@@ -5,8 +5,6 @@
 import contextlib
 
 import mail_client_api
-import gmail_client_impl
-import gmail_message_impl
 
 
 def main() -> None:
