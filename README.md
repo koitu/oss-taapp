@@ -21,8 +21,6 @@ This project is built on the principle of "programming integrated over time." Th
 
 The project is a `uv` workspace containing four primary packages:
 
-1.  **`message`**: Defines the abstract `Message` base class (ABC). This is the contract for what an email message looks like.
-2.  **`gmail_message_impl`**: Provides the `GmailMessage` class, a concrete implementation that knows how to parse raw data from the Gmail API into a `Message` object.
 3.  **`mail_client_api`**: Defines the abstract `Client` base class (ABC). This is the contract for what actions a mail client can perform (e.g., `get_messages`).
 4.  **`gmail_client_impl`**: Provides the `GmailClient` class, a concrete implementation that uses the Google API to perform the actions defined in the `Client` abstraction.
 
@@ -31,8 +29,6 @@ The project is a `uv` workspace containing four primary packages:
 ```
 ta-assignment/
 ├── src/                          # Source packages (uv workspace members)
-│   ├── message/                  # Abstract message base class (ABC)
-│   ├── gmail_message_impl/       # Gmail-specific message implementation
 │   ├── mail_client_api/          # Abstract mail client base class (ABC)  
 │   └── gmail_client_impl/        # Gmail-specific client implementation
 ├── tests/                        # Integration and E2E tests
