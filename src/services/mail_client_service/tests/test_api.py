@@ -1,4 +1,4 @@
-"""Unit tests for FastAPI mail client service endpoints."""
+"""Unit tests for FastAPI mail client service endpoints. This simulates a fake client using the FakeClient class written here and only tests the endpoints of the FastAPI app."""
 
 import pytest
 from fastapi.testclient import TestClient
@@ -49,10 +49,10 @@ api.client = FakeClient()
 
 client_app = TestClient(api.app)
 
-
 # --- Tests ---
 @pytest.mark.unit 
 def test_get_emails():
+    """Test getting a list of emails."""
     response = client_app.get("/messages")
     assert response.status_code == 200
     data = response.json()
@@ -62,6 +62,7 @@ def test_get_emails():
 
 @pytest.mark.unit 
 def test_get_email_contents_success():
+    """Test getting the contents of an email given an email ID."""
     response = client_app.get("/messages/1")
     assert response.status_code == 200
     data = response.json()
@@ -70,27 +71,32 @@ def test_get_email_contents_success():
 
 @pytest.mark.unit 
 def test_get_email_contents_not_found():
+    """Test getting the contents of an email that doesn't exist."""
     response = client_app.get("/messages/999")
     assert response.status_code == 404
 
 @pytest.mark.unit 
 def test_mark_email_read_success():
+    """Test marking an email as read when it succeeds."""
     response = client_app.post("/messages/1/mark-as-read")
     assert response.status_code == 200
     assert response.json()["Status"] == "Success"
 
 @pytest.mark.unit 
 def test_mark_email_read_fail():
+    """Test marking an email as read when it fails."""
     response = client_app.post("/messages/999/mark-as-read")
     assert response.status_code == 404
 
 @pytest.mark.unit 
 def test_delete_email_success():
+    """Test deleting an email when it succeeds."""
     response = client_app.delete("/messages/1")
     assert response.status_code == 200
     assert response.json()["Status"] == "Success"
 
 @pytest.mark.unit 
 def test_delete_email_fail():
+    """Test deleting an email when it fails.""""
     response = client_app.delete("/messages/999")
     assert response.status_code == 404
