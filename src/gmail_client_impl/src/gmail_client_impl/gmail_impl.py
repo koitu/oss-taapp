@@ -9,7 +9,6 @@ The implementation supports multiple authentication modes:
     - Interactive OAuth flow (for initial setup)
 """
 
-import logging
 import os
 from collections.abc import Iterator
 from pathlib import Path
@@ -71,13 +70,12 @@ class GmailClient(mail_client_api.Client):
     TOKEN_PATH: ClassVar[str] = "token.json"  # noqa: S105
     CREDENTIALS_PATH: ClassVar[str] = "credentials.json"
     SCOPES: ClassVar[list[str]] = [
-        "https://mail.google.com/",
+        "https://www.googleapis.com/auth/gmail.modify",
     ]
     FAILURE_TO_CRED = "Failed to obtain credentials. Please check your setup."
 
     def __init__(self, service: Resource | None = None, *, interactive: bool = False) -> None:
         """Initialize the GmailClient, handling authentication."""
-        self.logger = logging.getLogger(__name__)
         if service:
             self.service = service
             return  # Skip auth if service is provided
@@ -254,15 +252,6 @@ class GmailClient(mail_client_api.Client):
             The message cannot be recovered after deletion.
 
         """
-        subject = "Unknown"
-        try:
-            msg = self.get_message(message_id)
-            subject = msg.subject or "No subject"
-            self.logger.info("Attempting to delete message %s w subject: %s", message_id, subject)
-
-        except (HttpError, OSError, ValueError) as e:
-            self.logger.warning("Could not retrieve %s details before deletion: %s", message_id, e)
-
         try:
             (
                 self.service.users()  # type: ignore[attr-defined]
@@ -270,9 +259,7 @@ class GmailClient(mail_client_api.Client):
                 .delete(userId="me", id=message_id)
                 .execute()
             )
-        except (HttpError, OSError, ValueError) as e:
-            self.logger.exception("Failed to delete message %s (subject: %s)", message_id, subject)
-            self.logger.debug("Error details: %s", e)
+        except (HttpError, OSError, ValueError):
             return False
         else:
             return True
