@@ -400,7 +400,7 @@ class TestGmailClientConstants:
     def test_scopes_constant(self) -> None:
         """Test that SCOPES constant is correctly defined."""
         expected_scopes = [
-            "https://www.googleapis.com/auth/gmail.modify",
+            "https://mail.google.com/",
         ]
         assert expected_scopes == GmailClient.SCOPES
 

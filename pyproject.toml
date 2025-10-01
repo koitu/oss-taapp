@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "Template repository for a mail client"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "fastapi>=0.118.0",
+    "fastapi[standard]",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -36,6 +39,8 @@ ignore = [
   "D203", # `incorrect-blank-line-before-class` (D203) and `no-blank-line-before-class` (D211) are incompatible. Ignoring `incorrect-blank-line-before-class`.
   "D213", # `multi-line-summary-first-line` (D212) and `multi-line-summary-second-line` (D213) are incompatible. Ignoring `multi-line-summary-second-line`.
   "S101", # Use of `assert` detected --> Asserts are good in our opinion. Tests use asserts profusely.
+  "G004", # Logging statement uses f-string
+  "COM812", # Checks for the absence of trailing commas (recommended when also using ruff format)
 ]
 per-file-ignores = { "**/test_*.py" = ["TRY300", "BLE001", "ANN401", "SLF001", "E501", "S105", "ARG001", "ARG002", "S106", "INP001", "PLC0415"] }
 

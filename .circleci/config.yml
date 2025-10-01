@@ -220,7 +220,7 @@ workflows:
                 - main
                 - develop
                 - kamen-requierd-fixes
-
+                - make-real-deletions
       - lint:
           requires:
             - build
@@ -230,6 +230,7 @@ workflows:
                 - main
                 - develop
                 - kamen-requierd-fixes
+                - make-real-deletions
 
       - unit_test:
           requires:
@@ -240,6 +241,7 @@ workflows:
                 - main
                 - develop
                 - kamen-requierd-fixes
+                - make-real-deletions
 
       - circleci_test:
           requires:
@@ -250,6 +252,7 @@ workflows:
                 - main
                 - develop
                 - kamen-requierd-fixes
+                - make-real-deletions
 
       # Optional: Report summary after core tests
       - report_summary:
@@ -262,6 +265,7 @@ workflows:
                 - main
                 - develop
                 - kamen-requierd-fixes
+                - make-real-deletions
 
   # Enhanced workflow: Full tests with real credentials (main/develop only)
   full_integration:
@@ -273,6 +277,7 @@ workflows:
                 - main
                 - develop # Add other branches as needed
                 - kamen-requierd-fixes
+                - make-real-deletions
 
       - lint:
           requires:
@@ -283,6 +288,7 @@ workflows:
                 - main
                 - develop
                 - kamen-requierd-fixes
+                - make-real-deletions
 
       - unit_test:
           requires:
@@ -293,6 +299,7 @@ workflows:
                 - main
                 - develop
                 - kamen-requierd-fixes
+                - make-real-deletions
 
       - circleci_test:
           requires:
@@ -303,6 +310,7 @@ workflows:
                 - main
                 - develop
                 - kamen-requierd-fixes
+                - make-real-deletions
 
       - integration_test:
           requires:
@@ -314,6 +322,7 @@ workflows:
                 - main
                 - develop
                 - kamen-requierd-fixes
+                - make-real-deletions
                 
       - report_summary:
           requires:
@@ -326,3 +335,4 @@ workflows:
                 - main
                 - develop
                 - kamen-requierd-fixes
+                - make-real-deletions
