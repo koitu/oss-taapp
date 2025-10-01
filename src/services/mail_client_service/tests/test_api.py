@@ -51,6 +51,7 @@ client_app = TestClient(api.app)
 
 
 # --- Tests ---
+@pytest.mark.unit 
 def test_get_emails():
     response = client_app.get("/messages")
     assert response.status_code == 200
@@ -59,7 +60,7 @@ def test_get_emails():
     assert data["1"]["Subject"] == "Hello"
     assert data["2"]["From"] == "bob@example.com"
 
-
+@pytest.mark.unit 
 def test_get_email_contents_success():
     response = client_app.get("/messages/1")
     assert response.status_code == 200
@@ -67,29 +68,29 @@ def test_get_email_contents_success():
     assert data["ID"] == "1"
     assert data["Body"] == "Email body"
 
-
+@pytest.mark.unit 
 def test_get_email_contents_not_found():
     response = client_app.get("/messages/999")
     assert response.status_code == 404
 
-
+@pytest.mark.unit 
 def test_mark_email_read_success():
     response = client_app.post("/messages/1/mark-as-read")
     assert response.status_code == 200
     assert response.json()["Status"] == "Success"
 
-
+@pytest.mark.unit 
 def test_mark_email_read_fail():
     response = client_app.post("/messages/999/mark-as-read")
     assert response.status_code == 404
 
-
+@pytest.mark.unit 
 def test_delete_email_success():
     response = client_app.delete("/messages/1")
     assert response.status_code == 200
     assert response.json()["Status"] == "Success"
 
-
+@pytest.mark.unit 
 def test_delete_email_fail():
     response = client_app.delete("/messages/999")
     assert response.status_code == 404
