@@ -30,7 +30,15 @@ def main() -> None:
         return
 
     for i, msg in enumerate(messages, 1):
-        logger.info(f"Message {i}:\n  ID: {msg.id}\n  Subject: {msg.subject}\n  From: {msg.from_}\n  Date: {msg.date}\n")
+        # fmt: off
+        logger.info(
+            f"Message {i}:\n"
+            f"  ID: {msg.id}\n"
+            f"  Subject: {msg.subject}\n"
+            f"  From: {msg.from_}\n"
+            f"  Date: {msg.date}\n"
+        )
+        # fmt: on
 
     # Test 2: Get a specific message by ID
     if messages:
