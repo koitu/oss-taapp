@@ -67,6 +67,8 @@ class MessageSummary(BaseModel):
 class MessageDetail(BaseModel):
     """Detailed information for an email message."""
 
+    model_config = {"populate_by_name": True}
+
     id: str = Field(..., description="Unique message identifier")
     subject: str | None = Field(None, description="Email subject line")
     from_: str | None = Field(None, alias="from", description="Sender email address")
@@ -184,7 +186,7 @@ def get_message(
         return MessageDetail(
             id=message_id,
             subject=msg.subject,
-            from_=msg.from_,
+            from_=msg.from_,  # type: ignore[call-arg]
             date=msg.date,
             body=msg.body,
         )
