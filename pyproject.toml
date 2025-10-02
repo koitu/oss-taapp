@@ -28,6 +28,8 @@ members = [
   "src/mail_client_api",
   "src/gmail_client_impl",
   "src/services/mail_client_service",
+  "src/clients",
+  "src/mail_client_service_adapter",
 ]
 
 [tool.ruff]
