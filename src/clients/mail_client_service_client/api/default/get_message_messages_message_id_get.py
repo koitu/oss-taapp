@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from typing import Any, Optional, Union
+from typing import Any
 
 import httpx
 
@@ -23,8 +23,8 @@ def _get_kwargs(
 
 
 def _parse_response(
-    *, client: Union[AuthenticatedClient, Client], response: httpx.Response
-) -> Optional[Union[ErrorResponse, HTTPValidationError, MessageDetail]]:
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> ErrorResponse | HTTPValidationError | MessageDetail | None:
     if response.status_code == 200:
         response_200 = MessageDetail.from_dict(response.json())
 
@@ -52,8 +52,8 @@ def _parse_response(
 
 
 def _build_response(
-    *, client: Union[AuthenticatedClient, Client], response: httpx.Response
-) -> Response[Union[ErrorResponse, HTTPValidationError, MessageDetail]]:
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[ErrorResponse | HTTPValidationError | MessageDetail]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -65,8 +65,8 @@ def _build_response(
 def sync_detailed(
     message_id: str,
     *,
-    client: Union[AuthenticatedClient, Client],
-) -> Response[Union[ErrorResponse, HTTPValidationError, MessageDetail]]:
+    client: AuthenticatedClient | Client,
+) -> Response[ErrorResponse | HTTPValidationError | MessageDetail]:
     """Get message details
 
      Retrieve the full details of a specific email message
@@ -96,8 +96,8 @@ def sync_detailed(
 def sync(
     message_id: str,
     *,
-    client: Union[AuthenticatedClient, Client],
-) -> Optional[Union[ErrorResponse, HTTPValidationError, MessageDetail]]:
+    client: AuthenticatedClient | Client,
+) -> ErrorResponse | HTTPValidationError | MessageDetail | None:
     """Get message details
 
      Retrieve the full details of a specific email message
@@ -122,8 +122,8 @@ def sync(
 async def asyncio_detailed(
     message_id: str,
     *,
-    client: Union[AuthenticatedClient, Client],
-) -> Response[Union[ErrorResponse, HTTPValidationError, MessageDetail]]:
+    client: AuthenticatedClient | Client,
+) -> Response[ErrorResponse | HTTPValidationError | MessageDetail]:
     """Get message details
 
      Retrieve the full details of a specific email message
@@ -151,8 +151,8 @@ async def asyncio_detailed(
 async def asyncio(
     message_id: str,
     *,
-    client: Union[AuthenticatedClient, Client],
-) -> Optional[Union[ErrorResponse, HTTPValidationError, MessageDetail]]:
+    client: AuthenticatedClient | Client,
+) -> ErrorResponse | HTTPValidationError | MessageDetail | None:
     """Get message details
 
      Retrieve the full details of a specific email message

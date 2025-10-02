@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from typing import Any, Optional, Union
+from typing import Any
 
 import httpx
 
@@ -13,7 +13,7 @@ from ...types import UNSET, Response, Unset
 
 def _get_kwargs(
     *,
-    max_results: Union[Unset, int] = 10,
+    max_results: Unset | int = 10,
 ) -> dict[str, Any]:
     params: dict[str, Any] = {}
 
@@ -31,8 +31,8 @@ def _get_kwargs(
 
 
 def _parse_response(
-    *, client: Union[AuthenticatedClient, Client], response: httpx.Response
-) -> Optional[Union[ErrorResponse, HTTPValidationError, MessagesResponse]]:
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> ErrorResponse | HTTPValidationError | MessagesResponse | None:
     if response.status_code == 200:
         response_200 = MessagesResponse.from_dict(response.json())
 
@@ -55,8 +55,8 @@ def _parse_response(
 
 
 def _build_response(
-    *, client: Union[AuthenticatedClient, Client], response: httpx.Response
-) -> Response[Union[ErrorResponse, HTTPValidationError, MessagesResponse]]:
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[ErrorResponse | HTTPValidationError | MessagesResponse]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -67,9 +67,9 @@ def _build_response(
 
 def sync_detailed(
     *,
-    client: Union[AuthenticatedClient, Client],
-    max_results: Union[Unset, int] = 10,
-) -> Response[Union[ErrorResponse, HTTPValidationError, MessagesResponse]]:
+    client: AuthenticatedClient | Client,
+    max_results: Unset | int = 10,
+) -> Response[ErrorResponse | HTTPValidationError | MessagesResponse]:
     """Get message list
 
      Retrieve a list of email message summaries from the inbox
@@ -98,9 +98,9 @@ def sync_detailed(
 
 def sync(
     *,
-    client: Union[AuthenticatedClient, Client],
-    max_results: Union[Unset, int] = 10,
-) -> Optional[Union[ErrorResponse, HTTPValidationError, MessagesResponse]]:
+    client: AuthenticatedClient | Client,
+    max_results: Unset | int = 10,
+) -> ErrorResponse | HTTPValidationError | MessagesResponse | None:
     """Get message list
 
      Retrieve a list of email message summaries from the inbox
@@ -124,9 +124,9 @@ def sync(
 
 async def asyncio_detailed(
     *,
-    client: Union[AuthenticatedClient, Client],
-    max_results: Union[Unset, int] = 10,
-) -> Response[Union[ErrorResponse, HTTPValidationError, MessagesResponse]]:
+    client: AuthenticatedClient | Client,
+    max_results: Unset | int = 10,
+) -> Response[ErrorResponse | HTTPValidationError | MessagesResponse]:
     """Get message list
 
      Retrieve a list of email message summaries from the inbox
@@ -153,9 +153,9 @@ async def asyncio_detailed(
 
 async def asyncio(
     *,
-    client: Union[AuthenticatedClient, Client],
-    max_results: Union[Unset, int] = 10,
-) -> Optional[Union[ErrorResponse, HTTPValidationError, MessagesResponse]]:
+    client: AuthenticatedClient | Client,
+    max_results: Unset | int = 10,
+) -> ErrorResponse | HTTPValidationError | MessagesResponse | None:
     """Get message list
 
      Retrieve a list of email message summaries from the inbox

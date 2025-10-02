@@ -10,22 +10,21 @@ a familiar local interface.
 import logging
 from collections.abc import Iterator
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-
-from mail_client_service_client import Client as GeneratedClient  
-from mail_client_service_client.api.default import (  
+import mail_client_api
+from mail_client_api.message import Message
+from mail_client_service_client import Client as GeneratedClient
+from mail_client_service_client.api.default import (
     delete_message_messages_message_id_delete,
     get_message_messages_message_id_get,
     get_messages_messages_get,
     mark_as_read_messages_message_id_mark_as_read_post,
 )
-from mail_client_service_client.models.message_detail import MessageDetail  
-from mail_client_service_client.models.messages_response import (  
-    MessagesResponse,
-)
 
-import mail_client_api
-from mail_client_api.message import Message
+if TYPE_CHECKING:
+    from mail_client_service_client.models.message_detail import MessageDetail
+    from mail_client_service_client.models.messages_response import MessagesResponse
 
 logger = logging.getLogger(__name__)
 
@@ -203,7 +202,7 @@ class ServiceAdapterClient(mail_client_api.Client):
 
 
 def get_client_impl(service_url: str = "http://localhost:8000") -> mail_client_api.Client:
-    """Factory function to create a service adapter client.
+    """Create a service adapter client.
 
     Args:
         service_url: Base URL of the running mail service
@@ -222,4 +221,4 @@ def register(service_url: str = "http://localhost:8000") -> None:
         service_url: Base URL of the running mail service
 
     """
-    mail_client_api.get_client = lambda **kwargs: get_client_impl(service_url)
+    mail_client_api.get_client = lambda: get_client_impl(service_url)
