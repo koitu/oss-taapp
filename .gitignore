@@ -34,3 +34,6 @@ credentials.json
 
 .coverage*
 TESTING_STATUS.md
+
+# MacOS files
+.DS_Store
