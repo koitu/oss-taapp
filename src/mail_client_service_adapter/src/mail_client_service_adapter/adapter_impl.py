@@ -7,8 +7,9 @@ This demonstrates the Adapter Pattern: hiding network/HTTP complexity behind
 a familiar local interface.
 """
 
+from __future__ import annotations
+
 import logging
-from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -23,8 +24,15 @@ from mail_client_service_client.api.default import (
 )
 
 if TYPE_CHECKING:
+    # Standard library
+    from collections.abc import Iterator
+
+    # Local / project imports
+    from mail_client_service_client.models.error_response import ErrorResponse
+    from mail_client_service_client.models.http_validation_error import HTTPValidationError
     from mail_client_service_client.models.message_detail import MessageDetail
     from mail_client_service_client.models.messages_response import MessagesResponse
+
 
 logger = logging.getLogger(__name__)
 
@@ -110,12 +118,15 @@ class ServiceAdapterClient(mail_client_api.Client):
         """
         logger.debug("Fetching message %s from service", message_id)
 
-        response: MessageDetail | None = get_message_messages_message_id_get.sync(
-            client=self._http_client,
-            message_id=message_id,
+        response: MessageDetail | ErrorResponse | HTTPValidationError | None = (
+            get_message_messages_message_id_get.sync(
+                client=self._http_client,
+                message_id=message_id,
+            )
         )
 
-        if response is None:
+        # If the service returned an error model or nothing, treat as failure.
+        if response is None or getattr(response, "id", None) is None:
             msg = f"Failed to retrieve message {message_id} from service"
             raise ValueError(msg)
 
@@ -179,9 +190,11 @@ class ServiceAdapterClient(mail_client_api.Client):
         """
         logger.debug("Fetching up to %d messages from service", max_results)
 
-        response: MessagesResponse | None = get_messages_messages_get.sync(
-            client=self._http_client,
-            max_results=max_results,
+        response: MessagesResponse | ErrorResponse | HTTPValidationError | None = (
+            get_messages_messages_get.sync(
+                client=self._http_client,
+                max_results=max_results,
+            )
         )
 
         if response is None or response.messages is None:
@@ -221,4 +234,11 @@ def register(service_url: str = "http://localhost:8000") -> None:
         service_url: Base URL of the running mail service
 
     """
-    mail_client_api.get_client = lambda: get_client_impl(service_url)
+    # Provide a factory function matching the expected signature
+    def _get_client_factory(*, interactive: bool = False) -> mail_client_api.Client:
+        # interactive argument is accepted for API compatibility but not used by this adapter
+        # keep a local reference to avoid unused-argument linter warnings
+        _ = interactive
+        return get_client_impl(service_url)
+
+    mail_client_api.get_client = _get_client_factory

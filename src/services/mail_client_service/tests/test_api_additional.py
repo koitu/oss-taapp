@@ -25,7 +25,9 @@ def test_get_mail_client_success(monkeypatch: pytest.MonkeyPatch) -> None:
 
     # Force re-initialization and patch the factory
     monkeypatch.setattr(api, "_client_instance", None)
-    monkeypatch.setattr(api.mail_client_api, "get_client", fake_get_client)
+    # Patch the mail_client_api attribute on the module to a simple object exposing get_client
+    fake_module = type("M", (), {"get_client": staticmethod(fake_get_client)})()
+    monkeypatch.setattr(api, "mail_client_api", fake_module)
 
     client = api.get_mail_client()
     assert isinstance(client, DummyClient)
@@ -39,7 +41,8 @@ def test_get_mail_client_failure_raises_http_exception(monkeypatch: pytest.Monke
         raise RuntimeError(msg)
 
     monkeypatch.setattr(api, "_client_instance", None)
-    monkeypatch.setattr(api.mail_client_api, "get_client", broken_get_client)
+    fake_module = type("M", (), {"get_client": staticmethod(broken_get_client)})()
+    monkeypatch.setattr(api, "mail_client_api", fake_module)
 
     with pytest.raises(HTTPException) as exc:
         api.get_mail_client()
@@ -58,7 +61,8 @@ def test_get_messages_server_error(monkeypatch: pytest.MonkeyPatch) -> None:
             raise RuntimeError(msg)
 
 
-    monkeypatch.setitem(api.app.dependency_overrides, api.get_mail_client, lambda: Faulty())
+    # Override dependency by setting attribute on the FastAPI app
+    api.app.dependency_overrides[api.get_mail_client] = lambda: Faulty()
     client = TestClient(api.app)
 
     resp = client.get("/messages")
@@ -75,7 +79,7 @@ def test_get_message_server_error(monkeypatch: pytest.MonkeyPatch) -> None:
             msg = "boom"
             raise RuntimeError(msg)
 
-    monkeypatch.setitem(api.app.dependency_overrides, api.get_mail_client, lambda: Faulty())
+    api.app.dependency_overrides[api.get_mail_client] = lambda: Faulty()
     client = TestClient(api.app)
 
     resp = client.get("/messages/1")
@@ -92,7 +96,7 @@ def test_mark_as_read_server_error(monkeypatch: pytest.MonkeyPatch) -> None:
             msg = "boom"
             raise RuntimeError(msg)
 
-    monkeypatch.setitem(api.app.dependency_overrides, api.get_mail_client, lambda: Faulty())
+    api.app.dependency_overrides[api.get_mail_client] = lambda: Faulty()
     client = TestClient(api.app)
 
     resp = client.post("/messages/1/mark-as-read")
@@ -109,7 +113,7 @@ def test_delete_message_server_error(monkeypatch: pytest.MonkeyPatch) -> None:
             msg = "boom"
             raise RuntimeError(msg)
 
-    monkeypatch.setitem(api.app.dependency_overrides, api.get_mail_client, lambda: Faulty())
+    api.app.dependency_overrides[api.get_mail_client] = lambda: Faulty()
     client = TestClient(api.app)
 
     resp = client.delete("/messages/1")
