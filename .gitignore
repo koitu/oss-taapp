@@ -32,6 +32,9 @@ token.json
 .env
 credentials.json
 
+# Files created by CI/test backups
+*.ci_backup
+
 .coverage*
 TESTING_STATUS.md
 
