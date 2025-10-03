@@ -22,16 +22,16 @@ from mail_client_service_client.api.default import (
     get_messages_messages_get,
     mark_as_read_messages_message_id_mark_as_read_post,
 )
+from mail_client_service_client.models.message_detail import MessageDetail
+from mail_client_service_client.models.messages_response import MessagesResponse
 
 if TYPE_CHECKING:
     # Standard library
     from collections.abc import Iterator
 
-    # Local / project imports
+    # Local / project imports used only for type hints
     from mail_client_service_client.models.error_response import ErrorResponse
     from mail_client_service_client.models.http_validation_error import HTTPValidationError
-    from mail_client_service_client.models.message_detail import MessageDetail
-    from mail_client_service_client.models.messages_response import MessagesResponse
 
 
 logger = logging.getLogger(__name__)
@@ -125,8 +125,8 @@ class ServiceAdapterClient(mail_client_api.Client):
             )
         )
 
-        # If the service returned an error model or nothing, treat as failure.
-        if response is None or getattr(response, "id", None) is None:
+        # Only proceed if response is actually a MessageDetail
+        if not isinstance(response, MessageDetail) or response.id is None:
             msg = f"Failed to retrieve message {message_id} from service"
             raise ValueError(msg)
 
@@ -197,7 +197,8 @@ class ServiceAdapterClient(mail_client_api.Client):
             )
         )
 
-        if response is None or response.messages is None:
+        # Check if response is valid and contains messages
+        if not isinstance(response, MessagesResponse) or response.messages is None:
             logger.warning("No messages returned from service")
             return
 
