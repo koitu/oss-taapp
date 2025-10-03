@@ -4,9 +4,39 @@ This module tests the service endpoints using a fake client implementation
 to avoid requiring actual Gmail API credentials during testing.
 """
 
+from typing import Never
+
 import pytest
 from fastapi.testclient import TestClient
 
+
+class BrokenClient:
+    """Fake client that always raises errors (for exception coverage)."""
+
+    def get_messages(self, *args: object, **kwargs: object) -> Never:
+        """Raise an error when called."""
+        msg = "boom in get_messages"
+        raise RuntimeError(msg)
+
+    def get_message(self, *args: object, **kwargs: object) -> Never:
+        """Raise an error when called."""
+        msg = "boom in get_message"
+        raise RuntimeError(msg)
+
+    def mark_as_read(self, *args: object, **kwargs: object) -> Never:
+        """Raise an error when called."""
+        msg = "boom in mark_as_read"
+        raise RuntimeError(msg)
+
+    def delete_message(self, *args: object, **kwargs: object) -> Never:
+        """Raise an error when called."""
+        msg = "boom in delete_message"
+        raise RuntimeError(msg)
+
+
+def override_broken_client() -> BrokenClient:
+    """Dependency override to return a BrokenClient instance."""
+    return BrokenClient()
 
 class FakeMessage:
     """Fake message class for unit testing."""
@@ -225,3 +255,76 @@ def test_health_check() -> None:
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "healthy"
+
+@pytest.mark.unit
+def test_get_mail_client_init_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Force get_mail_client to fail during initialization."""
+    # Clear any existing global client
+    api.app.dependency_overrides[api.get_mail_client] = override_broken_client
+
+    def fake_get_client(*args: object, **kwargs: object) -> Never:
+        """Fake replacement for mail_client_api.get_client that raises."""
+        msg = "init failure"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr("mail_client_api.get_client", fake_get_client)
+
+    with pytest.raises(Exception, match="init failure") as excinfo:
+        api.get_mail_client()
+
+    assert "init failure" in str(excinfo.value)
+
+@pytest.mark.unit
+def test_get_messages_internal_error(
+    monkeypatch: pytest.MonkeyPatch,
+    client_app: TestClient,
+) -> None:
+    """Force internal server error in get_messages."""
+    api.app.dependency_overrides[api.get_mail_client] = override_broken_client
+
+    response = client_app.get("/messages")
+
+    assert response.status_code == 500
+    assert "Failed to retrieve messages" in response.json()["detail"]
+
+
+@pytest.mark.unit
+def test_get_message_internal_error(
+    monkeypatch: pytest.MonkeyPatch,
+    client_app: TestClient,
+) -> None:
+    """Force unexpected error in get_message."""
+    api.app.dependency_overrides[api.get_mail_client] = override_broken_client
+
+    response = client_app.get("/messages/123")
+
+    assert response.status_code == 500
+    assert "Failed to retrieve message" in response.json()["detail"]
+
+
+@pytest.mark.unit
+def test_mark_as_read_internal_error(
+    monkeypatch: pytest.MonkeyPatch,
+    client_app: TestClient,
+) -> None:
+    """Force unexpected error in mark_as_read."""
+    api.app.dependency_overrides[api.get_mail_client] = override_broken_client
+
+    response = client_app.post("/messages/123/mark-as-read")
+
+    assert response.status_code == 500
+    assert "Failed to mark message as read" in response.json()["detail"]
+
+
+@pytest.mark.unit
+def test_delete_message_internal_error(
+    monkeypatch: pytest.MonkeyPatch,
+    client_app: TestClient,
+) -> None:
+    """Force unexpected error in delete_message."""
+    api.app.dependency_overrides[api.get_mail_client] = override_broken_client
+
+    response = client_app.delete("/messages/123")
+
+    assert response.status_code == 500
+    assert "Failed to delete message" in response.json()["detail"]
