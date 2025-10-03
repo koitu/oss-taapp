@@ -51,6 +51,12 @@ per-file-ignores = { "**/test_*.py" = ["TRY300", "BLE001", "ANN401", "SLF001", "
 strict = true
 explicit_package_bases = true # Required for src layout
 mypy_path = ["src/mail_client_api/src", "src/gmail_client_impl/src", "src/services/mail_client_service/src"]
+# Ensure packages that live directly under src/clients are discovered with a
+# consistent package base (prevents "Source file found twice under different
+# module names" errors where mypy can see the same file as both
+# `src.clients...` and `mail_client_service_client...`).
+# Add the clients directory as an explicit package base.
+mypy_path = ["src/mail_client_api/src", "src/gmail_client_impl/src", "src/services/mail_client_service/src", "src/clients"]
 ignore_missing_imports = false
 warn_unused_ignores = false
 
