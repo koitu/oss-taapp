@@ -8,6 +8,7 @@ The test uses an in-process httpx client bound to the FastAPI app so all
 networking stays in-process and fast.
 """
 
+from collections.abc import Callable, Generator
 from unittest.mock import MagicMock
 
 import httpx
@@ -31,7 +32,7 @@ def mock_gmail_client() -> MagicMock:
 
 
 @pytest.fixture(scope="module")
-def test_client(mock_gmail_client: MagicMock) -> TestClient:
+def test_client(mock_gmail_client: MagicMock) -> Generator[TestClient, None, None]:
     """Start the FastAPI TestClient with the mail client dependency overridden.
 
     We override `get_mail_client` so the service will call the mocked gmail
@@ -53,17 +54,16 @@ def _make_message(id_: str, subject: str, from_: str, date: str, body: str | Non
     return m
 
 
-def _make_forward(test_client: TestClient) -> callable:
+def _make_forward(test_client: TestClient) -> Callable[[httpx.Request], httpx.Response]:
     """Return a sync forward function that adapts httpx.Request -> httpx.Response via TestClient."""
     def _forward(request: httpx.Request) -> httpx.Response:
-        # Use the full URL so query params are preserved (e.g., ?max_results=5)
         url = str(request.url)
-
         resp = test_client.request(
             request.method, url, headers=dict(request.headers), content=request.content
         )
-        return httpx.Response(status_code=resp.status_code, headers=resp.headers, content=resp.content, request=request)
-
+        return httpx.Response(
+            status_code=resp.status_code, headers=resp.headers, content=resp.content, request=request
+        )
     return _forward
 
 @pytest.mark.circleci

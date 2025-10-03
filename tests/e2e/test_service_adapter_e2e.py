@@ -5,19 +5,19 @@ and a Gmail account with valid credentials). It will be skipped when no
 credentials or service are available so it doesn't fail CI unintentionally.
 """
 
-from pathlib import Path
+import logging
 import os
-import urllib.request
-from urllib.error import URLError, HTTPError
+from pathlib import Path
 
+import httpx
 import pytest
 
 import mail_client_api
-
-import mail_client_service_adapter.adapter_impl as adapter_impl
-
+from mail_client_service_adapter import adapter_impl
 
 pytestmark = pytest.mark.e2e
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.mark.local_credentials
@@ -30,7 +30,6 @@ def test_service_adapter_can_reach_service_and_gmail() -> None:
     - register the adapter to talk to the service
     - call get_messages and then get_message for one message
     """
-
     # Workspace root detection (same convention used in other E2E tests)
     workspace_root = Path(__file__).parent.parent.parent
 
@@ -55,10 +54,10 @@ def test_service_adapter_can_reach_service_and_gmail() -> None:
     # Check service health before proceeding
     health_url = service_url.rstrip("/") + "/health"
     try:
-        with urllib.request.urlopen(health_url, timeout=5) as resp:
-            if resp.status != 200:
-                pytest.skip(f"Mail service unhealthy at {health_url}: status={resp.status}")
-    except (URLError, HTTPError) as exc:
+        resp = httpx.get(health_url, timeout=5.0)
+        if resp.status_code != httpx.codes.OK:
+            pytest.skip(f"Mail service unhealthy at {health_url}: status={resp.status_code}")
+    except httpx.RequestError as exc:
         pytest.skip(f"Mail service not reachable at {health_url}: {exc}")
 
     # Register adapter to point at the running service
@@ -88,6 +87,5 @@ def test_service_adapter_can_reach_service_and_gmail() -> None:
     # Optionally mark as read if supported -- don't fail the test if operation fails
     try:
         _ = client.mark_as_read(first.id)
-    except Exception:
-        # ignore side-effect failures
-        pass
+    except Exception as e:
+        logger.warning("Failed to mark message as read (ignored): %s", e)
