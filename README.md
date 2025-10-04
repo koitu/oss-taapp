@@ -220,6 +220,8 @@ See `docs/circleci-setup.md` for detailed CI/CD setup instructions.
 3. **Check code quality**: `uv run ruff check . && uv run ruff format --check .`
 4. **Fix formatting**: `uv run ruff format .`
 5. **View documentation**: `uv run mkdocs serve`
+6. **Run backend service**: `uv run python3 run_service.py`
+7. **Demo of the frontend client**: `uv run python3 test_adapter.py`
 
 ### Best Practices
 - Run unit tests (`uv run pytest src/`) during development for fast feedback
