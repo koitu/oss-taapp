@@ -20,8 +20,8 @@ pytestmark = pytest.mark.e2e
 logger = logging.getLogger(__name__)
 
 # Unsure which one should be used
-# @pytest.mark.local_credentials
-@pytest.mark.circleci
+# @pytest.mark.circleci
+@pytest.mark.local_credentials
 def test_service_adapter_can_reach_service_and_gmail() -> None:
     """Use the service adapter to list messages and fetch one message detail.
 
