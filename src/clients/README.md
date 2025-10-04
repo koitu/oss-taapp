@@ -1,124 +1,135 @@
 # mail-client-service-client
-A client library for accessing Mail Client Service
 
-## Usage
-First, create a client:
+A generated client library for interacting with Mail Client Service APIs.
+
+## Overview
+
+This package provides a small, typed HTTP client wrapper around the Mail Client Service. It exposes a thin runtime `Client` (and an `AuthenticatedClient`) that manage underlying `httpx` clients and convenience modules for each API path.
+
+The library is generated to match an OpenAPI specification. Each path + method pair is a Python module under `mail_client_service_client.api` that exposes four functions: `sync`, `sync_detailed`, `asyncio` and `asyncio_detailed`.
+
+## Scope
+
+- Provide a convenient, typed programmatic interface to the Mail Client Service REST API.
+- Keep a small runtime surface: client objects, typed models, API modules, and a small error class for unexpected responses.
+- Do not implement business logic; this package only concerns transport and data (models).
+
+## Exposed interfaces
+
+Top-level exports (from `mail_client_service_client`):
+
+- `Client` — a non-authenticated client wrapper. Construct with `Client(base_url=...)`.
+- `AuthenticatedClient` — client that injects an Authorization header. Construct with `AuthenticatedClient(base_url=..., token=...)`.
+
+Other important packages and locations:
+
+- `mail_client_service_client.models` — typed model classes for request/response bodies (e.g. `MessageDetail`, `MessagesResponse`).
+- `mail_client_service_client.api` — modules mirroring API tags and paths. For tagless operations the functions live in `mail_client_service_client.api.default` (for example: `mail_client_service_client.api.default.get_messages_messages_get`).
+- `mail_client_service_client.errors.UnexpectedStatus` — exception raised when a response status is undocumented and `Client.raise_on_unexpected_status` is True.
+- `mail_client_service_client.types.Response[T]` — a typed response wrapper used by `*_detailed` methods to include raw metadata like status code and headers.
+
+See the package `__init__.py` and `client.py` for full docstrings and available keyword args.
+
+## Usage patterns
+
+All examples use absolute imports.
+
+1) Simple, synchronous request (blocking)
 
 ```python
 from mail_client_service_client import Client
+from mail_client_service_client.api.default import get_messages_messages_get
 
 client = Client(base_url="https://api.example.com")
+
+with client as client:
+    messages = get_messages_messages_get.sync(client=client)
+    # `messages` will be the parsed model (or None if the server returned no documented body)
 ```
 
-If the endpoints you're going to hit require authentication, use `AuthenticatedClient` instead:
+2) Authenticated client
 
 ```python
 from mail_client_service_client import AuthenticatedClient
+from mail_client_service_client.api.default import get_message_messages_message_id_get
 
 client = AuthenticatedClient(base_url="https://api.example.com", token="SuperSecretToken")
-```
-
-Now call your endpoint and use your models:
-
-```python
-from mail_client_service_client.models import MyDataModel
-from mail_client_service_client.api.my_tag import get_my_data_model
-from mail_client_service_client.types import Response
 
 with client as client:
-    my_data: MyDataModel = get_my_data_model.sync(client=client)
-    # or if you need more info (e.g. status_code)
-    response: Response[MyDataModel] = get_my_data_model.sync_detailed(client=client)
+    message = get_message_messages_message_id_get.sync(client=client, message_id="abc123")
 ```
 
-Or do the same thing with an async version:
-
-```python
-from mail_client_service_client.models import MyDataModel
-from mail_client_service_client.api.my_tag import get_my_data_model
-from mail_client_service_client.types import Response
-
-async with client as client:
-    my_data: MyDataModel = await get_my_data_model.asyncio(client=client)
-    response: Response[MyDataModel] = await get_my_data_model.asyncio_detailed(client=client)
-```
-
-By default, when you're calling an HTTPS API it will attempt to verify that SSL is working correctly. Using certificate verification is highly recommended most of the time, but sometimes you may need to authenticate to a server (especially an internal server) using a custom certificate bundle.
-
-```python
-client = AuthenticatedClient(
-    base_url="https://internal_api.example.com", 
-    token="SuperSecretToken",
-    verify_ssl="/path/to/certificate_bundle.pem",
-)
-```
-
-You can also disable certificate validation altogether, but beware that **this is a security risk**.
-
-```python
-client = AuthenticatedClient(
-    base_url="https://internal_api.example.com", 
-    token="SuperSecretToken", 
-    verify_ssl=False
-)
-```
-
-Things to know:
-1. Every path/method combo becomes a Python module with four functions:
-    1. `sync`: Blocking request that returns parsed data (if successful) or `None`
-    1. `sync_detailed`: Blocking request that always returns a `Request`, optionally with `parsed` set if the request was successful.
-    1. `asyncio`: Like `sync` but async instead of blocking
-    1. `asyncio_detailed`: Like `sync_detailed` but async instead of blocking
-
-1. All path/query params, and bodies become method arguments.
-1. If your endpoint had any tags on it, the first tag will be used as a module name for the function (my_tag above)
-1. Any endpoint which did not have a tag will be in `mail_client_service_client.api.default`
-
-## Advanced customizations
-
-There are more settings on the generated `Client` class which let you control more runtime behavior, check out the docstring on that class for more info. You can also customize the underlying `httpx.Client` or `httpx.AsyncClient` (depending on your use-case):
+3) Async usage
 
 ```python
 from mail_client_service_client import Client
+from mail_client_service_client.api.default import get_messages_messages_get
+import asyncio
 
-def log_request(request):
-    print(f"Request event hook: {request.method} {request.url} - Waiting for response")
+async def main():
+    async with Client(base_url="https://api.example.com") as client:
+        messages = await get_messages_messages_get.asyncio(client=client)
 
-def log_response(response):
-    request = response.request
-    print(f"Response event hook: {request.method} {request.url} - Status {response.status_code}")
-
-client = Client(
-    base_url="https://api.example.com",
-    httpx_args={"event_hooks": {"request": [log_request], "response": [log_response]}},
-)
-
-# Or get the underlying httpx client to modify directly with client.get_httpx_client() or client.get_async_httpx_client()
+asyncio.run(main())
 ```
 
-You can even set the httpx client directly, but beware that this will override any existing settings (e.g., base_url):
+4) Using the detailed variants to access status and headers
+
+```python
+from mail_client_service_client import Client
+from mail_client_service_client.api.default import get_messages_messages_get
+from mail_client_service_client.types import Response
+
+client = Client(base_url="https://api.example.com")
+
+with client as client:
+    detailed: Response = get_messages_messages_get.sync_detailed(client=client)
+    print(detailed.status_code, detailed.headers)
+    parsed = detailed.parsed  # typed model or None
+```
+
+5) Customizing the underlying httpx client
 
 ```python
 import httpx
 from mail_client_service_client import Client
 
-client = Client(
-    base_url="https://api.example.com",
-)
-# Note that base_url needs to be re-set, as would any shared cookies, headers, etc.
+client = Client(base_url="https://api.example.com")
+# Replace the internal httpx client (overrides cookies/headers/timeouts)
 client.set_httpx_client(httpx.Client(base_url="https://api.example.com", proxies="http://localhost:8030"))
 ```
 
-## Building / publishing this package
-This project uses [Poetry](https://python-poetry.org/) to manage dependencies  and packaging.  Here are the basics:
-1. Update the metadata in pyproject.toml (e.g. authors, version)
-1. If you're using a private repository, configure it with Poetry
-    1. `poetry config repositories.<your-repository-name> <url-to-your-repository>`
-    1. `poetry config http-basic.<your-repository-name> <username> <password>`
-1. Publish the client with `poetry publish --build -r <your-repository-name>` or, if for public PyPI, just `poetry publish --build`
+## Error handling
 
-If you want to install this client into another project without publishing it (e.g. for development) then:
-1. If that project **is using Poetry**, you can simply do `poetry add <path-to-this-client>` from that project
-1. If that project is not using Poetry:
-    1. Build a wheel with `poetry build -f wheel`
-    1. Install that wheel from the other project `pip install <path-to-wheel>`
+- If `Client.raise_on_unexpected_status` is set to True, API functions will raise `mail_client_service_client.errors.UnexpectedStatus` for undocumented status codes. The exception includes `.status_code` and `.content` attributes.
+- Timeouts and transport errors are raised as `httpx` exceptions (for example `httpx.TimeoutException`).
+
+## Component dependencies
+
+- Runtime:
+  - Python 3.8+ (the source may use newer typing features; check `pyproject.toml` for the exact requirement)
+  - `httpx` — HTTP client used for sync/async requests
+  - `attrs` — lightweight data classes used for `Client`/`AuthenticatedClient`
+
+- Development / packaging:
+  - Poetry (project uses Poetry; see `pyproject.toml` under this package)
+
+Check the local `pyproject.toml` in this directory for pinned versions.
+
+## Building & publishing
+
+This package follows a typical Poetry workflow:
+
+1. Update metadata in `pyproject.toml` (authors, version).
+2. If using a private repository, configure it with Poetry (repositories/http-basic config).
+3. Publish with `poetry publish --build` (or `--build -r <repo>` for alternate repositories).
+
+For local development you can install the built wheel or add the path with Poetry.
+
+## Notes and tips
+
+- The generated API modules are small and deterministic. Look under `mail_client_service_client.api` to find functions matching the server paths you need to call.
+- Prefer the `*_detailed` functions when you need raw status/headers; prefer the plain `sync`/`asyncio` helpers if you only need parsed models.
+- Keep `verify_ssl=True` in production; only disable for local testing with trusted test servers.
+
+If you'd like, I can also add a short example script under `examples/` showing a real end-to-end request using a local mock server.

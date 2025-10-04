@@ -19,27 +19,34 @@ This project is built on the principle of "programming integrated over time." Th
 
 ## Core Components
 
-The project is a `uv` workspace containing four primary packages:
+The project is a `uv` workspace containing several related packages under `src/`. Each package has a focused responsibility and can be used independently:
 
-3.  **`mail_client_api`**: Defines the abstract `Client` base class (ABC). This is the contract for what actions a mail client can perform (e.g., `get_messages`).
-4.  **`gmail_client_impl`**: Provides the `GmailClient` class, a concrete implementation that uses the Google API to perform the actions defined in the `Client` abstraction.
+- **`mail_client_api`**: Defines the abstract `Client` base class (ABC) and message abstractions. This package is the stable contract that implementations must satisfy.
+- **`gmail_client_impl`**: A concrete implementation that implements the `mail_client_api` contract using the Gmail API (`GmailClient` and message implementations).
+- **`mail_client_service_adapter`**: An adapter layer that translates between the mail client implementation and the service API (handler code used by the service).
+- **`mail_client_service`** (located under `src/services/mail_client_service`): A small HTTP service that exposes the mail client functionality, orchestration and end-to-end glue.
+- **`clients`** (under `src/clients`, e.g. `mail_client_service_client`): Generated OpenAPI client(s) used to call the service from other components or tests.
 
 ## Project Structure
 
 ```
 ta-assignment/
-├── src/                          # Source packages (uv workspace members)
-│   ├── mail_client_api/          # Abstract mail client base class (ABC)  
-│   └── gmail_client_impl/        # Gmail-specific client implementation
+├── src/                          # Source packages (workspace members)
+│   ├── clients/                  # Generated API clients (e.g. mail_client_service_client)
+│   ├── gmail_client_impl/        # Gmail-specific implementation of the mail client
+│   ├── mail_client_api/          # Abstract mail client contract (Client, Message)
+│   └── mail_client_service_adapter/ # Adapter that exposes implementations as the service API
+│   └── services/
+│       └── mail_client_service/  # Small HTTP service exposing the mail client API
 ├── tests/                        # Integration and E2E tests
 │   ├── integration/              # Component integration tests
 │   └── e2e/                      # End-to-end application tests
 ├── docs/                         # Documentation source files
 ├── .circleci/                    # CircleCI configuration
-├── main.py                       # Main application entry point
-├── pyproject.toml               # Project configuration (dependencies, tools)
-├── uv.lock                      # Locked dependency versions
-└── credentials.json             # Google OAuth credentials (local only)
+├── main.py                       # Main application entry point / demo
+├── pyproject.toml                # Project configuration (dependencies, tools)
+├── uv.lock                       # Locked dependency versions
+└── credentials.json              # Google OAuth credentials (local only)
 ```
 
 ## Project Setup
