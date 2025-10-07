@@ -489,6 +489,53 @@ def example(param1: str, param2: int) -> bool:
 - `GMAIL_CLIENT_SECRET`
 - `GMAIL_REFRESH_TOKEN`
 
+### Docker Deployment
+
+The project includes Docker support for containerized deployment.
+
+**Dockerfile Overview:**
+
+The [Dockerfile](Dockerfile) uses a multi-stage approach:
+- Base image: Python 3.11 slim (lightweight)
+- Installs `uv` via pip
+- Copies all project files (respecting `.dockerignore`)
+- Installs dependencies with `uv sync --all-packages --no-dev`
+- Exposes port 8000
+- Default command runs the FastAPI service
+
+**Build the image:**
+```bash
+docker build -t gmail-service .
+```
+
+**Run the service:**
+```bash
+# Basic run
+docker run -p 8000:8000 gmail-service
+
+# With environment variables (for Gmail API)
+docker run -p 8000:8000 \
+  -e GMAIL_CLIENT_ID="your_id" \
+  -e GMAIL_CLIENT_SECRET="your_secret" \
+  -e GMAIL_REFRESH_TOKEN="your_token" \
+  gmail-service
+
+# Run main.py demo instead
+docker run gmail-service uv run python main.py
+```
+
+**Access the API:**
+- Docs: `http://localhost:8000/docs`
+- Alternative docs: `http://localhost:8000/redoc`
+- Root path (`/`) returns 404 - this is normal
+
+**What's excluded (.dockerignore):**
+- Virtual environments and caches
+- Git and CI files
+- Documentation and tests
+- Secrets (credentials.json, token.json)
+- IDE and OS files
+
 ---
 
 ## Quick Reference
@@ -505,6 +552,12 @@ uv run ruff check . --fix             # Fix linting
 uv run ruff format .                  # Format code
 uv run mypy src/                      # Type check
 uv run pytest src/ tests/ -m "not local_credentials"  # All tests
+```
+
+**Docker:**
+```bash
+docker build -t gmail-service .       # Build image
+docker run -p 8000:8000 gmail-service # Run service
 ```
 
 **Docs:**
