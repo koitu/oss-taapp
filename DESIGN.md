@@ -150,3 +150,45 @@ def get_messages(self, max_results: int = 10):
             _body=""
         )
 ```
+
+## Testing Strategy
+
+### What We Tested
+
+- Service endpoints for correct status codes and JSON structure.
+- Adapter conversions to ensure correct mapping from API models to `Message` objects.
+- Integration between adapter, client, and service using mocked Gmail client.
+
+---
+
+### Test Types
+
+- **Unit Tests:** Validate service endpoints and adapter behavior in isolation.
+- **Integration Tests:** Test full flow from adapter → generated client → FastAPI service using mocks for Gmail API.
+- **End-to-End Tests:** Optional real Gmail tests (for credentialed environments only).
+
+---
+
+### Mocking Strategy
+
+- **FastAPI Tests:** Mock `mail_client_api.Client` dependency to isolate route behavior.
+- **Adapter Tests:** Mock generated client calls to simulate API responses.
+- **Integration Tests:** Mock Gmail implementation but use real HTTP requests to verify inter-component communication.
+
+Mocks are used primarily to ensure determinism, prevent network calls, and simulate Gmail API edge cases.
+
+---
+
+### Interface Compliance
+
+- **Static Validation:** Used `mypy` to confirm adapter matches the `mail_client_api.Client` signature.
+- **Behavioral Testing:** Reused the same test suite for both `gmail_client_impl` and `ServiceAdapterClient` to verify identical results.
+- **Contract Tests:** Ensured that methods return correct types (`Message`, `bool`, or raise `ValueError` where appropriate).
+
+---
+
+### Summary
+
+This design transforms the Gmail client library into a scalable service-based architecture while preserving the same interface for users.  
+The **FastAPI service** exposes the implementation over HTTP, the **auto-generated client** provides structured access, and the **adapter** ensures backward compatibility.  
+Together, they allow the mail client to be used interchangeably as a local library or as a remote service — where “location” becomes irrelevant to the consuming code.
