@@ -61,7 +61,7 @@ GET /messages?max_results=2
 
 **Response**
 
-`````json
+````json
 {
   "messages": {
     "a1b2c3": {
@@ -76,7 +76,8 @@ GET /messages?max_results=2
     }
   },
   "count": 2
-}````
+}
+```
 
 ---
 
@@ -133,7 +134,7 @@ client = get_client()  # returns ServiceAdapterClient
 messages = client.get_messages(max_results=5)
 for msg in messages:
     print(msg.subject)
-`````
+````
 
 **Adapter implementation:**
 
