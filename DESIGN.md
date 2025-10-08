@@ -61,7 +61,7 @@ GET /messages?max_results=2
 
 **Response**
 
-````json
+```json
 {
   "messages": {
     "a1b2c3": {
@@ -85,24 +85,24 @@ GET /messages?max_results=2
 
 ### Endpoints
 
-| Method | Path | Description | Request Params | Response |
-|--------|------|--------------|----------------|-----------|
-| **GET** | `/messages` | Fetch message summaries | `max_results: int` | `MessagesResponse` |
-| **GET** | `/messages/{message_id}` | Retrieve message details | `message_id: str` | `MessageDetail` |
-| **POST** | `/messages/{message_id}/mark-as-read` | Mark message as read | `message_id: str` | `OperationResponse` |
-| **DELETE** | `/messages/{message_id}` | Delete message | `message_id: str` | `OperationResponse` |
-| **GET** | `/health` | Health check | — | `{ "status": "healthy" }` |
+| Method     | Path                                  | Description              | Request Params     | Response                  |
+| ---------- | ------------------------------------- | ------------------------ | ------------------ | ------------------------- |
+| **GET**    | `/messages`                           | Fetch message summaries  | `max_results: int` | `MessagesResponse`        |
+| **GET**    | `/messages/{message_id}`              | Retrieve message details | `message_id: str`  | `MessageDetail`           |
+| **POST**   | `/messages/{message_id}/mark-as-read` | Mark message as read     | `message_id: str`  | `OperationResponse`       |
+| **DELETE** | `/messages/{message_id}`              | Delete message           | `message_id: str`  | `OperationResponse`       |
+| **GET**    | `/health`                             | Health check             | —                  | `{ "status": "healthy" }` |
 
 ---
 
 ### Error Handling
 
-| Error Type | Underlying Cause | HTTP Status | Example Response |
-|-------------|------------------|--------------|------------------|
-| **Message not found** | `ValueError` raised by Gmail implementation | `404 Not Found` | `{ "detail": "Message not found" }` |
-| **Invalid input** | Request validation error | `422 Unprocessable Entity` | `{ "detail": "Invalid query parameter" }` |
-| **Gmail auth or token failure** | Credential issue in Gmail client | `503 Service Unavailable` | `{ "detail": "Gmail service unavailable" }` |
-| **Unexpected error** | Any uncaught exception | `500 Internal Server Error` | `{ "detail": "Internal server error" }` |
+| Error Type                      | Underlying Cause                            | HTTP Status                 | Example Response                            |
+| ------------------------------- | ------------------------------------------- | --------------------------- | ------------------------------------------- |
+| **Message not found**           | `ValueError` raised by Gmail implementation | `404 Not Found`             | `{ "detail": "Message not found" }`         |
+| **Invalid input**               | Request validation error                    | `422 Unprocessable Entity`  | `{ "detail": "Invalid query parameter" }`   |
+| **Gmail auth or token failure** | Credential issue in Gmail client            | `503 Service Unavailable`   | `{ "detail": "Gmail service unavailable" }` |
+| **Unexpected error**            | Any uncaught exception                      | `500 Internal Server Error` | `{ "detail": "Internal server error" }`     |
 
 ---
 
@@ -134,7 +134,7 @@ client = get_client()  # returns ServiceAdapterClient
 messages = client.get_messages(max_results=5)
 for msg in messages:
     print(msg.subject)
-````
+```
 
 **Adapter implementation:**
 
