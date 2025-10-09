@@ -228,3 +228,54 @@ See `docs/circleci-setup.md` for detailed CI/CD setup instructions.
 - Use integration tests (`uv run pytest -m integration`) to verify component interactions
 - Run full test suite (`uv run pytest`) before pushing to ensure CI compatibility
 - The CircleCI pipeline provides automated validation on every push
+
+## Running with Docker
+
+The application can be containerized using Docker for easy deployment and distribution.
+
+### Building the Docker Image
+
+```bash
+docker build -t gmail-service .
+```
+
+This builds a Docker image named `gmail-service` using the provided Dockerfile. The build process:
+- Uses Python 3.11 slim base image
+- Installs `uv` for dependency management
+- Copies project files and installs dependencies
+- Exposes port 8000 for the FastAPI service
+
+### Running the Container
+
+**Basic run (FastAPI service):**
+```bash
+docker run -p 8000:8000 gmail-service
+```
+
+The service will be available at `http://localhost:8000`. You can access:
+- API documentation: `http://localhost:8000/docs`
+- Alternative docs: `http://localhost:8000/redoc`
+
+**Note:** If you visit `http://localhost:8000/` (root path), you'll see a 404 error. This is normal - the service has specific endpoints like `/messages`, `/health`, etc. Use `/docs` to see all available endpoints.
+
+**Running with Gmail credentials (environment variables):**
+```bash
+docker run -p 8000:8000 \
+  -e GMAIL_CLIENT_ID="your_client_id" \
+  -e GMAIL_CLIENT_SECRET="your_client_secret" \
+  -e GMAIL_REFRESH_TOKEN="your_refresh_token" \
+  gmail-service
+```
+
+**Running the main.py demo:**
+```bash
+docker run gmail-service uv run python main.py
+```
+
+**Running with credential files:**
+```bash
+docker run -p 8000:8000 \
+  -v $(pwd)/credentials.json:/app/credentials.json \
+  -v $(pwd)/token.json:/app/token.json \
+  gmail-service
+```
