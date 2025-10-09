@@ -68,21 +68,6 @@ class Client(ABC):
         raise NotImplementedError
 ```
 
-**Why Use ABCs Instead of Protocols?**
-
-- **Runtime Checks** - ABCs will throw an error if you forget to implement a method. Protocols only work with static type checkers.
-- **Clear Intent** - You have to explicitly inherit: `class GmailClient(Client)`. This makes relationships obvious.
-- **Easy Discovery** - You can search for all implementations by looking for classes that inherit from the ABC.
-
-**ABC vs Protocol Comparison:**
-
-| Aspect | ABC | Protocol |
-|--------|-----|----------|
-| Type Checking | Nominal (explicit inheritance) | Structural (duck typing) |
-| Runtime Check | Yes | No |
-| Inheritance | Required | Optional |
-| Use Case | Framework contracts (this project) | Flexible type hints |
-
 ### Implementation Details
 
 **Python Features Used:**
@@ -99,6 +84,21 @@ class Client(ABC):
 - **Usage**: You just call `mail_client_api.get_client().get_messages()` - you don't need to know anything about Gmail
 
 This means we could swap in `OutlookClient` or `MockClient` without changing any code that uses the interface.
+
+**Why Use ABCs Instead of Protocols?**
+
+- **Runtime Checks** - ABCs will throw an error if you forget to implement a method. Protocols only work with static type checkers.
+- **Clear Intent** - You have to explicitly inherit: `class GmailClient(Client)`. This makes relationships obvious.
+- **Easy Discovery** - You can search for all implementations by looking for classes that inherit from the ABC.
+
+**ABC vs Protocol Comparison:**
+
+| Aspect | ABC | Protocol |
+|--------|-----|----------|
+| Type Checking | Nominal (explicit inheritance) | Structural (duck typing) |
+| Runtime Check | Yes | No |
+| Inheritance | Required | Optional |
+| Use Case | Framework contracts (this project) | Flexible type hints |
 
 ### Dependency Injection
 
