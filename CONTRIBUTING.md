@@ -383,27 +383,53 @@ uv run ruff format .
 uv run mypy src/
 ```
 
-#### pyproject.toml Roles
+Detailed, component-specific roles for `pyproject.toml`
 
-**Root `pyproject.toml`**
+We have a single root `pyproject.toml` plus five component `pyproject.toml` files (one per package under `src/`). Below is what each file specifically contains and when to edit it.
 
-- Serves as the global configuration for the entire repository.
-- Specifies the **build system** used by all components.
-- Defines **global tool configurations** (e.g., `black`, `ruff`, `mypy`) to ensure consistency across all packages.
-- Can manage **shared dependencies** if the repository uses a workspace or monorepo setup.
+- Root `pyproject.toml` (repository root):
+    - Lists the workspace members (`[tool.uv.workspace].members`) so `uv` knows which packages belong to this workspace.
+    - Declares shared dependencies and common developer tooling (examples: `fastapi` listed at the root, `ruff`, `mypy`, `pytest`, coverage configuration, and `dev` extras). This is the primary source for workspace-wide policy and shared version constraints and is what `uv sync --all-packages` and `uv lock` use to produce `uv.lock`.
+    - Use the root file when you need to change behavior that should apply to all packages (shared linting rules, CI thresholds, common pinned versions, or adding a runtime dependency used across multiple packages).
 
-**Component-level `pyproject.toml`**
+- `src/mail_client_api/pyproject.toml`:
+    - Purpose: the lightweight, dependency-free interface package that defines ABCs and public API types.
+    - What it contains: package metadata, no runtime dependencies (empty `dependencies`), build system (`hatchling`), and a `tool.ruff` section that extends the root config. It intentionally keeps imports minimal so the API stays stable and easy to import in other packages.
+    - Edit this file to change the package name/version, add package-specific metadata, or add a strictly interface-only dependency (rare). Do NOT add implementation dependencies here.
 
-- Defines **package-specific metadata** (name, version, description, authors) for each component.
-- Manages **component-specific dependencies** required only by that subpackage.
-- Can override or extend **tool configurations** for the specific component.
-- Needed if the component is independently buildable or installable.
+- `src/gmail_client_impl/pyproject.toml`:
+    - Purpose: the concrete Gmail implementation that depends on Google auth libraries and the `mail-client-api` interface.
+    - What it contains: runtime dependencies such as `google-api-python-client`, `google-auth`, `google-auth-oauthlib`, `dotenv`, and a dependency on the workspace `mail-client-api`. It also defines `optional-dependencies` for testing and a `tool.pytest.ini_options` override for local test discovery. It declares `[tool.uv.sources]` to reference `mail-client-api` from the workspace.
+    - Edit this file when you need to add or update Gmail-specific third-party libraries, package-level test extras, or per-package pytest/coverage settings. Do not add cross-cutting tooling (like ruff rules) here unless you need to relax or override the root tool config for this package.
 
-**Interaction**
+- `src/mail_client_service_adapter/pyproject.toml`:
+    - Purpose: adapts the generated HTTP client into the `mail_client_api` abstractions.
+    - What it contains: adapter-specific dependencies (`httpx`, `mail-client-api`, `mail-client-service-client`), test extras (e.g., `respx`) and workspace source references under `[tool.uv.sources]` for the API and client packages.
+    - Edit this file to add HTTP client tooling or mocking libraries used only by the adapter, or to change package metadata. Keep adapter-only runtime deps here.
 
-- Root `pyproject.toml` provides global defaults.
-- Component-level `pyproject.toml` overrides or extends root settings as needed.
-- Dependency installation, tool execution, and builds consult both root and component configurations depending on context.
+- `src/services/mail_client_service/pyproject.toml`:
+    - Purpose: the FastAPI service package that exposes the mail client via HTTP.
+    - What it contains: `fastapi`, `uvicorn`, and workspace dependencies like `gmail-client-impl` and `mail-client-api` in `dependencies`. It also customizes some tooling (coverage thresholds, ruff overrides) appropriate for a small service wrapper.
+    - Edit this file to add server-only dependencies (middleware, auth libraries) or change service-specific test/coverage settings. Because it depends on implementation packages, it lists those workspace packages in `[tool.uv.sources]`.
+
+- `src/clients/pyproject.toml` (generated client package):
+    - Purpose: the auto-generated HTTP client library used by the adapter/service.
+    - What it contains: client-specific runtime deps like `httpx`, `attrs`, and `python-dateutil`, plus build-system metadata.
+    - Edit this file when the generated client needs new runtime libraries or when updating package metadata prior to publishing the client.
+
+Practical rules of thumb
+
+- Add or pin a dependency at the root when it is shared across multiple components or when you want a single canonical version in `uv.lock`.
+- Add package-specific libraries to that component's `pyproject.toml` (implementation, adapter, service, or generated client only). This keeps minimal surface for the API package and avoids pulling heavy libraries into packages that don't need them.
+- Use `[tool.uv.sources]` in a component when it should depend on another workspace package (this is already present in the component files). This lets `uv` resolve workspace packages without publishing them to PyPI.
+- Update tooling (ruff/mypy/pytest) in the root for global rules; only change per-component tool settings when the package has good reasons (different coverage threshold, test layout, or linter exceptions).
+
+Example workflow:
+
+1. Add a cross-cutting library used by multiple components (e.g., a logging helper): add it to the root `pyproject.toml` and run `uv sync --all-packages --extra dev`.
+2. Add an HTTP mocking tool used only by the adapter: cd into `src/mail_client_service_adapter` and add the dependency in that package's `pyproject.toml`, then run `uv sync` from the repository root or `uv sync` inside the package if you prefer local workflows.
+
+Together: run `uv sync --all-packages` from the root to install versions from the root manifest, or work inside a component directory to add/package a single component using its local `pyproject.toml`.
 
 
 ### Static Analysis and Code Formatting
