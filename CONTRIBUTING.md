@@ -383,6 +383,29 @@ uv run ruff format .
 uv run mypy src/
 ```
 
+#### pyproject.toml Roles
+
+**Root `pyproject.toml`**
+
+- Serves as the global configuration for the entire repository.
+- Specifies the **build system** used by all components.
+- Defines **global tool configurations** (e.g., `black`, `ruff`, `mypy`) to ensure consistency across all packages.
+- Can manage **shared dependencies** if the repository uses a workspace or monorepo setup.
+
+**Component-level `pyproject.toml`**
+
+- Defines **package-specific metadata** (name, version, description, authors) for each component.
+- Manages **component-specific dependencies** required only by that subpackage.
+- Can override or extend **tool configurations** for the specific component.
+- Needed if the component is independently buildable or installable.
+
+**Interaction**
+
+- Root `pyproject.toml` provides global defaults.
+- Component-level `pyproject.toml` overrides or extends root settings as needed.
+- Dependency installation, tool execution, and builds consult both root and component configurations depending on context.
+
+
 ### Static Analysis and Code Formatting
 
 **Tools we use:**
