@@ -163,6 +163,17 @@ uv run python main.py
     uv run pytest --cov=src --cov-report=term-missing
     ```
 
+- **(Optional) Pre-commit Checks**
+    
+    To automatically running ruff linting/format, mypy, and unit tests before committing.
+    ```bash
+    uv tool install pre-commit --with pre-commit-uv
+    uv run pre-commit install
+  
+    # Run against all files (optional)
+    uv run pre-commit run --all-files
+    ```
+
 ### Viewing Documentation
 
 This project uses MkDocs for documentation.

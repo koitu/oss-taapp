@@ -21,6 +21,8 @@ dev = [
     "pytest-cov>=6.2.1",
     "ruff>=0.12.7",
     "types-requests>=2.32.4.20250611",
+    "pre-commit>=4.3.0",
+    "pre-commit-uv>=4.2.0",
 ]
 
 [tool.uv.workspace]
