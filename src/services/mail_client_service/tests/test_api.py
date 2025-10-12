@@ -124,8 +124,7 @@ def test_get_message_not_found(client: TestClient) -> None:
 def test_mark_as_read_success(client: TestClient) -> None:
     """Test marking a message as read succeeds."""
     response = client.post("/messages/1/mark-as-read")
-    assert response.status_code == 200
-    assert response.json()["status"] == "success"
+    assert response.status_code == 204
 
 
 @pytest.mark.unit
@@ -139,8 +138,7 @@ def test_mark_as_read_not_found(client: TestClient) -> None:
 def test_delete_message_success(client: TestClient) -> None:
     """Test deleting a message by ID succeeds."""
     response = client.delete("/messages/1")
-    assert response.status_code == 200
-    assert response.json()["status"] == "success"
+    assert response.status_code == 204
 
 
 @pytest.mark.unit
