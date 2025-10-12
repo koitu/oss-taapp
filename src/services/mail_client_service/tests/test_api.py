@@ -72,6 +72,7 @@ class FakeClient:
 @pytest.fixture
 def client() -> Generator[TestClient, None, None]:
     """Fixture that provides a test client with a fake mail client override."""
+
     def override_get_mail_client() -> FakeClient:
         return FakeClient()
 

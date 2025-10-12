@@ -19,6 +19,7 @@ pytestmark = pytest.mark.e2e
 
 logger = logging.getLogger(__name__)
 
+
 # Unsure which one should be used
 # @pytest.mark.circleci
 @pytest.mark.local_credentials

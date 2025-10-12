@@ -60,7 +60,6 @@ def test_get_messages_server_error(monkeypatch: pytest.MonkeyPatch) -> None:
             msg = "boom"
             raise RuntimeError(msg)
 
-
     # Override dependency by setting attribute on the FastAPI app
     api.app.dependency_overrides[api.get_mail_client] = lambda: Faulty()
     client = TestClient(api.app)

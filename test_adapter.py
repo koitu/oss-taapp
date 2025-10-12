@@ -27,13 +27,7 @@ def main() -> None:
     logger.info(f"✓ Retrieved {len(messages)} messages\n")
 
     for i, msg in enumerate(messages, 1):
-        logger.info(
-            f"Message {i}:\n"
-            f"  ID: {msg.id}\n"
-            f"  Subject: {msg.subject}\n"
-            f"  From: {msg.from_}\n"
-            f"  Date: {msg.date}\n"
-        )
+        logger.info(f"Message {i}:\n  ID: {msg.id}\n  Subject: {msg.subject}\n  From: {msg.from_}\n  Date: {msg.date}\n")
 
     if not messages:
         logger.warning("No messages found. Test complete.")

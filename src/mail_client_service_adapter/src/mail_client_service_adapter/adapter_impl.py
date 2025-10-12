@@ -24,6 +24,7 @@ from mail_client_service_client.api.default import (
 )
 from mail_client_service_client.models.message_detail import MessageDetail
 from mail_client_service_client.models.messages_response import MessagesResponse
+from mail_client_service_client.models.operation_response import OperationResponse
 
 if TYPE_CHECKING:
     # Standard library
@@ -181,9 +182,9 @@ class ServiceAdapterClient(mail_client_api.Client):
         )
 
         return (
-                response is not None
-                and isinstance(response, OperationResponse)
-                and response.status == "success"
+            response is not None
+            and isinstance(response, OperationResponse)
+            and response.status == "success"
         )
 
     def get_messages(self, max_results: int = 10) -> Iterator[Message]:
@@ -248,6 +249,7 @@ def register(service_url: str = "http://localhost:8000") -> None:
         service_url: Base URL of the running mail service
 
     """
+
     # Provide a factory function matching the expected signature
     def _get_client_factory(*, interactive: bool = False) -> mail_client_api.Client:
         # interactive argument is accepted for API compatibility but not used by this adapter

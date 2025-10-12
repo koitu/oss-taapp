@@ -220,7 +220,7 @@ def get_message(
 def mark_as_read(
     message_id: str,
     client: Annotated[mail_client_api.Client, Depends(get_mail_client)] = None,  # type: ignore[assignment]
-) -> OperationResponse:
+) -> None:
     """Mark an email as read.
 
     Args:
@@ -238,7 +238,7 @@ def mark_as_read(
         success = client.mark_as_read(message_id)
         if success:
             logger.info("Marked message as read: %s", message_id)
-            return None
+            return
 
     except Exception as e:
         logger.exception("Error marking message as read: %s", message_id)
@@ -268,7 +268,7 @@ def mark_as_read(
 def delete_message(
     message_id: str,
     client: Annotated[mail_client_api.Client, Depends(get_mail_client)] = None,  # type: ignore[assignment]
-) -> OperationResponse:
+) -> None:
     """Delete an email permanently.
 
     Args:
@@ -289,7 +289,7 @@ def delete_message(
         success = client.delete_message(message_id)
         if success:
             logger.info("Deleted message: %s", message_id)
-            return None
+            return
 
     except Exception as e:
         logger.exception("Error deleting message: %s", message_id)

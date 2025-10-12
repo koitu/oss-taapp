@@ -56,15 +56,14 @@ def _make_message(id_: str, subject: str, from_: str, date: str, body: str | Non
 
 def _make_forward(test_client: TestClient) -> Callable[[httpx.Request], httpx.Response]:
     """Return a sync forward function that adapts httpx.Request -> httpx.Response via TestClient."""
+
     def _forward(request: httpx.Request) -> httpx.Response:
         url = str(request.url)
-        resp = test_client.request(
-            request.method, url, headers=dict(request.headers), content=request.content
-        )
-        return httpx.Response(
-            status_code=resp.status_code, headers=resp.headers, content=resp.content, request=request
-        )
+        resp = test_client.request(request.method, url, headers=dict(request.headers), content=request.content)
+        return httpx.Response(status_code=resp.status_code, headers=resp.headers, content=resp.content, request=request)
+
     return _forward
+
 
 @pytest.mark.circleci
 def test_get_messages_via_adapter(test_client: TestClient, mock_gmail_client: MagicMock) -> None:
@@ -89,6 +88,7 @@ def test_get_messages_via_adapter(test_client: TestClient, mock_gmail_client: Ma
     assert msgs[0].subject == "Hello"
     mock_gmail_client.get_messages.assert_called_once_with(max_results=5)
 
+
 @pytest.mark.circleci
 def test_get_message_via_adapter(test_client: TestClient, mock_gmail_client: MagicMock) -> None:
     """Adapter.get_message should return the message provided by the mocked gmail client via service."""
@@ -105,6 +105,7 @@ def test_get_message_via_adapter(test_client: TestClient, mock_gmail_client: Mag
     assert msg.id == "m2"
     assert msg.body == "body text"
     mock_gmail_client.get_message.assert_called_once_with("m2")
+
 
 @pytest.mark.circleci
 def test_mark_as_read_and_delete_via_adapter(test_client: TestClient, mock_gmail_client: MagicMock) -> None:
