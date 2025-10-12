@@ -208,9 +208,9 @@ def get_message(
 
 @app.post(
     "/messages/{message_id}/mark-as-read",
-    response_model=OperationResponse,
+    status_code=status.HTTP_204_NO_CONTENT,
     responses={
-        200: {"description": "Successfully marked as read"},
+        204: {"description": "Successfully marked as read"},
         404: {"description": "Message not found", "model": ErrorResponse},
         500: {"description": "Internal server error", "model": ErrorResponse},
     },
@@ -238,19 +238,7 @@ def mark_as_read(
         success = client.mark_as_read(message_id)
         if success:
             logger.info("Marked message as read: %s", message_id)
-            return OperationResponse(
-                status="success",
-                message=f"Message {message_id} marked as read",
-            )
-
-        logger.warning("Failed to mark message as read: %s", message_id)
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Message not found or operation failed: {message_id}",
-        )
-
-    except HTTPException:
-        raise
+            return None
 
     except Exception as e:
         logger.exception("Error marking message as read: %s", message_id)
@@ -259,12 +247,18 @@ def mark_as_read(
             detail=f"Failed to mark message as read: {e!s}",
         ) from e
 
+    logger.warning("Failed to mark message as read: %s", message_id)
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Message not found or operation failed: {message_id}",
+    )
+
 
 @app.delete(
     "/messages/{message_id}",
-    response_model=OperationResponse,
+    status_code=status.HTTP_204_NO_CONTENT,
     responses={
-        200: {"description": "Successfully deleted message"},
+        204: {"description": "Successfully deleted message"},
         404: {"description": "Message not found", "model": ErrorResponse},
         500: {"description": "Internal server error", "model": ErrorResponse},
     },
@@ -295,19 +289,7 @@ def delete_message(
         success = client.delete_message(message_id)
         if success:
             logger.info("Deleted message: %s", message_id)
-            return OperationResponse(
-                status="success",
-                message=f"Message {message_id} deleted successfully",
-            )
-
-        logger.warning("Failed to delete message: %s", message_id)
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Message not found or operation failed: {message_id}",
-        )
-
-    except HTTPException:
-        raise
+            return None
 
     except Exception as e:
         logger.exception("Error deleting message: %s", message_id)
@@ -315,6 +297,12 @@ def delete_message(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete message: {e!s}",
         ) from e
+
+    logger.warning("Failed to delete message: %s", message_id)
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Message not found or operation failed: {message_id}",
+    )
 
 
 @app.get(

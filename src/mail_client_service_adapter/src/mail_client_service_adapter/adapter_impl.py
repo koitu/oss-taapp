@@ -157,7 +157,11 @@ class ServiceAdapterClient(mail_client_api.Client):
             message_id=message_id,
         )
 
-        return response is not None and hasattr(response, "status") and response.status == "success"
+        return (
+            response is not None
+            and isinstance(response, OperationResponse)
+            and response.status == "success"
+        )
 
     def mark_as_read(self, message_id: str) -> bool:
         """Mark a message as read via the service.
@@ -176,7 +180,11 @@ class ServiceAdapterClient(mail_client_api.Client):
             message_id=message_id,
         )
 
-        return response is not None and hasattr(response, "status") and response.status == "success"
+        return (
+                response is not None
+                and isinstance(response, OperationResponse)
+                and response.status == "success"
+        )
 
     def get_messages(self, max_results: int = 10) -> Iterator[Message]:
         """Retrieve messages from the service.
@@ -197,8 +205,13 @@ class ServiceAdapterClient(mail_client_api.Client):
             )
         )
 
-        # Check if response is valid and contains messages
-        if not isinstance(response, MessagesResponse) or response.messages is None:
+        # Check if response is valid
+        if not isinstance(response, MessagesResponse):
+            logger.warning("Invalid response from the service")
+            return
+
+        # Check if message contains messages
+        if response.messages is None:
             logger.warning("No messages returned from service")
             return
 
