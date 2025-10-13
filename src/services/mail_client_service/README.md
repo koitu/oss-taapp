@@ -32,12 +32,12 @@ Below are the primary HTTP endpoints. These are documented in the running app's 
 
 - POST /messages/{message_id}/mark-as-read
 	- Description: Marks the message as read.
-	- Response: 204 No Content on success.
+    - Response: 200 OK with JSON object containing a message acknowledging success.
 	- Errors: 404 Not Found if message_id does not exist.
 
 - DELETE /messages/{message_id}
 	- Description: Deletes the message referenced by message_id.
-	- Response: 204 No Content on success.
+    - Response: 200 OK with JSON object containing a message acknowledging success.
 	- Errors: 404 Not Found if message_id does not exist.
 
 - GET /health

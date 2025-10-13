@@ -208,9 +208,9 @@ def get_message(
 
 @app.post(
     "/messages/{message_id}/mark-as-read",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=OperationResponse,
     responses={
-        204: {"description": "Successfully marked as read"},
+        200: {"description": "Successfully marked as read"},
         404: {"description": "Message not found", "model": ErrorResponse},
         500: {"description": "Internal server error", "model": ErrorResponse},
     },
@@ -220,7 +220,7 @@ def get_message(
 def mark_as_read(
     message_id: str,
     client: Annotated[mail_client_api.Client, Depends(get_mail_client)] = None,  # type: ignore[assignment]
-) -> None:
+) -> OperationResponse:
     """Mark an email as read.
 
     Args:
@@ -238,7 +238,10 @@ def mark_as_read(
         success = client.mark_as_read(message_id)
         if success:
             logger.info("Marked message as read: %s", message_id)
-            return
+            return OperationResponse(
+                status="success",
+                message=f"Message {message_id} marked as read",
+            )
 
     except Exception as e:
         logger.exception("Error marking message as read: %s", message_id)
@@ -256,9 +259,9 @@ def mark_as_read(
 
 @app.delete(
     "/messages/{message_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=OperationResponse,
     responses={
-        204: {"description": "Successfully deleted message"},
+        200: {"description": "Successfully deleted message"},
         404: {"description": "Message not found", "model": ErrorResponse},
         500: {"description": "Internal server error", "model": ErrorResponse},
     },
@@ -268,7 +271,7 @@ def mark_as_read(
 def delete_message(
     message_id: str,
     client: Annotated[mail_client_api.Client, Depends(get_mail_client)] = None,  # type: ignore[assignment]
-) -> None:
+) -> OperationResponse:
     """Delete an email permanently.
 
     Args:
@@ -289,7 +292,10 @@ def delete_message(
         success = client.delete_message(message_id)
         if success:
             logger.info("Deleted message: %s", message_id)
-            return
+            return OperationResponse(
+                status="success",
+                message=f"Message {message_id} deleted successfully",
+            )
 
     except Exception as e:
         logger.exception("Error deleting message: %s", message_id)
