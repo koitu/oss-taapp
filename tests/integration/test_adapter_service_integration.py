@@ -14,7 +14,7 @@ from unittest.mock import MagicMock
 import httpx
 import pytest
 from fastapi.testclient import TestClient
-from mail_client_service.api import app, get_mail_client
+from mail_client_service.service import app, get_mail_client
 
 import mail_client_api
 from mail_client_service_adapter import ServiceAdapterClient

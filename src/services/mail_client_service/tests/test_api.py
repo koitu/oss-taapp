@@ -9,7 +9,7 @@ from collections.abc import Generator
 import pytest
 from fastapi.testclient import TestClient
 
-from mail_client_service import api
+from mail_client_service import service
 
 
 # --- Fake client setup ---
@@ -76,10 +76,10 @@ def client() -> Generator[TestClient, None, None]:
     def override_get_mail_client() -> FakeClient:
         return FakeClient()
 
-    api.app.dependency_overrides[api.get_mail_client] = override_get_mail_client
-    test_client = TestClient(api.app)
+    service.app.dependency_overrides[service.get_mail_client] = override_get_mail_client
+    test_client = TestClient(service.app)
     yield test_client
-    api.app.dependency_overrides.clear()
+    service.app.dependency_overrides.clear()
 
 
 # --- Tests ---

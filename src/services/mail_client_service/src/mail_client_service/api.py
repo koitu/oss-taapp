@@ -7,51 +7,17 @@ It exposes endpoints for fetching, reading, marking as read, and deleting email 
 import logging
 from typing import Annotated
 
-import gmail_client_impl  # noqa: F401 - Register implementation
 import mail_client_api
-from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi import Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
+
+from .service import app, get_mail_client
+
+__all__ = ["app"]
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Create FastAPI application
-app = FastAPI(
-    title="Mail Client Service",
-    description="RESTful API for email operations using Gmail",
-    version="0.1.0",
-)
-
-# Global client instance (initialized lazily)
-_client_instance: mail_client_api.Client | None = None
-
-
-def get_mail_client() -> mail_client_api.Client:
-    """Get or create the mail client instance (dependency injection).
-
-    This function is used as a FastAPI dependency to provide the mail client
-    to route handlers. It initializes the client lazily on first request.
-
-    Returns:
-        mail_client_api.Client: The mail client instance.
-
-    Raises:
-        HTTPException: If client initialization fails.
-
-    """
-    global _client_instance  # noqa: PLW0603
-    if _client_instance is None:
-        try:
-            _client_instance = mail_client_api.get_client(interactive=False)
-            logger.info("Mail client initialized successfully")
-        except Exception as e:
-            logger.exception("Failed to initialize mail client")
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"Mail client initialization failed: {e!s}",
-            ) from e
-    return _client_instance
 
 
 # Response Models

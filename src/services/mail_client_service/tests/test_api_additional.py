@@ -1,4 +1,4 @@
-"""Additional unit tests for mail_client_service.api to hit error branches.
+"""Additional unit tests for mail_client_service to hit error branches.
 
 These tests exercise the internal `get_mail_client` initialization logic and the
 500-error exception handlers on the endpoints by overriding the FastAPI
@@ -11,7 +11,7 @@ import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from mail_client_service import api
+from mail_client_service import service
 
 
 def test_get_mail_client_success(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -24,12 +24,12 @@ def test_get_mail_client_success(monkeypatch: pytest.MonkeyPatch) -> None:
         return DummyClient()
 
     # Force re-initialization and patch the factory
-    monkeypatch.setattr(api, "_client_instance", None)
+    monkeypatch.setattr(service, "_client_instance", None)
     # Patch the mail_client_api attribute on the module to a simple object exposing get_client
     fake_module = type("M", (), {"get_client": staticmethod(fake_get_client)})()
-    monkeypatch.setattr(api, "mail_client_api", fake_module)
+    monkeypatch.setattr(service, "mail_client_api", fake_module)
 
-    client = api.get_mail_client()
+    client = service.get_mail_client()
     assert isinstance(client, DummyClient)
 
 
@@ -40,12 +40,12 @@ def test_get_mail_client_failure_raises_http_exception(monkeypatch: pytest.Monke
         msg = "nope"
         raise RuntimeError(msg)
 
-    monkeypatch.setattr(api, "_client_instance", None)
+    monkeypatch.setattr(service, "_client_instance", None)
     fake_module = type("M", (), {"get_client": staticmethod(broken_get_client)})()
-    monkeypatch.setattr(api, "mail_client_api", fake_module)
+    monkeypatch.setattr(service, "mail_client_api", fake_module)
 
     with pytest.raises(HTTPException) as exc:
-        api.get_mail_client()
+        service.get_mail_client()
 
     assert exc.value.status_code == 503
     assert "Mail client initialization failed" in exc.value.detail
@@ -61,8 +61,8 @@ def test_get_messages_server_error(monkeypatch: pytest.MonkeyPatch) -> None:
             raise RuntimeError(msg)
 
     # Override dependency by setting attribute on the FastAPI app
-    api.app.dependency_overrides[api.get_mail_client] = lambda: Faulty()
-    client = TestClient(api.app)
+    service.app.dependency_overrides[service.get_mail_client] = lambda: Faulty()
+    client = TestClient(service.app)
 
     resp = client.get("/messages")
     assert resp.status_code == 500
@@ -78,8 +78,8 @@ def test_get_message_server_error(monkeypatch: pytest.MonkeyPatch) -> None:
             msg = "boom"
             raise RuntimeError(msg)
 
-    api.app.dependency_overrides[api.get_mail_client] = lambda: Faulty()
-    client = TestClient(api.app)
+    service.app.dependency_overrides[service.get_mail_client] = lambda: Faulty()
+    client = TestClient(service.app)
 
     resp = client.get("/messages/1")
     assert resp.status_code == 500
@@ -95,8 +95,8 @@ def test_mark_as_read_server_error(monkeypatch: pytest.MonkeyPatch) -> None:
             msg = "boom"
             raise RuntimeError(msg)
 
-    api.app.dependency_overrides[api.get_mail_client] = lambda: Faulty()
-    client = TestClient(api.app)
+    service.app.dependency_overrides[service.get_mail_client] = lambda: Faulty()
+    client = TestClient(service.app)
 
     resp = client.post("/messages/1/mark-as-read")
     assert resp.status_code == 500
@@ -112,8 +112,8 @@ def test_delete_message_server_error(monkeypatch: pytest.MonkeyPatch) -> None:
             msg = "boom"
             raise RuntimeError(msg)
 
-    api.app.dependency_overrides[api.get_mail_client] = lambda: Faulty()
-    client = TestClient(api.app)
+    service.app.dependency_overrides[service.get_mail_client] = lambda: Faulty()
+    client = TestClient(service.app)
 
     resp = client.delete("/messages/1")
     assert resp.status_code == 500
