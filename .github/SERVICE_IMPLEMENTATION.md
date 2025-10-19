@@ -163,7 +163,7 @@ This means:
 **Unit tests** use a **fake client** to avoid requiring Gmail credentials:
 
 ```python
-class FakeClient:
+class FakeMailClient:
     """Mimics mail_client_api.Client interface"""
     def get_messages(self, max_results): ...
     def get_message(self, message_id): ...

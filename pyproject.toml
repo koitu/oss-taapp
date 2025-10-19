@@ -5,6 +5,7 @@ description = "Template repository for a mail client"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "mcp[cli]",
     "fastmcp>=2.12.4",
     "fastapi>=0.118.0",
     "fastapi[standard]",
@@ -19,6 +20,7 @@ dev = [
     "mypy>=1.17.0",
     "pymdown-extensions>=10.16.1",
     "pytest>=8.4.1",
+    "pytest-asyncio>=v1.2.0",
     "pytest-cov>=6.2.1",
     "ruff>=0.12.7",
     "types-requests>=2.32.4.20250611",

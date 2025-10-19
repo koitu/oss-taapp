@@ -53,8 +53,8 @@ def get_messages(max_results: int = 10) -> dict[str, Any]:
 
 
 @mcp.tool()
-def get_message_resource(message_id: str) -> dict[str, Any]:
-    """Get the full details of a specific email message as a resource.
+def get_message(message_id: str) -> dict[str, Any]:
+    """Get the full details of a specific email message.
 
     Args:
         message_id: The unique identifier of the message to retrieve.
@@ -69,11 +69,11 @@ def get_message_resource(message_id: str) -> dict[str, Any]:
         msg = mail_client.get_message(message_id)
 
     except ValueError:
-        logger.warning("Message not found via MCP resource: %s", message_id)
+        logger.warning("Message not found via MCP: %s", message_id)
         return {"error": f"Message not found: {message_id}", "id": message_id}
 
     except Exception as e:
-        logger.exception("Failed to retrieve message via MCP resource: %s", message_id)
+        logger.exception("Failed to retrieve message via MCP: %s", message_id)
         return {"error": f"Failed to retrieve message: {e!s}", "id": message_id}
 
     else:
