@@ -52,7 +52,7 @@ def get_messages(max_results: int = 10) -> dict[str, Any]:
         return {"error": f"Failed to retrieve messages: {e!s}", "count": 0, "messages": {}}
 
 
-@mcp.resource("message://{message_id}")
+@mcp.tool()
 def get_message_resource(message_id: str) -> dict[str, Any]:
     """Get the full details of a specific email message as a resource.
 

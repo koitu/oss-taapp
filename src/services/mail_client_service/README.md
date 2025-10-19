@@ -10,7 +10,7 @@ This service provides a thin network layer for the underlying mail client implem
 
 - What this service does
 	- Exposes mail client operations over HTTP (list messages, get message details, mark-as-read, delete, health check).
-	- Converts HTTP payloads to typed Python objects and vice-versa (FastAPI + Pydantic).
+	- Converts HTTP payloads to typed Python objects and vice versa (FastAPI + Pydantic).
 	- Performs authentication and authorization at the HTTP layer when configured by the deployment.
 
 - What this service does NOT do
@@ -142,6 +142,7 @@ When running the service, interactive documentation is available at:
 
 - If the service cannot contact an external mail provider, the health endpoint may report degraded status. Check environment variables and credentials used by the underlying implementation (for example, Gmail credentials).
 - For local development prefer using the provided fake client implementations in tests to avoid needing real credentials.
+- To access the (HTTP) MCP service simply point your client to https://127.0.0.1:8000/mcp/
 
 ---
 

@@ -12,6 +12,8 @@ import mail_client_api
 from fastapi import FastAPI, HTTPException, status
 from fastmcp import FastMCP
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Global client instance (initialized lazily)
@@ -60,7 +62,7 @@ async def app_lifespan() -> typing.AsyncIterator[None]:
 
 # Create MCP application
 mcp = FastMCP("Mail Client MCP Server")
-mcp_app = mcp.http_app(path="/mcp")
+mcp_app = mcp.http_app(path="/")
 
 
 @asynccontextmanager
@@ -77,4 +79,4 @@ app = FastAPI(
     version="0.1.0",
     lifespan=combined_lifespan,
 )
-app.mount("/mcp", mcp_app)
+app.mount("/mcp/", mcp_app)
