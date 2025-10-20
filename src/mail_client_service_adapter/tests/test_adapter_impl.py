@@ -22,9 +22,8 @@ def test_get_message_success(mock_get: MagicMock, adapter: ServiceAdapterClient)
     mock_get.sync.return_value = MessageDetail(
         id="123",
         subject="Test subject",
-        sender="user@example.com",
-        body="Hello world",
-        read=False,
+        from_="user@example.com",
+        body="Hello world"
     )
 
     message = adapter.get_message("123")
@@ -39,7 +38,7 @@ def test_get_message_invalid_response_raises(mock_get: MagicMock, adapter: Servi
     """It should raise ValueError when the response is not a valid MessageDetail."""
     mock_get.sync.return_value = None
 
-    with pytest.raises(ValueError, match="Invalid response from service"):
+    with pytest.raises(ValueError, match="Failed to retrieve message"):
         adapter.get_message("doesnotexist")
 
 
@@ -86,16 +85,24 @@ def test_mark_as_read_failure(mock_post: MagicMock, adapter: ServiceAdapterClien
 @patch("mail_client_service_adapter.adapter_impl.get_messages_messages_get")
 def test_get_messages_success(mock_get: MagicMock, adapter: ServiceAdapterClient) -> None:
     """It should yield Message objects from a valid MessagesResponse."""
-    fake_message = MagicMock(id="1", subject="Hello", sender="a@example.com", body="Body", read=False)
-    fake_response = MessagesResponse(messages=[fake_message], count=1)
+    
+    fake_message_data = MagicMock()
+    fake_message_data.additional_properties = {
+        "subject": "Hello",
+        "from": "a@example.com",
+        "date": "2025-10-19",
+    }
+
+    fake_messages = MagicMock()
+    fake_messages.additional_properties = {"1": fake_message_data}
+
+    fake_response = MessagesResponse(messages=fake_messages, count=1)
     mock_get.sync.return_value = fake_response
 
     messages = list(adapter.get_messages())
-
     assert len(messages) == 1
-    assert isinstance(messages[0], ServiceMessage)
     assert messages[0].subject == "Hello"
-
+    assert messages[0].from_ == "a@example.com"
 
 @patch("mail_client_service_adapter.adapter_impl.get_messages_messages_get")
 def test_get_messages_invalid_response(mock_get: MagicMock, adapter: ServiceAdapterClient) -> None:
