@@ -85,7 +85,6 @@ def test_mark_as_read_failure(mock_post: MagicMock, adapter: ServiceAdapterClien
 @patch("mail_client_service_adapter.adapter_impl.get_messages_messages_get")
 def test_get_messages_success(mock_get: MagicMock, adapter: ServiceAdapterClient) -> None:
     """It should yield Message objects from a valid MessagesResponse."""
-    
     fake_message_data = MagicMock()
     fake_message_data.additional_properties = {
         "subject": "Hello",
