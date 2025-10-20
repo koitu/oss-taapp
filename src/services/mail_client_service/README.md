@@ -9,42 +9,48 @@ This service provides a thin network layer for the underlying mail client implem
 ## Scope
 
 - What this service does
-	- Exposes mail client operations over HTTP (list messages, get message details, mark-as-read, delete, health check).
-	- Converts HTTP payloads to typed Python objects and vice versa (FastAPI + Pydantic).
-	- Performs authentication and authorization at the HTTP layer when configured by the deployment.
+
+  - Exposes mail client operations over HTTP (list messages, get message details, mark-as-read, delete, health check).
+  - Converts HTTP payloads to typed Python objects and vice versa (FastAPI + Pydantic).
+  - Performs authentication and authorization at the HTTP layer when configured by the deployment.
 
 - What this service does NOT do
-	- It is not a full mail server or message store. It delegates storage and remote API calls to the mail client implementations (for example, `gmail_client_impl`).
-	- It does not implement long-running background workers—these belong to other components.
+  - It is not a full mail server or message store. It delegates storage and remote API calls to the mail client implementations (for example, `gmail_client_impl`).
+  - It does not implement long-running background workers—these belong to other components.
 
 ## Exposed interfaces (HTTP)
 
 Below are the primary HTTP endpoints. These are documented in the running app's OpenAPI schema (`/docs`) but are reproduced here for convenience.
 
 - GET /messages
-	- Description: Returns a list of message summaries (id, subject, sender, snippet, is_read, received_at).
-	- Response: 200 OK with JSON array of message summary objects.
+
+  - Description: Returns a list of message summaries (id, subject, sender, snippet, is_read, received_at).
+  - Response: 200 OK with JSON array of message summary objects.
 
 - GET /messages/{message_id}
-	- Description: Returns full message details for the given message_id.
-	- Response: 200 OK with JSON object containing full message fields (headers, body, attachments metadata).
-	- Errors: 404 Not Found if message_id does not exist.
+
+  - Description: Returns full message details for the given message_id.
+  - Response: 200 OK with JSON object containing full message fields (headers, body, attachments metadata).
+  - Errors: 404 Not Found if message_id does not exist.
 
 - POST /messages/{message_id}/mark-as-read
-	- Description: Marks the message as read.
+
+  - Description: Marks the message as read.
     - Response: 200 OK with JSON object containing a message acknowledging success.
-	- Errors: 404 Not Found if message_id does not exist.
+  - Errors: 404 Not Found if message_id does not exist.
 
 - DELETE /messages/{message_id}
-	- Description: Deletes the message referenced by message_id.
+
+  - Description: Deletes the message referenced by message_id.
     - Response: 200 OK with JSON object containing a message acknowledging success.
-	- Errors: 404 Not Found if message_id does not exist.
+  - Errors: 404 Not Found if message_id does not exist.
 
 - GET /health
-	- Description: Basic health check for the service (returns service-ready status and optionally downstream status).
-	- Response: 200 OK with JSON {"status": "ok"} when healthy.
+  - Description: Basic health check for the service (returns service-ready status and optionally downstream status).
+  - Response: 200 OK with JSON {"status": "ok"} when healthy.
 
 Notes
+
 - The exact JSON schema for request/response bodies is provided by the running app's OpenAPI schema. Use `/docs` (Swagger UI) or `/openapi.json` to inspect shapes programmatically.
 
 ## Usage pattern (examples using absolute imports)
@@ -104,15 +110,18 @@ from mail_client_service.api import app
 This service relies on the following internal components (packages under `src/`) and may depend on external packages declared in its `pyproject.toml`:
 
 - mail_client_api
-	- The API/abstraction used by the service to talk to mail client implementations (defines the operations and DTOs).
+
+  - The API/abstraction used by the service to talk to mail client implementations (defines the operations and DTOs).
 
 - gmail_client_impl (optional)
-	- A concrete implementation of the mail client API that talks to Gmail. The service will use whatever implementation is wired into its dependency injection.
+
+  - A concrete implementation of the mail client API that talks to Gmail. The service will use whatever implementation is wired into its dependency injection.
 
 - mail_client_service_adapter (optional)
-	- Adapter utilities that convert between service-level models and client-level models when needed.
+  - Adapter utilities that convert between service-level models and client-level models when needed.
 
 External runtime dependencies (declared in this package's pyproject.toml)
+
 - fastapi
 - uvicorn
 - pydantic
@@ -143,7 +152,3 @@ When running the service, interactive documentation is available at:
 - If the service cannot contact an external mail provider, the health endpoint may report degraded status. Check environment variables and credentials used by the underlying implementation (for example, Gmail credentials).
 - For local development prefer using the provided fake client implementations in tests to avoid needing real credentials.
 - To access the (HTTP) MCP service simply point your client to https://127.0.0.1:8000/mcp/
-
----
-
-If you'd like, I can also add explicit example Pydantic models or a short section showing how to wire a fake client into the FastAPI dependency overrides for tests.

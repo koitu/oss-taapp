@@ -34,7 +34,7 @@ See the package `__init__.py` and `client.py` for full docstrings and available 
 
 All examples use absolute imports.
 
-1) Simple, synchronous request (blocking)
+1. Simple, synchronous request (blocking)
 
 ```python
 from mail_client_service_client import Client
@@ -47,7 +47,7 @@ with client as client:
     # `messages` will be the parsed model (or None if the server returned no documented body)
 ```
 
-2) Authenticated client
+2. Authenticated client
 
 ```python
 from mail_client_service_client import AuthenticatedClient
@@ -59,7 +59,7 @@ with client as client:
     message = get_message_messages_message_id_get.sync(client=client, message_id="abc123")
 ```
 
-3) Async usage
+3. Async usage
 
 ```python
 from mail_client_service_client import Client
@@ -73,7 +73,7 @@ async def main():
 asyncio.run(main())
 ```
 
-4) Using the detailed variants to access status and headers
+4. Using the detailed variants to access status and headers
 
 ```python
 from mail_client_service_client import Client
@@ -88,7 +88,7 @@ with client as client:
     parsed = detailed.parsed  # typed model or None
 ```
 
-5) Customizing the underlying httpx client
+5. Customizing the underlying httpx client
 
 ```python
 import httpx
@@ -107,6 +107,7 @@ client.set_httpx_client(httpx.Client(base_url="https://api.example.com", proxies
 ## Component dependencies
 
 - Runtime:
+
   - Python 3.8+ (the source may use newer typing features; check `pyproject.toml` for the exact requirement)
   - `httpx` — HTTP client used for sync/async requests
   - `attrs` — lightweight data classes used for `Client`/`AuthenticatedClient`
@@ -131,5 +132,3 @@ For local development you can install the built wheel or add the path with Poetr
 - The generated API modules are small and deterministic. Look under `mail_client_service_client.api` to find functions matching the server paths you need to call.
 - Prefer the `*_detailed` functions when you need raw status/headers; prefer the plain `sync`/`asyncio` helpers if you only need parsed models.
 - Keep `verify_ssl=True` in production; only disable for local testing with trusted test servers.
-
-If you'd like, I can also add a short example script under `examples/` showing a real end-to-end request using a local mock server.
