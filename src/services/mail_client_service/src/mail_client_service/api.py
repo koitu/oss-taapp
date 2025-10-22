@@ -7,9 +7,10 @@ It exposes endpoints for fetching, reading, marking as read, and deleting email 
 import logging
 from typing import Annotated
 
-import mail_client_api
 from fastapi import Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
+
+import mail_client_api
 
 from .service import app, get_mail_client
 

@@ -10,7 +10,6 @@ from typing import Never
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
-
 from mail_client_service import service
 
 

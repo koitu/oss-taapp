@@ -10,9 +10,8 @@ from typing import Any
 
 import pytest
 from fastmcp import Client
-from mcp.types import TextContent
-
 from mail_client_service import service
+from mcp.types import TextContent
 
 from .test_fake_mail import FakeMailClient
 
@@ -21,10 +20,10 @@ from .test_fake_mail import FakeMailClient
 def mcp_client() -> Generator[Client[Any], None, None]:
     """Fixture that provides an MCP client with a fake mail client override."""
     # Store original function
-    original_client = service._client_instance  # noqa: SLF001
+    original_client = service._client_instance
 
     # Replace with fake client
-    service._client_instance = FakeMailClient()  # type: ignore[assignment]  # noqa: SLF001
+    service._client_instance = FakeMailClient()  # type: ignore[assignment]
 
     # Create MCP client for in-memory testing
     client = Client(service.mcp)
@@ -32,7 +31,7 @@ def mcp_client() -> Generator[Client[Any], None, None]:
     yield client
 
     # Restore original
-    service._client_instance = original_client  # noqa: SLF001
+    service._client_instance = original_client
 
 
 # Mark all tests as async

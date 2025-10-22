@@ -8,7 +8,6 @@ from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
-
 from mail_client_service import service
 
 from .test_fake_mail import FakeMailClient
