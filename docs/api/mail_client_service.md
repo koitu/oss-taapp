@@ -6,3 +6,8 @@
     options:
       show_root_heading: true
       show_source: false
+
+::: mail_client_service.mcp
+    options:
+      show_root_heading: true
+      show_source: false
