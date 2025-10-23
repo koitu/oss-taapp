@@ -1,6 +1,6 @@
 # Python Application Template: A Component-Based Mail Client
 
-[![CircleCI](https://circleci.com/gh/ivanearisty/oss-taapp.svg?style=shield)](https://circleci.com/gh/ivanearisty/oss-taapp)
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/koitu/oss-taapp/tree/root.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/koitu/oss-taapp/tree/root)
 [![Coverage](https://img.shields.io/badge/coverage-85%2B%25-brightgreen)](https://circleci.com/gh/ivanearisty/oss-taapp)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://python.org)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
@@ -19,27 +19,37 @@ This project is built on the principle of "programming integrated over time." Th
 
 ## Core Components
 
-The project is a `uv` workspace containing four primary packages:
+The project is a `uv` workspace containing several related packages under `src/`. Each package has a focused responsibility and can be used independently:
 
-3.  **`mail_client_api`**: Defines the abstract `Client` base class (ABC). This is the contract for what actions a mail client can perform (e.g., `get_messages`).
-4.  **`gmail_client_impl`**: Provides the `GmailClient` class, a concrete implementation that uses the Google API to perform the actions defined in the `Client` abstraction.
+- **`mail_client_api`**: Defines the abstract `Client` base class (ABC) and message abstractions. This package is the stable contract that implementations must satisfy.
+- **`gmail_client_impl`**: A concrete implementation that implements the `mail_client_api` contract using the Gmail API (`GmailClient` and message implementations).
+- **`mail_client_service_adapter`**: An adapter layer that translates between the mail client implementation and the service API (handler code used by the service).
+- **`mail_client_service`** (located under `src/services/mail_client_service`): A small HTTP service that exposes the mail client functionality, orchestration and end-to-end glue.
+- **`clients`** (under `src/clients`, e.g. `mail_client_service_client`): Generated OpenAPI client(s) used to call the service from other components or tests.
 
 ## Project Structure
 
 ```
 ta-assignment/
-├── src/                          # Source packages (uv workspace members)
-│   ├── mail_client_api/          # Abstract mail client base class (ABC)  
-│   └── gmail_client_impl/        # Gmail-specific client implementation
+├── src/                          # Source packages (workspace members)
+│   ├── clients/                  # Generated API clients (e.g. mail_client_service_client)
+│   ├── gmail_client_impl/        # Gmail-specific implementation of the mail client
+│   ├── mail_client_api/          # Abstract mail client contract (Client, Message)
+│   └── mail_client_service_adapter/ # Adapter that exposes implementations as the service API
+│   └── services/
+│       └── mail_client_service/  # Small HTTP service exposing the mail client API
 ├── tests/                        # Integration and E2E tests
 │   ├── integration/              # Component integration tests
 │   └── e2e/                      # End-to-end application tests
 ├── docs/                         # Documentation source files
 ├── .circleci/                    # CircleCI configuration
-├── main.py                       # Main application entry point
-├── pyproject.toml               # Project configuration (dependencies, tools)
-├── uv.lock                      # Locked dependency versions
-└── credentials.json             # Google OAuth credentials (local only)
+├── Dockerfile                     # Dockerfile to containerize FastAPI service
+├── CONTRIBUTING.md                # Contributor guide
+├── DESIGN.md                      # Design document for new components
+├── main.py                        # Main application entry point / demo
+├── pyproject.toml                 # Project configuration (dependencies, tools)
+├── uv.lock                        # Locked dependency versions
+└── credentials.json               # Google OAuth credentials (local only)
 ```
 
 ## Project Setup
@@ -156,6 +166,17 @@ uv run python main.py
     uv run pytest --cov=src --cov-report=term-missing
     ```
 
+- **(Optional) Pre-commit Checks**
+    
+    To automatically running ruff linting/format, mypy, and unit tests before committing.
+    ```bash
+    uv tool install pre-commit --with pre-commit-uv
+    uv run pre-commit install
+  
+    # Run against all files (optional)
+    uv run pre-commit run --all-files
+    ```
+
 ### Viewing Documentation
 
 This project uses MkDocs for documentation.
@@ -213,9 +234,62 @@ See `docs/circleci-setup.md` for detailed CI/CD setup instructions.
 3. **Check code quality**: `uv run ruff check . && uv run ruff format --check .`
 4. **Fix formatting**: `uv run ruff format .`
 5. **View documentation**: `uv run mkdocs serve`
+6. **Run backend service**: `uv run python3 run_service.py`
+7. **Demo of the frontend client**: `uv run python3 test_adapter.py`
 
 ### Best Practices
 - Run unit tests (`uv run pytest src/`) during development for fast feedback
 - Use integration tests (`uv run pytest -m integration`) to verify component interactions
 - Run full test suite (`uv run pytest`) before pushing to ensure CI compatibility
 - The CircleCI pipeline provides automated validation on every push
+
+## Running with Docker
+
+The application can be containerized using Docker for easy deployment and distribution.
+
+### Building the Docker Image
+
+```bash
+docker build -t gmail-service .
+```
+
+This builds a Docker image named `gmail-service` using the provided Dockerfile. The build process:
+- Uses Python 3.11 slim base image
+- Installs `uv` for dependency management
+- Copies project files and installs dependencies
+- Exposes port 8000 for the FastAPI service
+
+### Running the Container
+
+**Basic run (FastAPI service):**
+```bash
+docker run -p 8000:8000 gmail-service
+```
+
+The service will be available at `http://localhost:8000`. You can access:
+- API documentation: `http://localhost:8000/docs`
+- Alternative docs: `http://localhost:8000/redoc`
+
+**Note:** If you visit `http://localhost:8000/` (root path), you'll see a 404 error. This is normal - the service has specific endpoints like `/messages`, `/health`, etc. Use `/docs` to see all available endpoints.
+
+**Running with Gmail credentials (environment variables):**
+```bash
+docker run -p 8000:8000 \
+  -e GMAIL_CLIENT_ID="your_client_id" \
+  -e GMAIL_CLIENT_SECRET="your_client_secret" \
+  -e GMAIL_REFRESH_TOKEN="your_refresh_token" \
+  gmail-service
+```
+
+**Running the main.py demo:**
+```bash
+docker run gmail-service uv run python main.py
+```
+
+**Running with credential files:**
+```bash
+docker run -p 8000:8000 \
+  -v $(pwd)/credentials.json:/app/credentials.json \
+  -v $(pwd)/token.json:/app/token.json \
+  gmail-service
+```

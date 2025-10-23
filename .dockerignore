@@ -1,0 +1,67 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+*.so
+*.egg-info/
+build/
+dist/
+wheels/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Tooling caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+.github/
+
+# CI/CD
+.circleci/
+.claude/
+
+# Documentation
+docs/
+site/
+*.md
+mkdocs.yml
+
+# Test files
+tests/
+test_*.py
+*_test.py
+
+# Secrets and credentials
+token.json
+credentials.json
+.env
+*.pem
+*.key
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.backup
+*.ci_backup
+*.bak
+
+# Logs
+*.log
