@@ -43,10 +43,13 @@ ta-assignment/
 │   └── e2e/                      # End-to-end application tests
 ├── docs/                         # Documentation source files
 ├── .circleci/                    # CircleCI configuration
-├── main.py                       # Main application entry point / demo
-├── pyproject.toml                # Project configuration (dependencies, tools)
-├── uv.lock                       # Locked dependency versions
-└── credentials.json              # Google OAuth credentials (local only)
+├── Dockerfile                     # Dockerfile to containerize FastAPI service
+├── CONTRIBUTING.md                # Contributor guide
+├── DESIGN.md                      # Design document for new components
+├── main.py                        # Main application entry point / demo
+├── pyproject.toml                 # Project configuration (dependencies, tools)
+├── uv.lock                        # Locked dependency versions
+└── credentials.json               # Google OAuth credentials (local only)
 ```
 
 ## Project Setup
