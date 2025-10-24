@@ -54,14 +54,21 @@ per-file-ignores = { "**/tests/*.py" = [
     "ARG001",  # Unused function argument (test fixtures)
     "PIE810",  # Multiple startswith calls (test readability)
     "PLC0415",  # Import not at top (intentional for registration tests)
+    "S105", "S106",  # Hardcoded password (false positive for test tokens)
+    "PLR2004",  # Magic values (test constants are self-documenting)
 ], "**/__init__.py" = [
     "ARG001",  # Unused args in factory functions (interface compatibility)
     "TD002", "TD003", "FIX002",  # TODO comments (acceptable for planned features)
+    "D104",  # Missing docstring in __init__ (some are intentionally minimal)
 ], "**/*_impl.py" = [
     "S105",  # Hardcoded password (false positive for URL constants)
     "EM101", "EM102", "TRY003",  # Exception messages (direct messages are clearer)
     "PLR2004",  # Magic values (HTTP status codes are self-documenting)
     "TRY300",  # Return in try block (intentional for success paths)
+], "**/database/*.py" = [
+    "PLR0913",  # Too many arguments (necessary for comprehensive credential storage)
+    "S107",  # Hardcoded password (false positive for token_type default)
+    "PLW0603",  # Global statement (singleton pattern for manager)
 ] }
 
 [tool.uv.sources]
