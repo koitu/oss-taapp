@@ -1,0 +1,366 @@
+"""Service Adapter Implementation for Discord.
+
+This module provides an adapter that implements the chat_client_api.Client interface
+by wrapping the auto-generated OpenAPI client for the discord_client_service.
+
+This demonstrates the Adapter Pattern: hiding network/HTTP complexity behind
+a familiar local interface.
+"""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+import chat_client_api
+from chat_client_api.message import Channel, ChatMessage
+from discord_client_service_client import Client as GeneratedClient
+from discord_client_service_client.api.default import (
+    delete_message_user_id_channels_channel_id_messages_message_id_delete,
+    get_channel_user_id_channels_channel_id_get,
+    get_channels_user_id_channels_get,
+    get_messages_user_id_channels_channel_id_messages_get,
+    send_message_user_id_channels_channel_id_messages_post,
+)
+from discord_client_service_client.models.channel_info import ChannelInfo
+from discord_client_service_client.models.message_detail import MessageDetail
+from discord_client_service_client.models.send_message_request import (
+    SendMessageRequest,
+)
+from discord_client_service_client.types import Unset
+
+if TYPE_CHECKING:
+    # Standard library
+    from collections.abc import Iterator
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ServiceMessage(ChatMessage):
+    """Simple ChatMessage implementation for service adapter responses."""
+
+    _id: str
+    _channel_id: str
+    _content: str
+    _author_id: str
+    _author_name: str
+    _timestamp: str
+    _edited_timestamp: str | None = None
+
+    @property
+    def id(self) -> str:
+        """Return the unique identifier of the message."""
+        return self._id
+
+    @property
+    def channel_id(self) -> str:
+        """Return the channel ID where the message was sent."""
+        return self._channel_id
+
+    @property
+    def content(self) -> str:
+        """Return the message content."""
+        return self._content
+
+    @property
+    def author_id(self) -> str:
+        """Return the author's user ID."""
+        return self._author_id
+
+    @property
+    def author_name(self) -> str:
+        """Return the author's display name."""
+        return self._author_name
+
+    @property
+    def timestamp(self) -> str:
+        """Return the timestamp when the message was sent."""
+        return self._timestamp
+
+    @property
+    def edited_timestamp(self) -> str | None:
+        """Return the timestamp when the message was edited, if applicable."""
+        return self._edited_timestamp
+
+
+@dataclass
+class ServiceChannel(Channel):
+    """Simple Channel implementation for service adapter responses."""
+
+    _id: str
+    _name: str
+    _channel_type: str
+
+    @property
+    def id(self) -> str:
+        """Return the unique identifier of the channel."""
+        return self._id
+
+    @property
+    def name(self) -> str:
+        """Return the channel name."""
+        return self._name
+
+    @property
+    def channel_type(self) -> str:
+        """Return the channel type."""
+        return self._channel_type
+
+
+class ServiceAdapterClient(chat_client_api.Client):
+    """Adapter that wraps the auto-generated Discord service client.
+
+    This class implements the chat_client_api.Client interface by delegating
+    to the auto-generated OpenAPI client. It translates between the HTTP/REST
+    world and the local interface expected by our application.
+
+    Attributes:
+        service_url: Base URL of the Discord service
+        user_id: The user ID for whom to make requests
+        _http_client: The auto-generated HTTP client
+
+    """
+
+    def __init__(
+        self, service_url: str = "http://localhost:8000", user_id: str | None = None
+    ) -> None:
+        """Initialize the service adapter client.
+
+        Args:
+            service_url: Base URL of the running Discord service
+            user_id: The user ID for making authenticated requests
+
+        """
+        self.service_url = service_url
+        self.user_id = user_id or "default_user"
+        self._http_client = GeneratedClient(base_url=service_url)
+        logger.info(
+            "Initialized ServiceAdapterClient for user %s at %s",
+            self.user_id,
+            service_url,
+        )
+
+    def get_message(self, channel_id: str, message_id: str) -> ChatMessage:
+        """Get a single message by ID from a channel.
+
+        Args:
+            channel_id: The Discord channel ID
+            message_id: The message ID to retrieve
+
+        Returns:
+            A ChatMessage object containing the message details
+
+        Raises:
+            ValueError: If the message cannot be retrieved
+
+        """
+        try:
+            response = get_messages_user_id_channels_channel_id_messages_get.sync(
+                client=self._http_client,
+                user_id=self.user_id,
+                channel_id=channel_id,
+                limit=100,
+            )
+            if response and hasattr(response, "messages") and response.messages:
+                for msg in response.messages:
+                    if msg.id == message_id:
+                        edited_ts = msg.edited_timestamp
+                        return ServiceMessage(
+                            _id=msg.id,
+                            _channel_id=msg.channel_id,
+                            _content=msg.content,
+                            _author_id=msg.author_id,
+                            _author_name=msg.author_name,
+                            _timestamp=msg.timestamp,
+                            _edited_timestamp=None
+                            if isinstance(edited_ts, Unset)
+                            else edited_ts,
+                        )
+            error_msg = f"Message {message_id} not found in channel {channel_id}"
+            raise ValueError(error_msg)
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.exception(
+                "Failed to get message %s from channel %s", message_id, channel_id
+            )
+            error_msg = f"Failed to get message: {e}"
+            raise ValueError(error_msg) from e
+
+    def get_messages(
+        self, channel_id: str, max_results: int = 10
+    ) -> Iterator[ChatMessage]:
+        """Get messages from a Discord channel.
+
+        Args:
+            channel_id: The Discord channel ID
+            max_results: Maximum number of messages to return
+
+        Yields:
+            ChatMessage objects
+
+        """
+        try:
+            response = get_messages_user_id_channels_channel_id_messages_get.sync(
+                client=self._http_client,
+                user_id=self.user_id,
+                channel_id=channel_id,
+                limit=max_results,
+            )
+            if response and hasattr(response, "messages") and response.messages:
+                for msg in response.messages:
+                    edited_ts = msg.edited_timestamp
+                    yield ServiceMessage(
+                        _id=msg.id,
+                        _channel_id=msg.channel_id,
+                        _content=msg.content,
+                        _author_id=msg.author_id,
+                        _author_name=msg.author_name,
+                        _timestamp=msg.timestamp,
+                        _edited_timestamp=None
+                        if isinstance(edited_ts, Unset)
+                        else edited_ts,
+                    )
+        except Exception as e:
+            logger.exception("Failed to get messages from channel %s", channel_id)
+            error_msg = f"Failed to get messages: {e}"
+            raise ValueError(error_msg) from e
+
+    def send_message(self, channel_id: str, content: str) -> ChatMessage:
+        """Send a message to a Discord channel.
+
+        Args:
+            channel_id: The Discord channel ID
+            content: The message content to send
+
+        Returns:
+            The sent ChatMessage object
+
+        Raises:
+            ValueError: If the message cannot be sent
+
+        """
+        try:
+            request = SendMessageRequest(content=content)
+            response = send_message_user_id_channels_channel_id_messages_post.sync(
+                client=self._http_client,
+                user_id=self.user_id,
+                channel_id=channel_id,
+                body=request,
+            )
+            if isinstance(response, MessageDetail):
+                edited_ts = response.edited_timestamp
+                return ServiceMessage(
+                    _id=response.id,
+                    _channel_id=response.channel_id,
+                    _content=response.content,
+                    _author_id=response.author_id,
+                    _author_name=response.author_name,
+                    _timestamp=response.timestamp,
+                    _edited_timestamp=None if isinstance(edited_ts, Unset) else edited_ts,
+                )
+            error_msg = "Failed to send message: no response from service"
+            raise ValueError(error_msg)
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.exception("Failed to send message to channel %s", channel_id)
+            error_msg = f"Failed to send message: {e}"
+            raise ValueError(error_msg) from e
+
+    def delete_message(self, channel_id: str, message_id: str) -> bool:
+        """Delete a message from a Discord channel.
+
+        Args:
+            channel_id: The Discord channel ID
+            message_id: The message ID to delete
+
+        Returns:
+            True if the message was successfully deleted, False otherwise
+
+        """
+        try:
+            response = (
+                delete_message_user_id_channels_channel_id_messages_message_id_delete.sync(
+                    client=self._http_client,
+                    user_id=self.user_id,
+                    channel_id=channel_id,
+                    message_id=message_id,
+                )
+            )
+            if response and hasattr(response, "status"):
+                return response.status == "success"
+            return False  # noqa: TRY300
+        except Exception:
+            logger.exception(
+                "Failed to delete message %s from channel %s", message_id, channel_id
+            )
+            return False
+
+    def get_channel(self, channel_id: str) -> Channel:
+        """Get information about a specific Discord channel.
+
+        Args:
+            channel_id: The Discord channel ID
+
+        Returns:
+            A Channel object containing channel details
+
+        Raises:
+            ValueError: If the channel cannot be retrieved
+
+        """
+        try:
+            response = get_channel_user_id_channels_channel_id_get.sync(
+                client=self._http_client,
+                user_id=self.user_id,
+                channel_id=channel_id,
+            )
+            if isinstance(response, ChannelInfo):
+                # Use 'type_' attribute if 'type' doesn't exist
+                channel_type = getattr(response, "type", None) or getattr(
+                    response, "type_", "unknown"
+                )
+                return ServiceChannel(
+                    _id=response.id,
+                    _name=response.name,
+                    _channel_type=str(channel_type),
+                )
+            error_msg = f"Channel {channel_id} not found"
+            raise ValueError(error_msg)
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.exception("Failed to get channel %s", channel_id)
+            error_msg = f"Failed to get channel: {e}"
+            raise ValueError(error_msg) from e
+
+    def get_channels(self) -> Iterator[Channel]:
+        """Get all accessible Discord channels for the user.
+
+        Yields:
+            Channel objects
+
+        """
+        try:
+            response = get_channels_user_id_channels_get.sync(
+                client=self._http_client,
+                user_id=self.user_id,
+            )
+            if response and hasattr(response, "channels") and response.channels:
+                for ch in response.channels:
+                    # Use 'type_' attribute if 'type' doesn't exist
+                    channel_type = getattr(ch, "type", None) or getattr(
+                        ch, "type_", "unknown"
+                    )
+                    yield ServiceChannel(
+                        _id=ch.id,
+                        _name=ch.name,
+                        _channel_type=str(channel_type),
+                    )
+        except Exception as e:
+            logger.exception("Failed to get channels")
+            error_msg = f"Failed to get channels: {e}"
+            raise ValueError(error_msg) from e

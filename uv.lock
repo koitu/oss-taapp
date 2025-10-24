@@ -11,6 +11,7 @@ members = [
     "chat-client-api",
     "discord-client-impl",
     "discord-client-service",
+    "discord-client-service-adapter",
     "gmail-client-impl",
     "mail-client-api",
     "mail-client-service",
@@ -512,6 +513,51 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.34.0" },
 ]
 provides-extras = ["test"]
+
+[[package]]
+name = "discord-client-service-adapter"
+version = "0.1.0"
+source = { editable = "src/discord_client_service_adapter" }
+dependencies = [
+    { name = "chat-client-api" },
+    { name = "discord-client-service-client" },
+    { name = "httpx" },
+]
+
+[package.optional-dependencies]
+test = [
+    { name = "pytest" },
+    { name = "pytest-mock" },
+    { name = "respx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "chat-client-api", editable = "src/chat_client_api" },
+    { name = "discord-client-service-client", editable = "src/clients/discord_client_service_client" },
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "pytest", marker = "extra == 'test'", specifier = ">=7.0.0" },
+    { name = "pytest-mock", marker = "extra == 'test'", specifier = ">=3.10.0" },
+    { name = "respx", marker = "extra == 'test'", specifier = ">=0.21.1" },
+]
+provides-extras = ["test"]
+
+[[package]]
+name = "discord-client-service-client"
+version = "0.1.0"
+source = { editable = "src/clients/discord_client_service_client" }
+dependencies = [
+    { name = "attrs" },
+    { name = "httpx" },
+    { name = "python-dateutil" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "attrs", specifier = ">=22.2.0" },
+    { name = "httpx", specifier = ">=0.23.0" },
+    { name = "python-dateutil", specifier = ">=2.8.0" },
+]
 
 [[package]]
 name = "distlib"
