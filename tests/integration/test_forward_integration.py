@@ -5,9 +5,9 @@ They require valid Gmail credentials (via environment variables or token.json).
 """
 
 import pytest
-import gmail_client_impl  # noqa: F401 - Trigger DI registration
-import mail_client_api
 
+import gmail_client_impl
+import mail_client_api
 
 pytestmark = pytest.mark.integration
 
@@ -86,14 +86,15 @@ def test_forward_latest_email_integration() -> None:
 @pytest.mark.circleci
 def test_forward_message_validates_client_contract() -> None:
     """Verify that forward_message is part of the Client contract."""
-    from mail_client_api import Client
     import inspect
+
+    from mail_client_api import Client
 
     # Verify that forward_message is defined in the ABC
     assert hasattr(Client, "forward_message")
 
     # Verify it's an abstract method
-    method = getattr(Client, "forward_message")
+    method = Client.forward_message
     assert hasattr(method, "__isabstractmethod__")
     assert method.__isabstractmethod__ is True
 

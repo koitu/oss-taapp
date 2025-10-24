@@ -1,8 +1,8 @@
 """Unit tests for the forward_latest_email function in main.py."""
 
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-import sys
 
 
 @pytest.mark.unit
@@ -19,7 +19,7 @@ def test_forward_latest_email_success() -> None:
     mock_client.forward_message.return_value = True
 
     # Mock the entire mail_client_api module before importing main
-    with patch.dict('sys.modules', {'gmail_client_impl': MagicMock()}):
+    with patch.dict("sys.modules", {"gmail_client_impl": MagicMock()}):
         with patch("mail_client_api.get_client", return_value=mock_client):
             from main import forward_latest_email
 
@@ -39,7 +39,7 @@ def test_forward_latest_email_no_messages() -> None:
     mock_client = Mock()
     mock_client.get_messages.return_value = iter([])  # Empty iterator
 
-    with patch.dict('sys.modules', {'gmail_client_impl': MagicMock()}):
+    with patch.dict("sys.modules", {"gmail_client_impl": MagicMock()}):
         with patch("mail_client_api.get_client", return_value=mock_client):
             from main import forward_latest_email
 
@@ -65,7 +65,7 @@ def test_forward_latest_email_forward_fails() -> None:
     mock_client.get_messages.return_value = iter([mock_message])
     mock_client.forward_message.return_value = False  # Simulate failure
 
-    with patch.dict('sys.modules', {'gmail_client_impl': MagicMock()}):
+    with patch.dict("sys.modules", {"gmail_client_impl": MagicMock()}):
         with patch("mail_client_api.get_client", return_value=mock_client):
             from main import forward_latest_email
 
@@ -90,7 +90,7 @@ def test_forward_latest_email_default_recipient() -> None:
     mock_client.get_messages.return_value = iter([mock_message])
     mock_client.forward_message.return_value = True
 
-    with patch.dict('sys.modules', {'gmail_client_impl': MagicMock()}):
+    with patch.dict("sys.modules", {"gmail_client_impl": MagicMock()}):
         with patch("mail_client_api.get_client", return_value=mock_client):
             from main import forward_latest_email
 
@@ -118,7 +118,7 @@ def test_forward_latest_email_custom_recipient() -> None:
 
     custom_email = "custom@example.org"
 
-    with patch.dict('sys.modules', {'gmail_client_impl': MagicMock()}):
+    with patch.dict("sys.modules", {"gmail_client_impl": MagicMock()}):
         with patch("mail_client_api.get_client", return_value=mock_client):
             from main import forward_latest_email
 

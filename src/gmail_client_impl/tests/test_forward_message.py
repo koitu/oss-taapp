@@ -1,7 +1,9 @@
 """Unit tests for the forward_message functionality."""
 
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
+
 import pytest
+
 from gmail_client_impl.gmail_impl import GmailClient
 
 

@@ -221,6 +221,7 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - root
       - lint:
           requires:
             - build
@@ -231,6 +232,7 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - root
 
       - unit_test:
           requires:
@@ -242,6 +244,7 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - root
 
       - circleci_test:
           requires:
@@ -253,6 +256,7 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - root
 
       # Optional: Report summary after core tests
       - report_summary:
@@ -266,6 +270,7 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - root
 
   # Enhanced workflow: Full tests with real credentials (main/develop only)
   full_integration:
@@ -278,6 +283,8 @@ workflows:
                 - develop # Add other branches as needed
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - root
+                - hw2
 
       - lint:
           requires:
@@ -289,6 +296,8 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - root
+                - hw2
 
       - unit_test:
           requires:
@@ -300,6 +309,8 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - root
+                - hw2
 
       - circleci_test:
           requires:
@@ -311,6 +322,8 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - root
+                - hw2
 
       - integration_test:
           requires:
@@ -323,6 +336,8 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - root
+                - hw2
                 
       - report_summary:
           requires:
@@ -336,3 +351,5 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - root
+                - hw2
