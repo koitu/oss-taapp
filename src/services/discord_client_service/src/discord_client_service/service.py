@@ -6,13 +6,35 @@ the OAuth2 flow for user authentication.
 """
 
 import logging
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from discord_client_impl.database import get_credential_manager
 from fastapi import FastAPI
 
 logger = logging.getLogger(__name__)
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+    logger.info("Loaded environment variables from .env file")
+except ImportError:
+    # If python-dotenv is not available, manually load .env file
+    env_path = Path(".env")
+    if env_path.exists():
+        with env_path.open() as f:
+            for raw_line in f:
+                line = raw_line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
+                    os.environ[key] = value
+        logger.info("Manually loaded environment variables from .env file")
+    else:
+        logger.warning("No .env file found")
 
 
 @asynccontextmanager
