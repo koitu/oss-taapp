@@ -92,7 +92,6 @@ class DiscordClient(Client):
             scope=" ".join(scopes),
             state=state,
             permissions=permissions,
-            
         )
 
         return authorization_url, state_value
