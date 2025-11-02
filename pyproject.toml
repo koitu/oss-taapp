@@ -53,6 +53,12 @@ members = [
 [tool.ruff]
 line-length = 130 # high for top level due to tests
 target-version = "py311"
+extend-exclude = [
+  "view_db.py",
+  "get_oauth_code.py",
+  "test_real_callback.py",
+  "test_callback.py",
+]
 
 [tool.ruff.lint]
 select = ["ALL"]
