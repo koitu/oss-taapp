@@ -334,14 +334,18 @@ class TestErrorHandling:
         """Test token exchange without client credentials."""
         client = DiscordClient()
 
-        with pytest.raises(ValueError, match="DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET required"):
+        with pytest.raises(
+            ValueError, match="DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET required"
+        ):
             client.exchange_code_for_token("test_code")
 
     def test_refresh_token_without_credentials(self) -> None:
         """Test token refresh without client credentials."""
         client = DiscordClient()
 
-        with pytest.raises(ValueError, match="DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET required"):
+        with pytest.raises(
+            ValueError, match="DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET required"
+        ):
             client.refresh_access_token("test_refresh_token")
 
     def test_get_message_http_error(
