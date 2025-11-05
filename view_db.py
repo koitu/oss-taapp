@@ -3,7 +3,7 @@
 
 import asyncio
 import sys
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -69,7 +69,7 @@ async def view_database():
         is_expired = datetime.now(UTC) >= expires_at_aware
 
         if is_expired:
-            print(f"⚠️  Status:         EXPIRED")
+            print("⚠️  Status:         EXPIRED")
         else:
             time_left = expires_at_aware - datetime.now(UTC)
             days = time_left.days
@@ -143,10 +143,10 @@ async def view_specific_user(user_id: str):
     is_expired = datetime.now(UTC) >= expires_at_aware
 
     if is_expired:
-        print(f"⚠️  Status:         EXPIRED")
+        print("⚠️  Status:         EXPIRED")
         print()
         print("To refresh the token:")
-        print(f"  1. Get new authorization code (python get_oauth_code.py)")
+        print("  1. Get new authorization code (python get_oauth_code.py)")
         print(f"  2. Exchange for new tokens (python test_real_callback.py <code> {user_id})")
     else:
         time_left = expires_at_aware - datetime.now(UTC)

@@ -16,7 +16,6 @@ from gmail_client_impl.message_impl import (
 )
 
 
-
 def register() -> None:
     """Register the Gmail client and message implementations."""
     _register_client()
