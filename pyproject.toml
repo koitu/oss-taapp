@@ -124,3 +124,8 @@ exclude_lines = [
     "raise NotImplementedError",
     "if TYPE_CHECKING:",
 ]
+
+[dependency-groups]
+dev = [
+    "respx>=0.22.0",
+]
