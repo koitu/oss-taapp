@@ -192,6 +192,8 @@ jobs:
           name: "Configure GCP Authentication"
           command: |
             echo "$GCLOUD_SERVICE_KEY" | sed 's/\\n/\n/g' > ${HOME}/gcloud-key.json
+            echo "First 3 lines of gcloud-key.json:"
+            head -n 3 ${HOME}/gcloud-key.json
             gcloud auth activate-service-account --key-file=${HOME}/gcloud-key.json
             gcloud config set project $GOOGLE_PROJECT_ID
             gcloud config set run/region us-central1
