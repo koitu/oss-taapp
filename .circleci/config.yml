@@ -185,16 +185,9 @@ jobs:
   # Job 7: Deploy to Cloud Run
   deploy:
     docker:
-      - image: cimg/python:3.11  # has docker
+      - image: cimg/gcp:2025.01  # latest monthly tag
     steps:
       - checkout
-      - setup_remote_docker:  # enables Docker builds
-          docker_layer_caching: true
-      - run:
-          name: Install gcloud CLI
-          command: |
-            curl -sSL https://sdk.cloud.google.com | bash
-            source $HOME/google-cloud-sdk/path.bash.inc
       - run:
           name: Configure GCP Authentication
           command: |
