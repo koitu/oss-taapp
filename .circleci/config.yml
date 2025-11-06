@@ -195,7 +195,7 @@ jobs:
             echo "Length of GOOGLE_SERVICE_KEY variable:"
             echo "${#GOOGLE_SERVICE_KEY}"
             echo "Length of gcloud-key.json in bytes:"
-            wc -c < ${HOME}/gcloud-key.jso
+            wc -c < ${HOME}/gcloud-key.json
             gcloud auth activate-service-account --key-file=${HOME}/gcloud-key.json
             gcloud config set project $GOOGLE_PROJECT_ID
             gcloud config set run/region us-central1
