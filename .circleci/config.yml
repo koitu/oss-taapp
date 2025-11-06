@@ -269,4 +269,4 @@ workflows:
           filters:
             branches:
               only:
-                - hw2-tests
+                - hw2
