@@ -185,15 +185,10 @@ jobs:
   # Job 7: Deploy to Cloud Run
   deploy:
     docker:
-      - image: cimg/python:3.11
+      - image: google/cloud-sdk:slim
     steps:
       - checkout
-      - setup_remote_docker  # enables docker build
-      - run:
-          name: Install gcloud CLI
-          command: |
-            curl -sSL https://sdk.cloud.google.com | bash
-            source $HOME/google-cloud-sdk/path.bash.inc
+      - setup_remote_docker # enables docker build
       - run:
           name: "Configure GCP Authentication"
           command: |
@@ -218,6 +213,7 @@ jobs:
               --region us-central1 \
               --allow-unauthenticated \
               --port 8000
+
 
 
 # Workflows
