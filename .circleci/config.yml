@@ -270,3 +270,99 @@ workflows:
             branches:
               only:
                 - hw2
+
+  # Auto-deploy workflow for Cloud Run
+  deploy_to_cloud_run:
+    jobs:
+      - build:
+          filters:
+            branches:
+              only:
+                - hw2
+
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - hw2
+
+jobs:
+  # Deployment Job to Google Cloud Run
+  deploy:
+    docker:
+      - image: google/cloud-sdk:slim
+    steps:
+      - checkout
+      - run:
+          name: "Configure GCP Authentication"
+          command: |
+            echo "$GCLOUD_SERVICE_KEY" > ${HOME}/gcloud-key.json
+            gcloud auth activate-service-account --key-file=${HOME}/gcloud-key.json
+            gcloud config set project $GOOGLE_PROJECT_ID
+            gcloud config set run/region us-central1
+            gcloud auth configure-docker us-central1-docker.pkg.dev -q
+      - run:
+          name: "Build and Push Docker Image to Artifact Registry"
+          command: |
+            IMAGE="us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/discord-service-repo/discord-service:latest"
+            docker build -t "$IMAGE" .
+            docker push "$IMAGE"
+      - run:
+          name: "Deploy to Cloud Run"
+          command: |
+            IMAGE="us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/discord-service-repo/discord-service:latest"
+            gcloud run deploy discord-service \
+              --image "$IMAGE" \
+              --platform managed \
+              --region us-central1 \
+              --allow-unauthenticated \
+              --port 8000
+
+    jobs:
+      - build:
+          filters:
+            branches:
+              only:
+                - hw2
+
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - hw2
+
+jobs:
+  # Deployment Job to Google Cloud Run
+  deploy:
+    docker:
+      - image: google/cloud-sdk:slim
+    steps:
+      - checkout
+      - run:
+          name: "Configure GCP Authentication"
+          command: |
+            echo "$GCLOUD_SERVICE_KEY" > ${HOME}/gcloud-key.json
+            gcloud auth activate-service-account --key-file=${HOME}/gcloud-key.json
+            gcloud config set project $GOOGLE_PROJECT_ID
+            gcloud config set run/region us-central1
+            gcloud auth configure-docker us-central1-docker.pkg.dev -q
+      - run:
+          name: "Build and Push Docker Image to Artifact Registry"
+          command: |
+            IMAGE="us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/discord-service-repo/discord-service:latest"
+            docker build -t "$IMAGE" .
+            docker push "$IMAGE"
+      - run:
+          name: "Deploy to Cloud Run"
+          command: |
+            IMAGE="us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/discord-service-repo/discord-service:latest"
+            gcloud run deploy discord-service \
+              --image "$IMAGE" \
+              --platform managed \
+              --region us-central1 \
+              --allow-unauthenticated \
+              --port 8000
