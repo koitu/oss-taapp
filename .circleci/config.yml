@@ -185,10 +185,15 @@ jobs:
   # Job 7: Deploy to Cloud Run
   deploy:
     docker:
-      - image: cimg/python:3.11  # Docker Hub auth not needed
+      - image: cimg/python:3.11
     steps:
       - checkout
-      - setup_remote_docker  # Enables Docker builds
+      - setup_remote_docker  # enables docker build
+      - run:
+          name: Install gcloud CLI
+          command: |
+            curl -sSL https://sdk.cloud.google.com | bash
+            source $HOME/google-cloud-sdk/path.bash.inc
       - run:
           name: "Configure GCP Authentication"
           command: |
@@ -198,13 +203,13 @@ jobs:
             gcloud config set run/region us-central1
             gcloud auth configure-docker us-central1-docker.pkg.dev -q
       - run:
-          name: "Build and Push Docker Image"
+          name: Build and Push Docker Image
           command: |
             IMAGE="us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/discord-service-repo/discord-service:latest"
             docker build -t "$IMAGE" .
             docker push "$IMAGE"
       - run:
-          name: "Deploy to Cloud Run"
+          name: Deploy to Cloud Run
           command: |
             IMAGE="us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/discord-service-repo/discord-service:latest"
             gcloud run deploy discord-service \
