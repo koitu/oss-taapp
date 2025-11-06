@@ -188,6 +188,8 @@ jobs:
       - image: cimg/gcp:2025.01  # latest monthly tag
     steps:
       - checkout
+      - setup_remote_docker:   # <-- This spins up a remote Docker daemon
+          version: 24.0.5      # optional, specify Docker version
       - run:
           name: Configure GCP Authentication
           command: |
