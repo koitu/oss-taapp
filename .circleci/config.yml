@@ -191,7 +191,7 @@ jobs:
       - run:
           name: "Configure GCP Authentication"
           command: |
-            echo "$GOOGLE_SERVICE_KEY" | tr -d '\r' | sed 's/\\n/\n/g' > ${HOME}/gcloud-key.json
+            echo "$GOOGLE_SERVICE_KEY" > ${HOME}/gcloud-key.json
             echo "Length of GOOGLE_SERVICE_KEY variable:"
             echo "${#GOOGLE_SERVICE_KEY}"
             echo "Length of gcloud-key.json in bytes:"
