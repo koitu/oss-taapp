@@ -191,8 +191,9 @@ jobs:
       - run:
           name: "Configure GCP Authentication"
           command: |
-            echo "$GCLOUD_SERVICE_KEY" > ${HOME}/gcloud-key.json
-            gcloud auth activate-service-account --key-file=${HOME}/gcloud-key.json
+            printf '%s' "$GCLOUD_SERVICE_KEY" > "${HOME}/gcloud-key.json"
+            cat "${HOME}/gcloud-key.json"  # optional debug
+            gcloud auth activate-service-account --key-file="${HOME}/gcloud-key.json"
             gcloud config set project $GOOGLE_PROJECT_ID
             gcloud config set run/region us-central1
             gcloud auth configure-docker us-central1-docker.pkg.dev -q
