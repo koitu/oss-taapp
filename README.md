@@ -293,3 +293,65 @@ docker run -p 8000:8000 \
   -v $(pwd)/token.json:/app/token.json \
   gmail-service
 ```
+
+## Deployment
+
+The Discord service is deployed on **Google Cloud Run** with the following URL:
+
+[http://discord-service-755226003273.us-central1.run.app/docs](http://discord-service-755226003273.us-central1.run.app/docs)
+
+### Platform
+- **Cloud Run** (fully managed)
+- **Region:** `us-central1`
+- **Port:** `8000`
+- **Authentication:** Allow unauthenticated access for public API
+
+### Environment Variables
+
+Secrets are securely stored in **Google Secret Manager**.
+
+- `DISCORD_CLIENT_ID`
+- `DISCORD_CLIENT_SECRET`
+- `DISCORD_REDIRECT_URI`
+- `DISCORD_PUBLIC_KEY`
+
+### CI/CD Pipeline
+
+The deployment pipeline is automated using **CircleCI** with the following steps:
+
+1. **Checkout Code**  
+   Pulls the latest code from the repository.
+
+2. **Setup Remote Docker**  
+   Enables Docker builds within the CI environment.
+
+3. **Configure GCP Authentication**  
+   - The service account key is stored in the `GOOGLE_SERVICE_KEY` environment variable.
+   - Authenticate using the service account and set the project and region:
+     ```bash
+     gcloud auth activate-service-account --key-file=$HOME/gcloud-key.json
+     gcloud config set project $GOOGLE_PROJECT_ID
+     gcloud config set run/region us-central1
+     gcloud auth configure-docker us-central1-docker.pkg.dev -q
+     ```
+
+4. **Build and Push Docker Image**  
+   - Docker image is built and pushed to Google Artifact Registry:
+     ```bash
+     IMAGE="us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/discord-service-repo/discord-service:latest"
+     docker build -t "$IMAGE" .
+     docker push "$IMAGE"
+     ```
+
+5. **Deploy to Cloud Run**  
+   - Deploys the service using the pushed Docker image:
+     ```bash
+     gcloud run deploy discord-service \
+       --image "$IMAGE" \
+       --platform managed \
+       --region us-central1 \
+       --allow-unauthenticated \
+       --port 8000
+     ```
+
+This setup ensured secure and automated deployment of our Discord service while keeping secrets protected and applying principle of least privilege access for each service.
