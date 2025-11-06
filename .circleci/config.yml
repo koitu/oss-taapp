@@ -204,13 +204,8 @@ jobs:
       - run:
           name: Build and Push Docker Image
           command: |
-            # Remove any hidden newlines from project ID
-            PROJECT_ID=$(echo "$GOOGLE_PROJECT_ID" | tr -d '\n\r')
-            
-            # Build the Docker image
+            PROJECT_ID=$(echo -n "$GOOGLE_PROJECT_ID" | tr -d '\n')
             IMAGE="us-central1-docker.pkg.dev/$PROJECT_ID/discord-service-repo/discord-service:latest"
-            echo "Docker Image: $IMAGE"
-            
             docker build -t "$IMAGE" .
             docker push "$IMAGE"
 
