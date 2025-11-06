@@ -183,39 +183,36 @@ jobs:
             fi
 
   # Job 7: Deploy to Cloud Run
-  deploy:
-    docker:
-      - image: google/cloud-sdk:slim
-    steps:
-      - checkout
-      - run:
-          name: "Configure GCP Authentication"
-          command: |
-            echo "$GOOGLE_SERVICE_KEY" > ${HOME}/gcloud-key.json
-            echo "Length of GOOGLE_SERVICE_KEY variable:"
-            echo "${#GOOGLE_SERVICE_KEY}"
-            echo "Length of gcloud-key.json in bytes:"
-            wc -c < ${HOME}/gcloud-key.json
-            gcloud auth activate-service-account --key-file=${HOME}/gcloud-key.json
-            gcloud config set project $GOOGLE_PROJECT_ID
-            gcloud config set run/region us-central1
-            gcloud auth configure-docker us-central1-docker.pkg.dev -q
-      - run:
-          name: "Build and Push Docker Image"
-          command: |
-            IMAGE="us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/discord-service-repo/discord-service:latest"
-            docker build -t "$IMAGE" .
-            docker push "$IMAGE"
-      - run:
-          name: "Deploy to Cloud Run"
-          command: |
-            IMAGE="us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/discord-service-repo/discord-service:latest"
-            gcloud run deploy discord-service \
-              --image "$IMAGE" \
-              --platform managed \
-              --region us-central1 \
-              --allow-unauthenticated \
-              --port 8000
+deploy:
+  docker:
+    - image: cimg/python:3.11  # Docker Hub auth not needed
+  steps:
+    - checkout
+    - setup_remote_docker  # Enables Docker builds
+    - run:
+        name: "Configure GCP Authentication"
+        command: |
+          echo "$GOOGLE_SERVICE_KEY" > ${HOME}/gcloud-key.json
+          gcloud auth activate-service-account --key-file=${HOME}/gcloud-key.json
+          gcloud config set project $GOOGLE_PROJECT_ID
+          gcloud config set run/region us-central1
+          gcloud auth configure-docker us-central1-docker.pkg.dev -q
+    - run:
+        name: "Build and Push Docker Image"
+        command: |
+          IMAGE="us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/discord-service-repo/discord-service:latest"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+    - run:
+        name: "Deploy to Cloud Run"
+        command: |
+          IMAGE="us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/discord-service-repo/discord-service:latest"
+          gcloud run deploy discord-service \
+            --image "$IMAGE" \
+            --platform managed \
+            --region us-central1 \
+            --allow-unauthenticated \
+            --port 8000
 
 # Workflows
 workflows:
