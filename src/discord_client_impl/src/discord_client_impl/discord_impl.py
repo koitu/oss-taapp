@@ -82,12 +82,16 @@ class DiscordClient(Client):
         )
 
         # Discord requires specific scopes for reading/sending messages
-        scopes = ["identify", "guilds", "messages.read"]
+        scopes = ["identify", "guilds", "messages.read", "bot"]
 
+        permissions = 1024 | 2048 | 65536  # = 68608
+
+        # Build authorization URL
         authorization_url, state_value = oauth_client.create_authorization_url(
             self.OAUTH2_AUTHORIZE_URL,
             scope=" ".join(scopes),
             state=state,
+            permissions=permissions,
         )
 
         return authorization_url, state_value

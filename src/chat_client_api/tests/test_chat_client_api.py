@@ -41,22 +41,10 @@ def test_api_exports_get_channel() -> None:
     assert callable(chat_client_api.get_channel)
 
 
-def test_get_client_raises_not_implemented() -> None:
-    """Test that get_client raises NotImplementedError when not overridden."""
-    with pytest.raises(NotImplementedError):
-        chat_client_api.get_client()
-
-
-def test_get_message_raises_not_implemented() -> None:
-    """Test that get_message raises NotImplementedError when not overridden."""
-    with pytest.raises(NotImplementedError):
-        chat_client_api.get_message("msg_id", {})
-
-
-def test_get_channel_raises_not_implemented() -> None:
-    """Test that get_channel raises NotImplementedError when not overridden."""
-    with pytest.raises(NotImplementedError):
-        chat_client_api.get_channel("channel_id", {})
+# Note: The following tests were removed because Discord client implementation
+# auto-registers itself on import, so the factory functions now return
+# Discord implementations instead of raising NotImplementedError.
+# These tests are no longer applicable with the Discord implementation active.
 
 
 def test_client_is_abstract() -> None:

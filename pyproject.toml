@@ -29,6 +29,8 @@ dev = [
     "pytest>=8.4.1",
     "pytest-asyncio>=v1.2.0",
     "pytest-cov>=6.2.1",
+    "pytest-mock>=3.15.0",
+    "respx>=0.22.0",
     "ruff>=0.12.7",
     "types-requests>=2.32.4.20250611",
     "pre-commit>=4.3.0",
@@ -51,6 +53,12 @@ members = [
 [tool.ruff]
 line-length = 130 # high for top level due to tests
 target-version = "py311"
+extend-exclude = [
+  "view_db.py",
+  "get_oauth_code.py",
+  "test_real_callback.py",
+  "test_callback.py",
+]
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -64,10 +72,11 @@ ignore = [
   "G004", # Allow logging statements to use f-string
   "COM812", # Checks for the absence of trailing commas (not compatible with ruff format)
 ]
-per-file-ignores = { "**/test_*.py" = [
+[tool.ruff.lint.per-file-ignores]
+"**/test_*.py" = [
     "TRY300", "TRY003", "EM102", "SIM110", "E402", "PLR2004", "ARG001", "ARG002", "S106", "INP001", "BLE001", "ANN401",
-    "SLF001", "E501", "S105", "PLC0415"
-] }
+    "SLF001", "E501", "S105", "PLC0415", "PT011"
+]
 
 
 [tool.mypy]
