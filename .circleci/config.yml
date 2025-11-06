@@ -185,15 +185,14 @@ jobs:
   # Job 7: Deploy to Cloud Run
   deploy:
     docker:
-      - image: google/cloud-sdk:slim
+      - image: google/cloud-sdk:slim-docker
     steps:
       - checkout
-      - setup_remote_docker # enables docker build
       - run:
-          name: "Configure GCP Authentication"
+          name: Configure GCP Authentication
           command: |
-            echo "$GOOGLE_SERVICE_KEY" > ${HOME}/gcloud-key.json
-            gcloud auth activate-service-account --key-file=${HOME}/gcloud-key.json
+            echo "$GOOGLE_SERVICE_KEY" > $HOME/gcloud-key.json
+            gcloud auth activate-service-account --key-file=$HOME/gcloud-key.json
             gcloud config set project $GOOGLE_PROJECT_ID
             gcloud config set run/region us-central1
             gcloud auth configure-docker us-central1-docker.pkg.dev -q
