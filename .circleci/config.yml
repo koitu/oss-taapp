@@ -270,20 +270,3 @@ workflows:
             branches:
               only:
                 - hw2
-
-  # Auto-deploy workflow for Cloud Run
-  deploy_to_cloud_run:
-    jobs:
-      - build:
-          filters:
-            branches:
-              only:
-                - hw2
-
-      - deploy:
-          requires:
-            - build
-          filters:
-            branches:
-              only:
-                - hw2
