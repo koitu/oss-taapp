@@ -204,7 +204,6 @@ jobs:
       - run:
           name: Build and Push Docker Image
           command: |
-            echo -n "$GOOGLE_PROJECT_ID" | wc -c
             IMAGE="us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/discord-service-repo/discord-service:latest"
             docker build -t "$IMAGE" .
             docker push "$IMAGE"
@@ -212,13 +211,14 @@ jobs:
       - run:
           name: Deploy to Cloud Run
           command: |
-            IMAGE="us-central1-docker.pkg.dev/$PROJECT_ID/discord-service-repo/discord-service:latest"
+            IMAGE="us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/discord-service-repo/discord-service:latest"
             gcloud run deploy discord-service \
               --image "$IMAGE" \
               --platform managed \
               --region us-central1 \
               --allow-unauthenticated \
               --port 8000
+
 
 
 # Workflows
