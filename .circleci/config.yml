@@ -1,13 +1,12 @@
 # Use the latest 2.1 version of CircleCI pipeline process engine.
-# See: https://circleci.com/docs/configuration-reference
 version: 2.1
 
-# Define jobs to be invoked later in a workflow.
+# Define jobs
 jobs:
   # Job 1: Setup Environment and Install All Dependencies
   build:
     docker:
-      - image: cimg/python:3.11 # Use a consistent Python version
+      - image: cimg/python:3.11
     steps:
       - checkout
       - run:
@@ -16,26 +15,23 @@ jobs:
             curl -LsSf https://astral.sh/uv/install.sh | sh
             echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> $BASH_ENV
             source $BASH_ENV
-            uv --version # Verify installation
+            uv --version
       - run:
-          name: "Create Virtual Env & Install All Dependencies via UV Sync"
+          name: "Create Virtual Env & Install Dependencies via UV Sync"
           command: |
-            # Create venv in the default .venv location
             uv venv --python 3.11
             source .venv/bin/activate
-            # Install all dependencies including dev/test extras
             uv sync --all-packages --extra dev --verbose
       - run:
           name: "Verify Installation (Optional)"
           command: |
             source .venv/bin/activate
-            uv tree # Check if workspace members and tools are listed
+            uv tree
             ruff --version
             pytest --version
             mypy --version
             coverage --version
       - persist_to_workspace:
-          # Persist the entire project directory, including the populated .venv
           root: .
           paths:
             - .
@@ -46,30 +42,29 @@ jobs:
       - image: cimg/python:3.11
     steps:
       - attach_workspace:
-          at: . # Attach the workspace persisted from 'build'
+          at: .
       - run:
           name: "Run Linting and Formatting Checks"
           command: |
-            source .venv/bin/activate # Activate the venv from the workspace
+            source .venv/bin/activate
             ruff check .
 
-  # Job 3: Unit Tests and Coverage (Fast, No External Dependencies)
+  # Job 3: Unit Tests and Coverage
   unit_test:
     docker:
       - image: cimg/python:3.11
     steps:
       - attach_workspace:
-          at: . # Attach the workspace persisted from 'build'
+          at: .
       - run:
           name: "Activate Venv and Create Test Results Directory"
           command: |
             source .venv/bin/activate
-            mkdir -p test-results/unit # Create directory for JUnit XML
+            mkdir -p test-results/unit
       - run:
-          name: "Execute Unit Test Suite (src/ tests only)"
+          name: "Execute Unit Test Suite"
           command: |
             source .venv/bin/activate
-            # Run only unit tests from src/ directories (fast, isolated tests)
             pytest src/ --cov=src --cov-report=xml --cov-report=term \
                      --junitxml=test-results/unit/junit.xml \
                      --cov-fail-under=85
@@ -77,36 +72,31 @@ jobs:
           name: "Run Static Analysis (mypy)"
           command: |
             source .venv/bin/activate
-            # Target specific source directories for mypy
             uv add types-requests
             mypy src/ --explicit-package-bases
       - store_test_results:
           path: test-results/unit
-      - store_artifacts: # Store coverage reports
+      - store_artifacts:
           path: coverage.xml
       - store_artifacts:
           path: test-results/unit
 
-  # Job 4: CircleCI Integration Tests (All Tests Except Local Credentials)
+  # Job 4: CircleCI Integration Tests (Except Local Credentials)
   circleci_test:
     docker:
       - image: cimg/python:3.11
-    # Environment variables from the 'gmail-client' context will be available here
     steps:
       - attach_workspace:
-          at: . # Attach the workspace persisted from 'build'
+          at: .
       - run:
           name: "Activate Venv and Create Test Results Directory"
           command: |
             source .venv/bin/activate
-            mkdir -p test-results/circleci # Separate directory for results
+            mkdir -p test-results/circleci
       - run:
           name: "Execute All Tests Except Local Credentials"
           command: |
             source .venv/bin/activate
-            # Run all tests from src/ and tests/ directories except those requiring local credentials
-            # This includes unit tests, integration tests, and e2e tests that work with env vars
-            # Coverage tracking enabled since this includes comprehensive unit tests
             pytest src/ tests/ -m "not local_credentials" \
                    --junitxml=test-results/circleci/junit.xml -v \
                    --cov=src --cov-report=term
@@ -115,21 +105,19 @@ jobs:
       - store_artifacts:
           path: test-results/circleci
 
-  # Job 5: Integration Tests with Real Credentials (Optional - Branch Restricted)
+  # Job 5: Integration Tests with Real Credentials
   integration_test:
     docker:
       - image: cimg/python:3.11
-    # Environment variables from the 'gmail-client' context will be available here
     steps:
       - attach_workspace:
-          at: . # Attach the workspace persisted from 'build'
+          at: .
       - run:
           name: "Verify Environment Variables"
           command: |
             echo "Checking for required environment variables..."
             if [ -z "$GMAIL_CLIENT_ID" ] || [ -z "$GMAIL_CLIENT_SECRET" ] || [ -z "$GMAIL_REFRESH_TOKEN" ]; then
               echo "WARNING: Missing Gmail environment variables. Integration tests may be skipped."
-              echo "Required: GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN"
             else
               echo "All required environment variables are present."
             fi
@@ -137,14 +125,11 @@ jobs:
           name: "Activate Venv and Create Test Results Directory"
           command: |
             source .venv/bin/activate
-            mkdir -p test-results/integration # Separate directory for results
+            mkdir -p test-results/integration
       - run:
           name: "Execute Integration Test Suite with Real API Calls"
           command: |
             source .venv/bin/activate
-            # Run integration tests that require real Gmail API connectivity
-            # These will use environment variables for authentication
-            # Note: No coverage tracking for integration tests - they test component interactions
             pytest -m "integration and not local_credentials" \
                    --junitxml=test-results/integration/junit.xml -v \
                    --no-cov
@@ -156,24 +141,18 @@ jobs:
   # Job 6: Report Summary
   report_summary:
     docker:
-      - image: cimg/base:stable # Use a basic image for reporting
+      - image: cimg/base:stable
     steps:
       - attach_workspace:
-          at: . # Attach the workspace
+          at: .
       - run:
           name: "Summarize Unit Test Results"
           command: |
             echo "--- Unit Test Summary ---"
             if [ -f test-results/unit/junit.xml ]; then
               echo "Unit test results file found."
-              # Extract test count if possible
-              if command -v xmllint > /dev/null; then
-                tests=$(xmllint --xpath "string(//testsuite/@tests)" test-results/unit/junit.xml 2>/dev/null || echo "N/A")
-                failures=$(xmllint --xpath "string(//testsuite/@failures)" test-results/unit/junit.xml 2>/dev/null || echo "N/A")
-                echo "Tests: $tests, Failures: $failures"
-              fi
             else
-              echo "Unit test results file (test-results/unit/junit.xml) not found."
+              echo "Unit test results file not found."
             fi
       - run:
           name: "Summarize CircleCI Test Results"
@@ -199,157 +178,89 @@ jobs:
             echo "--- Coverage Summary ---"
             if [ -f coverage.xml ]; then
                echo "Coverage XML found. Check artifacts for details."
-               # Extract overall line rate if xmllint is available
-               if command -v xmllint > /dev/null; then
-                 coverage_rate=$(xmllint --xpath "string(//coverage/@line-rate)" coverage.xml 2>/dev/null || echo "N/A")
-                 echo "Line Coverage Rate: $coverage_rate"
-               fi
             else
                echo "Coverage XML not found."
             fi
 
-# Orchestrate jobs using workflows
+  # Job 7: Deploy to Cloud Run
+  deploy:
+    docker:
+      - image: google/cloud-sdk:slim
+    steps:
+      - checkout
+      - run:
+          name: "Configure GCP Authentication"
+          command: |
+            echo "$GCLOUD_SERVICE_KEY" > ${HOME}/gcloud-key.json
+            gcloud auth activate-service-account --key-file=${HOME}/gcloud-key.json
+            gcloud config set project $GOOGLE_PROJECT_ID
+            gcloud config set run/region us-central1
+            gcloud auth configure-docker us-central1-docker.pkg.dev -q
+      - run:
+          name: "Build and Push Docker Image"
+          command: |
+            IMAGE="us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/discord-service-repo/discord-service:latest"
+            docker build -t "$IMAGE" .
+            docker push "$IMAGE"
+      - run:
+          name: "Deploy to Cloud Run"
+          command: |
+            IMAGE="us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/discord-service-repo/discord-service:latest"
+            gcloud run deploy discord-service \
+              --image "$IMAGE" \
+              --platform managed \
+              --region us-central1 \
+              --allow-unauthenticated \
+              --port 8000
+
+# Workflows
 workflows:
-  # Main workflow: Build, Lint, Test (runs on all branches)
   build_and_test:
     jobs:
-      - build:
-          filters:
-            branches:
-              ignore:
-                - main
-                - develop
-                - kamen-requierd-fixes
-                - make-real-deletions
-                - root
+      - build
       - lint:
           requires:
             - build
-          filters:
-            branches:
-              ignore:
-                - main
-                - develop
-                - kamen-requierd-fixes
-                - make-real-deletions
-                - root
-
       - unit_test:
           requires:
             - build
-          filters:
-            branches:
-              ignore:
-                - main
-                - develop
-                - kamen-requierd-fixes
-                - make-real-deletions
-                - root
-
       - circleci_test:
           requires:
-            - unit_test # Run after unit tests pass
-          filters:
-            branches:
-              ignore:
-                - main
-                - develop
-                - kamen-requierd-fixes
-                - make-real-deletions
-                - root
-
-      # Optional: Report summary after core tests
+            - unit_test
       - report_summary:
           requires:
             - unit_test
             - circleci_test
-          filters:
-            branches:
-              ignore:
-                - main
-                - develop
-                - kamen-requierd-fixes
-                - make-real-deletions
-                - root
 
-  # Enhanced workflow: Full tests with real credentials (main/develop only)
   full_integration:
     jobs:
-      - build:
-          filters:
-            branches:
-              only:
-                - main
-                - develop # Add other branches as needed
-                - kamen-requierd-fixes
-                - make-real-deletions
-                - root
-                - hw2
-
+      - build
       - lint:
           requires:
             - build
-          filters:
-            branches:
-              only:
-                - main
-                - develop
-                - kamen-requierd-fixes
-                - make-real-deletions
-                - root
-                - hw2
-
       - unit_test:
           requires:
             - build
-          filters:
-            branches:
-              only:
-                - main
-                - develop
-                - kamen-requierd-fixes
-                - make-real-deletions
-                - root
-                - hw2
-
       - circleci_test:
           requires:
             - unit_test
-          filters:
-            branches:
-              only:
-                - main
-                - develop
-                - kamen-requierd-fixes
-                - make-real-deletions
-                - root
-                - hw2
-
       - integration_test:
           requires:
-            - circleci_test # Run after CircleCI tests pass
-          context: gmail-client # Context containing Gmail API credentials
-          filters:
-            branches:
-              only:
-                - main
-                - develop
-                - kamen-requierd-fixes
-                - make-real-deletions
-                - root
-                - hw2
-                
+            - circleci_test
+          context: gmail-client
       - report_summary:
           requires:
             - unit_test
             - circleci_test
             - integration_test
+
+  deploy_to_cloud_run:
+    jobs:
+      - build
+      - deploy:
+          requires:
+            - build
           filters:
             branches:
               only:
-                - main
-                - develop
-                - kamen-requierd-fixes
-                - make-real-deletions
-                - root
-                - hw2
+                - hw2_deployment
