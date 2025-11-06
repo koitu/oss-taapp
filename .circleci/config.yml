@@ -263,4 +263,4 @@ workflows:
           filters:
             branches:
               only:
-                - hw2_deployment
+                - hw2-tests
