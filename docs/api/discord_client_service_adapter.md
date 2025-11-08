@@ -7,6 +7,7 @@
 
 ::: discord_client_service_adapter
     options:
-      show_root_heading: true
-      show_source: false
+        show_root_heading: true
+        show_source: false
+        show_submodules: true
 <!-- prettier-ignore-end -->
