@@ -1,5 +1,6 @@
 """Quick test to verify the /openapi.json endpoint works."""
 
+import logging
 import sys
 from pathlib import Path
 
@@ -11,7 +12,7 @@ from discord_client_service.service import app
 from fastapi.testclient import TestClient
 
 
-def test_openapi_endpoint():
+def test_openapi_endpoint() -> None:
     """Test that /openapi.json endpoint returns valid schema."""
     client = TestClient(app)
 
@@ -39,20 +40,18 @@ def test_openapi_endpoint():
     # Verify paths
     assert len(schema["paths"]) == 9, f"Expected 9 paths, got {len(schema['paths'])}"
 
-    print("✓ All checks passed!")
-    print(f"✓ OpenAPI version: {schema['openapi']}")
-    print(f"✓ Service: {schema['info']['title']} v{schema['info']['version']}")
-    print(f"✓ Endpoints: {len(schema['paths'])}")
-
-    return True
+    # Test assertions are sufficient; avoid printing in test files
 
 if __name__ == "__main__":
+    # Configure simple logging for when running this module as a script
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    logger = logging.getLogger(__name__)
     try:
         test_openapi_endpoint()
-        print("\n✅ OpenAPI endpoint test PASSED")
-    except AssertionError as e:
-        print(f"\n❌ OpenAPI endpoint test FAILED: {e}")
+        logger.info("OpenAPI endpoint test PASSED")
+    except AssertionError:
+        logger.exception("OpenAPI endpoint test FAILED")
         sys.exit(1)
-    except Exception as e:
-        print(f"\n❌ OpenAPI endpoint test ERROR: {e}")
+    except Exception:
+        logger.exception("OpenAPI endpoint test ERROR")
         sys.exit(1)

@@ -8,11 +8,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 # Prevent lifespan from running during import
+import logging
 import os
 
 os.environ["SKIP_DB_INIT"] = "1"
 
 from discord_client_service.service import app
+
+# Configure a module logger instead of using print statements (ruff T201)
+logger = logging.getLogger(__name__)
+if not logger.handlers:
+    logging.basicConfig(level=logging.INFO)
 
 
 def generate_openapi_schema() -> None:
@@ -25,10 +31,16 @@ def generate_openapi_schema() -> None:
     with output_path.open("w") as f:
         json.dump(openapi_schema, f, indent=2)
 
-    print(f"✓ OpenAPI schema generated at: {output_path}")
-    print(f"✓ Schema version: {openapi_schema.get('openapi', 'unknown')}")
-    print(f"✓ API title: {openapi_schema.get('info', {}).get('title', 'unknown')}")
-    print(f"✓ Number of paths: {len(openapi_schema.get('paths', {}))}")
+    logger.info("✓ OpenAPI schema generated at: %s", output_path)
+    logger.info("✓ Schema version: %s", openapi_schema.get("openapi", "unknown"))
+    logger.info(
+        "✓ API title: %s",
+        openapi_schema.get("info", {}).get("title", "unknown"),
+    )
+    logger.info(
+        "✓ Number of paths: %d",
+        len(openapi_schema.get("paths", {})),
+    )
 
 
 if __name__ == "__main__":

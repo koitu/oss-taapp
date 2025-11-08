@@ -1,10 +1,14 @@
 """Generate OpenAPI schema for the Discord Client Service."""
 
 import json
+import logging
 from pathlib import Path
 
 # Import after setting up the path
 from discord_client_service.service import app
+
+# module logger
+logger = logging.getLogger(__name__)
 
 
 def generate_openapi_schema() -> None:
@@ -17,9 +21,11 @@ def generate_openapi_schema() -> None:
     with output_path.open("w") as f:
         json.dump(openapi_schema, f, indent=2)
 
-    print(f"OpenAPI schema generated successfully at: {output_path}")
-    print(f"Schema contains {len(openapi_schema.get('paths', {}))} paths")
+    logger.info("OpenAPI schema generated successfully at: %s", output_path)
+    logger.info("Schema contains %d paths", len(openapi_schema.get("paths", {})))
 
 
 if __name__ == "__main__":
+    # Configure simple logging for script usage
+    logging.basicConfig(level=logging.INFO)
     generate_openapi_schema()
