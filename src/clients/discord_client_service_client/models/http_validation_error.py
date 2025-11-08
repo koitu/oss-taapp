@@ -45,6 +45,7 @@ class HTTPValidationError:
 
         d = dict(src_dict)
         _detail = d.pop("detail", UNSET)
+        detail: Unset | list[ValidationError]
         if isinstance(_detail, Unset):
             detail = UNSET
         else:

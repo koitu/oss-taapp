@@ -52,6 +52,9 @@ extend = "../../../pyproject.toml"
 
 [tool.ruff.lint]
 ignore = []
+per-file-ignores = { "**/api.py" = [
+    "SLF001",  # FastAPI endpoints allowed to access private OAuth methods for service integration
+] }
 
 [tool.uv.sources]
 discord-client-impl = { workspace = true }

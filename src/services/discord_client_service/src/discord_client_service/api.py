@@ -2,6 +2,7 @@
 
 import logging
 
+from chat_client_api.exceptions import MessageDeleteError, MessageNotFoundError
 from discord_client_impl.auth_helper import (
     check_user_authenticated,
     delete_user_credentials,
@@ -105,7 +106,7 @@ def oauth_login(
     """Initialize OAuth2 flow."""
     try:
         client = DiscordClient()
-        auth_url, generated_state = client.get_authorization_url(state=state)
+        auth_url, generated_state = client._get_authorization_url(state=state)
         logger.info("Generated OAuth authorization URL")
         return OAuthInitResponse(authorization_url=auth_url, state=generated_state)
     except Exception as e:
@@ -125,7 +126,7 @@ async def oauth_callback(request: OAuthCallbackRequest) -> OAuthCallbackResponse
     """Handle OAuth2 callback after user authorization."""
     try:
         client = DiscordClient()
-        token_data = client.exchange_code_for_token(request.code)
+        token_data = client._exchange_code_for_token(request.code)
         await store_user_credentials(user_id=request.user_id, token_data=token_data)
         logger.info("Successfully stored credentials for user: %s", request.user_id)
         return OAuthCallbackResponse(status="success", user_id=request.user_id)
@@ -287,19 +288,23 @@ async def delete_message(
     """Delete a message from a Discord channel."""
     try:
         client = await get_client_for_user(user_id)
-        success = client.delete_message(channel_id=channel_id, message_id=message_id)
-
-        if not success:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Message {message_id} not found",
-            )
+        client.delete_message(channel_id=channel_id, message_id=message_id)
 
         logger.info("Deleted message %s", message_id)
         return OperationResponse(status="success", message=f"Message {message_id} deleted")
 
-    except HTTPException:
-        raise
+    except MessageNotFoundError as e:
+        logger.warning("Message %s not found", message_id)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        ) from e
+    except MessageDeleteError as e:
+        logger.exception("Failed to delete message")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        ) from e
     except ValueError as e:
         logger.warning("User %s not authenticated", user_id)
         raise HTTPException(

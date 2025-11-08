@@ -16,7 +16,7 @@ class SendMessageRequest:
         content (str): Message content (1-2000 characters)
     """
 
-    content: str = _attrs_field(validator=[validators.instance_of(str), validators.min_len(1), validators.max_len(2000)])
+    content: str = _attrs_field(validator=[validators.instance_of(str), validators.min_len(1), validators.max_len(2000)])  # type: ignore[arg-type]
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
