@@ -69,6 +69,8 @@ per-file-ignores = { "**/tests/*.py" = [
     "PLR0913",  # Too many arguments (necessary for comprehensive credential storage)
     "S107",  # Hardcoded password (false positive for token_type default)
     "PLW0603",  # Global statement (singleton pattern for manager)
+], "**/auth_helper.py" = [
+    "SLF001",  # Internal helper allowed to access private methods within same package
 ] }
 
 [tool.uv.sources]
