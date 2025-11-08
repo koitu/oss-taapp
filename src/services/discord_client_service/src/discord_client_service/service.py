@@ -10,6 +10,7 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
 from discord_client_impl.database import get_credential_manager
 from fastapi import FastAPI
@@ -85,7 +86,7 @@ def health_check() -> dict[str, str]:
 
 
 @app.get("/openapi.json", include_in_schema=False)
-def get_openapi_schema() -> dict:
+def get_openapi_schema() -> dict[str, Any]:
     """Serve the OpenAPI schema.
 
     Returns:
