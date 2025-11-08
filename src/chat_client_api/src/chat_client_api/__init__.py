@@ -13,11 +13,18 @@ Public API:
 
 """
 
-from chat_client_api.client import Client as Client, get_client as get_client
+from chat_client_api.client import Client as Client
+from chat_client_api.client import get_client as get_client
 from chat_client_api.message import (
     Channel as Channel,
+)
+from chat_client_api.message import (
     ChatMessage as ChatMessage,
+)
+from chat_client_api.message import (
     get_channel as get_channel,
+)
+from chat_client_api.message import (
     get_message as get_message,
 )
 
