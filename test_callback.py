@@ -3,9 +3,8 @@
 
 import asyncio
 import sys
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
-import httpx
 from fastapi.testclient import TestClient
 
 
@@ -63,10 +62,9 @@ def test_callback_endpoint():
             print(f"✅ User ID: {data['user_id']}")
             print(f"✅ Status: {data['status']}")
             return True
-        else:
-            print(f"❌ Callback failed with status {response.status_code}")
-            print(f"❌ Error: {response.json().get('detail', 'Unknown error')}")
-            return False
+        print(f"❌ Callback failed with status {response.status_code}")
+        print(f"❌ Error: {response.json().get('detail', 'Unknown error')}")
+        return False
 
 
 def test_callback_with_invalid_code():
@@ -97,9 +95,8 @@ def test_callback_with_invalid_code():
         if response.status_code == 400:
             print("✅ Correctly rejected invalid authorization code!")
             return True
-        else:
-            print(f"❌ Expected 400, got {response.status_code}")
-            return False
+        print(f"❌ Expected 400, got {response.status_code}")
+        return False
 
 
 def test_callback_validation():
@@ -125,9 +122,8 @@ def test_callback_validation():
     if response.status_code == 422:
         print("✅ Correctly validates required fields!")
         return True
-    else:
-        print(f"❌ Expected 422 validation error, got {response.status_code}")
-        return False
+    print(f"❌ Expected 422 validation error, got {response.status_code}")
+    return False
 
 
 if __name__ == "__main__":

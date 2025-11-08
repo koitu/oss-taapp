@@ -16,11 +16,3 @@ Public API:
 from chat_client_api.client import Client, get_client
 from chat_client_api.message import Channel, ChatMessage, get_channel, get_message
 
-__all__ = [
-    "Channel",
-    "ChatMessage",
-    "Client",
-    "get_channel",
-    "get_client",
-    "get_message",
-]

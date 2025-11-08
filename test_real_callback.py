@@ -10,15 +10,16 @@ Usage:
 
 Example:
     python test_real_callback.py "AbCdEf123456..." "steven"
+
 """
 
 import sys
+
 import httpx
 
 
 def test_real_callback(code: str, user_id: str):
     """Test callback with real Discord OAuth code."""
-
     # Load the saved state
     try:
         with open(".oauth_state") as f:
@@ -75,12 +76,11 @@ def test_real_callback(code: str, user_id: str):
             print("Check auth status:")
             print(f"  curl http://localhost:8000/auth/status/{user_id}")
             return True
-        else:
-            print(f"❌ FAILED with status {response.status_code}")
-            print()
-            print("Error details:")
-            print(f"  {response.json().get('detail', 'Unknown error')}")
-            return False
+        print(f"❌ FAILED with status {response.status_code}")
+        print()
+        print("Error details:")
+        print(f"  {response.json().get('detail', 'Unknown error')}")
+        return False
 
     except httpx.ConnectError:
         print("❌ ERROR: Could not connect to http://localhost:8000")
