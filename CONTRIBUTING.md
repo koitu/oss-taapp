@@ -93,12 +93,12 @@ This means we could swap in `OutlookClient` or `MockClient` without changing any
 
 **ABC vs Protocol Comparison:**
 
-| Aspect | ABC | Protocol |
-|--------|-----|----------|
-| Type Checking | Nominal (explicit inheritance) | Structural (duck typing) |
-| Runtime Check | Yes | No |
-| Inheritance | Required | Optional |
-| Use Case | Framework contracts (this project) | Flexible type hints |
+| Aspect        | ABC                                | Protocol                 |
+| ------------- | ---------------------------------- | ------------------------ |
+| Type Checking | Nominal (explicit inheritance)     | Structural (duck typing) |
+| Runtime Check | Yes                                | No                       |
+| Inheritance   | Required                           | Optional                 |
+| Use Case      | Framework contracts (this project) | Flexible type hints      |
 
 ### Dependency Injection
 
@@ -144,6 +144,7 @@ client = mail_client_api.get_client()  # Now returns GmailClient
 **Where the injection happens:** [gmail_impl.py:346](src/gmail_client_impl/src/gmail_client_impl/gmail_impl.py#L346)
 
 **Why this is useful:**
+
 - You can swap implementations just by changing what you import
 - Tests can inject mocks by overriding the factory
 - No circular dependencies
@@ -181,11 +182,13 @@ oss-taapp/
 ### Configuration Files
 
 **Root `pyproject.toml`:**
+
 - Lists all workspace members
 - Defines shared dependencies (like fastapi)
 - Configures tools (ruff, mypy, pytest, coverage) for the whole project
 
 **Component `pyproject.toml`:**
+
 - Package name and version
 - Package-specific dependencies
 - References to workspace dependencies via `[tool.uv.sources]`
@@ -193,17 +196,18 @@ oss-taapp/
 
 **Main differences:**
 
-| Aspect | Root | Component |
-|--------|------|-----------|
-| Purpose | Manages the whole workspace | Defines one package |
-| Dependencies | Shared across all packages | Just for this package |
-| Workspace | Lists members | Declares dependencies |
+| Aspect       | Root                        | Component             |
+| ------------ | --------------------------- | --------------------- |
+| Purpose      | Manages the whole workspace | Defines one package   |
+| Dependencies | Shared across all packages  | Just for this package |
+| Workspace    | Lists members               | Declares dependencies |
 
 ### Package Structure
 
 **`__init__.py` Files:**
 
 Every package under `src/` has an `__init__.py` file that:
+
 - Marks the directory as a Python package
 - Defines what's public via `__all__`
 - Runs initialization code (like calling `register()`)
@@ -211,11 +215,12 @@ Every package under `src/` has an `__init__.py` file that:
 **Keep `__init__.py` files simple:**
 
 ✅ **Do:**
+
 - Import and re-export your public API
-- Define `__all__`
 - Call simple setup functions
 
 ❌ **Don't:**
+
 - Put business logic here
 - Do complex initialization
 - Create heavy side effects
@@ -227,7 +232,6 @@ Every package under `src/` has an `__init__.py` file that:
 from mail_client_api.client import Client, get_client
 from mail_client_api.message import Message, get_message
 
-__all__ = ["Client", "Message", "get_client", "get_message"]
 ```
 
 ### Import Guidelines
@@ -245,6 +249,7 @@ from .client import Client
 ```
 
 2. **Only use relative imports when:**
+
    - You're inside a package's internal modules
    - You need to avoid circular imports
 
@@ -287,6 +292,7 @@ from mail_client_api.client import Client
 **Don't put `__init__.py` in test directories:**
 
 Test directories should NOT be packages. This prevents:
+
 - Tests importing from each other
 - Weird namespace issues
 - Circular dependencies
@@ -338,6 +344,7 @@ uv run pytest --cov=src --cov-report=xml
 ```
 
 **What's excluded from coverage:**
+
 - Test files themselves
 - Generated code
 - Lines with `raise NotImplementedError`
@@ -388,34 +395,39 @@ Detailed, component-specific roles for `pyproject.toml`
 We have a single root `pyproject.toml` plus five component `pyproject.toml` files (one per package under `src/`). Below is what each file specifically contains and when to edit it.
 
 - Root `pyproject.toml` (repository root):
-    - Lists the workspace members (`[tool.uv.workspace].members`) so `uv` knows which packages belong to this workspace.
-    - Declares shared dependencies and common developer tooling (examples: `fastapi` listed at the root, `ruff`, `mypy`, `pytest`, coverage configuration, and `dev` extras). This is the primary source for workspace-wide policy and shared version constraints and is what `uv sync --all-packages` and `uv lock` use to produce `uv.lock`.
-    - Use the root file when you need to change behavior that should apply to all packages (shared linting rules, CI thresholds, common pinned versions, or adding a runtime dependency used across multiple packages).
+
+  - Lists the workspace members (`[tool.uv.workspace].members`) so `uv` knows which packages belong to this workspace.
+  - Declares shared dependencies and common developer tooling (examples: `fastapi` listed at the root, `ruff`, `mypy`, `pytest`, coverage configuration, and `dev` extras). This is the primary source for workspace-wide policy and shared version constraints and is what `uv sync --all-packages` and `uv lock` use to produce `uv.lock`.
+  - Use the root file when you need to change behavior that should apply to all packages (shared linting rules, CI thresholds, common pinned versions, or adding a runtime dependency used across multiple packages).
 
 - `src/mail_client_api/pyproject.toml`:
-    - Purpose: the lightweight, dependency-free interface package that defines ABCs and public API types.
-    - What it contains: package metadata, no runtime dependencies (empty `dependencies`), build system (`hatchling`), and a `tool.ruff` section that extends the root config. It intentionally keeps imports minimal so the API stays stable and easy to import in other packages.
-    - Edit this file to change the package name/version, add package-specific metadata, or add a strictly interface-only dependency (rare). Do NOT add implementation dependencies here.
+
+  - Purpose: the lightweight, dependency-free interface package that defines ABCs and public API types.
+  - What it contains: package metadata, no runtime dependencies (empty `dependencies`), build system (`hatchling`), and a `tool.ruff` section that extends the root config. It intentionally keeps imports minimal so the API stays stable and easy to import in other packages.
+  - Edit this file to change the package name/version, add package-specific metadata, or add a strictly interface-only dependency (rare). Do NOT add implementation dependencies here.
 
 - `src/gmail_client_impl/pyproject.toml`:
-    - Purpose: the concrete Gmail implementation that depends on Google auth libraries and the `mail-client-api` interface.
-    - What it contains: runtime dependencies such as `google-api-python-client`, `google-auth`, `google-auth-oauthlib`, `dotenv`, and a dependency on the workspace `mail-client-api`. It also defines `optional-dependencies` for testing and a `tool.pytest.ini_options` override for local test discovery. It declares `[tool.uv.sources]` to reference `mail-client-api` from the workspace.
-    - Edit this file when you need to add or update Gmail-specific third-party libraries, package-level test extras, or per-package pytest/coverage settings. Do not add cross-cutting tooling (like ruff rules) here unless you need to relax or override the root tool config for this package.
+
+  - Purpose: the concrete Gmail implementation that depends on Google auth libraries and the `mail-client-api` interface.
+  - What it contains: runtime dependencies such as `google-api-python-client`, `google-auth`, `google-auth-oauthlib`, `dotenv`, and a dependency on the workspace `mail-client-api`. It also defines `optional-dependencies` for testing and a `tool.pytest.ini_options` override for local test discovery. It declares `[tool.uv.sources]` to reference `mail-client-api` from the workspace.
+  - Edit this file when you need to add or update Gmail-specific third-party libraries, package-level test extras, or per-package pytest/coverage settings. Do not add cross-cutting tooling (like ruff rules) here unless you need to relax or override the root tool config for this package.
 
 - `src/mail_client_service_adapter/pyproject.toml`:
-    - Purpose: adapts the generated HTTP client into the `mail_client_api` abstractions.
-    - What it contains: adapter-specific dependencies (`httpx`, `mail-client-api`, `mail-client-service-client`), test extras (e.g., `respx`) and workspace source references under `[tool.uv.sources]` for the API and client packages.
-    - Edit this file to add HTTP client tooling or mocking libraries used only by the adapter, or to change package metadata. Keep adapter-only runtime deps here.
+
+  - Purpose: adapts the generated HTTP client into the `mail_client_api` abstractions.
+  - What it contains: adapter-specific dependencies (`httpx`, `mail-client-api`, `mail-client-service-client`), test extras (e.g., `respx`) and workspace source references under `[tool.uv.sources]` for the API and client packages.
+  - Edit this file to add HTTP client tooling or mocking libraries used only by the adapter, or to change package metadata. Keep adapter-only runtime deps here.
 
 - `src/services/mail_client_service/pyproject.toml`:
-    - Purpose: the FastAPI service package that exposes the mail client via HTTP.
-    - What it contains: `fastapi`, `uvicorn`, and workspace dependencies like `gmail-client-impl` and `mail-client-api` in `dependencies`. It also customizes some tooling (coverage thresholds, ruff overrides) appropriate for a small service wrapper.
-    - Edit this file to add server-only dependencies (middleware, auth libraries) or change service-specific test/coverage settings. Because it depends on implementation packages, it lists those workspace packages in `[tool.uv.sources]`.
+
+  - Purpose: the FastAPI service package that exposes the mail client via HTTP.
+  - What it contains: `fastapi`, `uvicorn`, and workspace dependencies like `gmail-client-impl` and `mail-client-api` in `dependencies`. It also customizes some tooling (coverage thresholds, ruff overrides) appropriate for a small service wrapper.
+  - Edit this file to add server-only dependencies (middleware, auth libraries) or change service-specific test/coverage settings. Because it depends on implementation packages, it lists those workspace packages in `[tool.uv.sources]`.
 
 - `src/clients/pyproject.toml` (generated client package):
-    - Purpose: the auto-generated HTTP client library used by the adapter/service.
-    - What it contains: client-specific runtime deps like `httpx`, `attrs`, and `python-dateutil`, plus build-system metadata.
-    - Edit this file when the generated client needs new runtime libraries or when updating package metadata prior to publishing the client.
+  - Purpose: the auto-generated HTTP client library used by the adapter/service.
+  - What it contains: client-specific runtime deps like `httpx`, `attrs`, and `python-dateutil`, plus build-system metadata.
+  - Edit this file when the generated client needs new runtime libraries or when updating package metadata prior to publishing the client.
 
 Practical rules of thumb
 
@@ -430,7 +442,6 @@ Example workflow:
 2. Add an HTTP mocking tool used only by the adapter: cd into `src/mail_client_service_adapter` and add the dependency in that package's `pyproject.toml`, then run `uv sync` from the repository root or `uv sync` inside the package if you prefer local workflows.
 
 Together: run `uv sync --all-packages` from the root to install versions from the root manifest, or work inside a component directory to add/package a single component using its local `pyproject.toml`.
-
 
 ### Static Analysis and Code Formatting
 
@@ -453,6 +464,7 @@ uv run mypy src/                 # Check types
 ```
 
 **Why use these:**
+
 - Everyone's code looks the same
 - Catches bugs before you run the code
 - Makes code review easier
@@ -477,6 +489,7 @@ uv run mkdocs build
 ```
 
 **To add a new doc page:**
+
 1. Create `docs/your-page.md`
 2. Add it to `mkdocs.yml`:
 
@@ -524,16 +537,17 @@ def example(param1: str, param2: int) -> bool:
 
 **When jobs run:**
 
-| Job | Trigger | Branches |
-|-----|---------|----------|
-| build | Every push | All |
-| lint | After build | All |
-| unit_test | After build | All |
-| circleci_test | After unit_test | All |
+| Job              | Trigger             | Branches           |
+| ---------------- | ------------------- | ------------------ |
+| build            | Every push          | All                |
+| lint             | After build         | All                |
+| unit_test        | After build         | All                |
+| circleci_test    | After unit_test     | All                |
 | integration_test | After circleci_test | main, develop only |
-| report_summary | After tests | All |
+| report_summary   | After tests         | All                |
 
 **Environment variables needed (stored in CircleCI):**
+
 - `GMAIL_CLIENT_ID`
 - `GMAIL_CLIENT_SECRET`
 - `GMAIL_REFRESH_TOKEN`
@@ -545,6 +559,7 @@ The project includes Docker support for containerized deployment.
 **Dockerfile Overview:**
 
 The [Dockerfile](Dockerfile) uses a multi-stage approach:
+
 - Base image: Python 3.11 slim (lightweight)
 - Installs `uv` via pip
 - Copies all project files (respecting `.dockerignore`)
@@ -553,11 +568,13 @@ The [Dockerfile](Dockerfile) uses a multi-stage approach:
 - Default command runs the FastAPI service
 
 **Build the image:**
+
 ```bash
 docker build -t gmail-service .
 ```
 
 **Run the service:**
+
 ```bash
 # Basic run
 docker run -p 8000:8000 gmail-service
@@ -574,11 +591,13 @@ docker run gmail-service uv run python main.py
 ```
 
 **Access the API:**
+
 - Docs: `http://localhost:8000/docs`
 - Alternative docs: `http://localhost:8000/redoc`
 - Root path (`/`) returns 404 - this is normal
 
 **What's excluded (.dockerignore):**
+
 - Virtual environments and caches
 - Git and CI files
 - Documentation and tests
@@ -590,11 +609,13 @@ docker run gmail-service uv run python main.py
 ## Quick Reference
 
 **Setup:**
+
 ```bash
 uv sync --all-packages --extra dev
 ```
 
 **Development loop:**
+
 ```bash
 uv run pytest src/                    # Quick unit tests
 uv run ruff check . --fix             # Fix linting
@@ -604,17 +625,20 @@ uv run pytest src/ tests/ -m "not local_credentials"  # All tests
 ```
 
 **Docker:**
+
 ```bash
 docker build -t gmail-service .       # Build image
 docker run -p 8000:8000 gmail-service # Run service
 ```
 
 **Docs:**
+
 ```bash
 uv run mkdocs serve
 ```
 
 **Coverage:**
+
 ```bash
 uv run pytest --cov=src --cov-report=html
 ```

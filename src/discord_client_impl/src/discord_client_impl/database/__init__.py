@@ -25,9 +25,3 @@ Usage:
 from discord_client_impl.database.manager import CredentialManager, get_credential_manager
 from discord_client_impl.database.models import Base, DiscordCredential
 
-__all__ = [
-    "Base",
-    "CredentialManager",
-    "DiscordCredential",
-    "get_credential_manager",
-]

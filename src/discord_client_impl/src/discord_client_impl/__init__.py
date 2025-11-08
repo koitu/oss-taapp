@@ -21,8 +21,6 @@ import chat_client_api
 from discord_client_impl.discord_impl import DiscordClient
 from discord_client_impl.message_impl import DiscordChannel, DiscordMessage
 
-__all__ = ["DiscordChannel", "DiscordClient", "DiscordMessage", "register"]
-
 
 def get_client_impl(user_id: str | None = None) -> chat_client_api.Client:
     """Create a Discord client instance.

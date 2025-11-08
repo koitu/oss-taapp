@@ -38,6 +38,17 @@ Required environment variables (see `.env.example` in project root):
 - `DISCORD_REDIRECT_URI`: OAuth2 redirect URI
 - `DISCORD_DB_PATH`: Path to SQLite database file
 
+### Important next steps:
+
+1. Go to https://discord.com/developers/applications/${DISCORD_CLIENT_ID}/oauth2/general
+
+2. Add this redirect URI: http://localhost:8000/auth/callback
+3. Under OAuth2 → URL Generator, select scopes:
+
+- identify
+- guilds
+- messages.read
+
 ## API Endpoints
 
 ### Authentication

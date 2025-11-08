@@ -13,4 +13,3 @@ from mail_client_service_adapter.adapter_impl import (
     register,
 )
 
-__all__ = ["ServiceAdapterClient", "get_client_impl", "register"]
