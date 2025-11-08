@@ -7,8 +7,9 @@ from pathlib import Path
 service_path = Path(__file__).parent / "src" / "services" / "discord_client_service" / "src"
 sys.path.insert(0, str(service_path))
 
-from fastapi.testclient import TestClient
 from discord_client_service.service import app
+from fastapi.testclient import TestClient
+
 
 def test_openapi_endpoint():
     """Test that /openapi.json endpoint returns valid schema."""

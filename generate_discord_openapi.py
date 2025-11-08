@@ -13,9 +13,9 @@ sys.path.insert(0, str(service_path))
 
 # Import FastAPI app without triggering lifespan
 # We'll temporarily replace the lifespan
-from fastapi import FastAPI
-from discord_client_service.api import *  # Import all API routes
 from discord_client_service import service
+from discord_client_service.api import *  # Import all API routes
+from fastapi import FastAPI
 
 # Create a new app without lifespan for schema generation
 temp_app = FastAPI(
@@ -35,7 +35,7 @@ output_path = Path(__file__).parent / "src" / "services" / "discord_client_servi
 with output_path.open("w") as f:
     json.dump(openapi_schema, f, indent=2)
 
-print(f"✓ OpenAPI schema generated successfully!")
+print("✓ OpenAPI schema generated successfully!")
 print(f"✓ Location: {output_path}")
 print(f"✓ OpenAPI version: {openapi_schema.get('openapi')}")
 print(f"✓ API title: {openapi_schema['info']['title']}")

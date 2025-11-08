@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 # Prevent lifespan from running during import
 import os
+
 os.environ["SKIP_DB_INIT"] = "1"
 
 from discord_client_service.service import app
