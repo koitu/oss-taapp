@@ -76,5 +76,5 @@ def test_get_client_impl_returns_discord_client() -> None:
 
     assert client is not None
     # Verify it has DiscordClient methods
-    assert hasattr(client, "get_authorization_url")
-    assert hasattr(client, "exchange_code_for_token")
+    assert hasattr(client, "_get_authorization_url")
+    assert hasattr(client, "_exchange_code_for_token")

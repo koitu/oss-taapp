@@ -8,6 +8,9 @@ import pytest_asyncio
 
 from discord_client_impl.database import CredentialManager
 
+# Test constants
+EXPECTED_CREDENTIAL_COUNT = 2  # Expected number of credentials in multi-user test
+
 
 @pytest_asyncio.fixture
 async def db_manager() -> AsyncIterator[CredentialManager]:
@@ -167,7 +170,7 @@ async def test_list_all_credentials(db_manager: CredentialManager) -> None:
     # List all
     all_creds = await db_manager.list_all_credentials()
 
-    assert len(all_creds) == 2
+    assert len(all_creds) == EXPECTED_CREDENTIAL_COUNT
     user_ids = {cred.user_id for cred in all_creds}
     assert user_ids == {"user1", "user2"}
 

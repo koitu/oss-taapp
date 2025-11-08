@@ -35,7 +35,7 @@ async def get_client_for_user(user_id: str) -> DiscordClient:
 
         try:
             # Refresh the token
-            new_token_data = client.refresh_access_token(credentials.refresh_token)
+            new_token_data = client._refresh_access_token(credentials.refresh_token)
 
             # Update database with new tokens
             # Note: Some OAuth servers return a new refresh token

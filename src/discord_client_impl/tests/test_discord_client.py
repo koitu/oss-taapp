@@ -4,10 +4,23 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import respx
+from chat_client_api.exceptions import (
+    AuthenticationError,
+    ChannelNotFoundError,
+    MessageDeleteError,
+    MessageNotFoundError,
+    MessageSendError,
+)
 from httpx import Response
 from respx import MockRouter
 
 from discord_client_impl.discord_impl import DiscordClient
+
+# Test constants
+MIN_STATE_LENGTH = 10  # Minimum length for OAuth2 state parameter
+DISCORD_TOKEN_EXPIRES_IN = 604800  # Discord token expiration time in seconds (7 days)
+EXPECTED_MESSAGE_COUNT = 2  # Expected number of messages in test responses
+EXPECTED_CHANNEL_COUNT = 2  # Expected number of channels in test responses
 
 
 @pytest.fixture
@@ -36,7 +49,7 @@ class TestOAuth2Flow:
 
     def test_get_authorization_url(self, auth_client: DiscordClient) -> None:
         """Test OAuth2 authorization URL generation."""
-        url, state = auth_client.get_authorization_url()
+        url, state = auth_client._get_authorization_url()
 
         assert "https://discord.com/api/oauth2/authorize" in url
         assert "response_type=code" in url
@@ -44,12 +57,12 @@ class TestOAuth2Flow:
         # redirect_uri is URL-encoded in the actual URL
         assert "redirect_uri=" in url
         assert f"state={state}" in url
-        assert len(state) > 10  # State should be a random string
+        assert len(state) > MIN_STATE_LENGTH  # State should be a random string
 
     def test_get_authorization_url_with_custom_state(self, auth_client: DiscordClient) -> None:
         """Test authorization URL with custom state."""
         custom_state = "my_custom_state"
-        url, state = auth_client.get_authorization_url(state=custom_state)
+        url, state = auth_client._get_authorization_url(state=custom_state)
 
         assert f"state={custom_state}" in url
         assert state == custom_state
@@ -71,12 +84,12 @@ class TestOAuth2Flow:
         mock_oauth_instance.fetch_token.return_value = mock_response
         mock_oauth_class.return_value = mock_oauth_instance
 
-        result = auth_client.exchange_code_for_token("test_code")
+        result = auth_client._exchange_code_for_token("test_code")
 
         assert result["access_token"] == "new_access_token"
         assert result["refresh_token"] == "new_refresh_token"
         assert result["token_type"] == "Bearer"
-        assert result["expires_in"] == 604800
+        assert result["expires_in"] == DISCORD_TOKEN_EXPIRES_IN
 
     @patch("discord_client_impl.discord_impl.OAuth2Client")
     def test_exchange_code_for_token_failure(
@@ -88,7 +101,7 @@ class TestOAuth2Flow:
         mock_oauth_class.return_value = mock_oauth_instance
 
         with pytest.raises(ValueError, match="Token exchange failed"):
-            auth_client.exchange_code_for_token("invalid_code")
+            auth_client._exchange_code_for_token("invalid_code")
 
     @patch("discord_client_impl.discord_impl.OAuth2Client")
     def test_refresh_access_token_success(
@@ -106,7 +119,7 @@ class TestOAuth2Flow:
         mock_oauth_instance.refresh_token.return_value = mock_response
         mock_oauth_class.return_value = mock_oauth_instance
 
-        result = auth_client.refresh_access_token("old_refresh_token")
+        result = auth_client._refresh_access_token("old_refresh_token")
 
         assert result["access_token"] == "refreshed_access_token"
         assert result["refresh_token"] == "new_refresh_token"
@@ -121,7 +134,7 @@ class TestOAuth2Flow:
         mock_oauth_class.return_value = mock_oauth_instance
 
         with pytest.raises(ValueError, match="Token refresh failed"):
-            auth_client.refresh_access_token("invalid_refresh_token")
+            auth_client._refresh_access_token("invalid_refresh_token")
 
 
 class TestMessageOperations:
@@ -153,7 +166,7 @@ class TestMessageOperations:
 
         messages = list(discord_client.get_messages(channel_id="789", max_results=10))
 
-        assert len(messages) == 2
+        assert len(messages) == EXPECTED_MESSAGE_COUNT
         assert messages[0].id == "123456"
         assert messages[0].content == "Test message 1"
         assert messages[0].author_name == "TestUser"
@@ -217,7 +230,7 @@ class TestMessageOperations:
             return_value=Response(403, json={"message": "Missing Access"})
         )
 
-        with pytest.raises(ValueError, match="Failed to send message"):
+        with pytest.raises(MessageSendError, match="Failed to send message"):
             discord_client.send_message(channel_id="789", content="Test")
 
     @respx.mock
@@ -233,14 +246,13 @@ class TestMessageOperations:
 
     @respx.mock
     def test_delete_message_not_found(self, discord_client: DiscordClient) -> None:
-        """Test deleting non-existent message."""
+        """Test deleting non-existent message raises MessageNotFoundError."""
         respx.delete("https://discord.com/api/v10/channels/789/messages/999").mock(
             return_value=Response(404, json={"message": "Unknown Message"})
         )
 
-        result = discord_client.delete_message(channel_id="789", message_id="999")
-
-        assert result is False
+        with pytest.raises(MessageNotFoundError, match="Message 999 not found"):
+            discord_client.delete_message(channel_id="789", message_id="999")
 
 
 class TestChannelOperations:
@@ -261,7 +273,7 @@ class TestChannelOperations:
 
         channels = list(discord_client.get_channels())
 
-        assert len(channels) == 2
+        assert len(channels) == EXPECTED_CHANNEL_COUNT
         assert channels[0].id == "ch1"
         assert channels[1].id == "ch2"
 
@@ -292,7 +304,7 @@ class TestChannelOperations:
             return_value=Response(404, json={"message": "Unknown Channel"})
         )
 
-        with pytest.raises(ValueError, match="Channel 999 not found"):
+        with pytest.raises(ChannelNotFoundError, match="Channel 999 not found"):
             discord_client.get_channel(channel_id="999")
 
 
@@ -327,7 +339,7 @@ class TestErrorHandling:
             client_secret="test_client_secret",
         )
 
-        with pytest.raises(ValueError, match="Not authenticated"):
+        with pytest.raises(AuthenticationError, match="Not authenticated"):
             list(client.get_channels())
 
     def test_exchange_code_without_credentials(self) -> None:
@@ -337,7 +349,7 @@ class TestErrorHandling:
         with pytest.raises(
             ValueError, match="DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET required"
         ):
-            client.exchange_code_for_token("test_code")
+            client._exchange_code_for_token("test_code")
 
     def test_refresh_token_without_credentials(self) -> None:
         """Test token refresh without client credentials."""
@@ -346,7 +358,7 @@ class TestErrorHandling:
         with pytest.raises(
             ValueError, match="DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET required"
         ):
-            client.refresh_access_token("test_refresh_token")
+            client._refresh_access_token("test_refresh_token")
 
     def test_get_message_http_error(
         self, discord_client: DiscordClient, respx_mock: MockRouter
@@ -356,7 +368,7 @@ class TestErrorHandling:
             return_value=Response(500, json={"message": "Internal Server Error"})
         )
 
-        with pytest.raises(ValueError, match="Failed to retrieve message"):
+        with pytest.raises(MessageNotFoundError, match="Failed to retrieve message"):
             discord_client.get_message(channel_id="ch1", message_id="msg999")
 
     def test_send_message_http_error(
@@ -367,19 +379,19 @@ class TestErrorHandling:
             return_value=Response(500, json={"message": "Internal Server Error"})
         )
 
-        with pytest.raises(ValueError, match="Failed to send message"):
+        with pytest.raises(MessageSendError, match="Failed to send message"):
             discord_client.send_message(channel_id="ch1", content="Test")
 
     def test_delete_message_http_error(
         self, discord_client: DiscordClient, respx_mock: MockRouter
     ) -> None:
-        """Test delete_message with HTTP error returns False."""
+        """Test delete_message with HTTP error raises exception."""
         respx_mock.delete("https://discord.com/api/v10/channels/ch1/messages/msg1").mock(
             return_value=Response(500, json={"message": "Internal Server Error"})
         )
 
-        result = discord_client.delete_message(channel_id="ch1", message_id="msg1")
-        assert result is False
+        with pytest.raises(MessageDeleteError, match="Failed to delete message"):
+            discord_client.delete_message(channel_id="ch1", message_id="msg1")
 
     def test_get_channel_http_error(
         self, discord_client: DiscordClient, respx_mock: MockRouter
@@ -389,5 +401,5 @@ class TestErrorHandling:
             return_value=Response(500, json={"message": "Internal Server Error"})
         )
 
-        with pytest.raises(ValueError, match="Failed to retrieve channel"):
+        with pytest.raises(ChannelNotFoundError, match="Failed to retrieve channel"):
             discord_client.get_channel(channel_id="ch999")

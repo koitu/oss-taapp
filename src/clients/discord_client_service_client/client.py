@@ -100,6 +100,11 @@ class Client:
         """Exit a context manager for internal httpx.Client (see httpx docs)"""
         self.get_httpx_client().__exit__(*args, **kwargs)
 
+    def close(self) -> None:
+        """Close the underlying httpx.Client, if it has been created"""
+        if self._client is not None:
+            self._client.close()
+
     def set_async_httpx_client(self, async_client: httpx.AsyncClient) -> "Client":
         """Manually the underlying httpx.AsyncClient
 
@@ -130,6 +135,11 @@ class Client:
     async def __aexit__(self, *args: Any, **kwargs: Any) -> None:
         """Exit a context manager for underlying httpx.AsyncClient (see httpx docs)"""
         await self.get_async_httpx_client().__aexit__(*args, **kwargs)
+
+    async def aclose(self) -> None:
+        """Close the underlying httpx.AsyncClient, if it has been created"""
+        if self._async_client is not None:
+            await self._async_client.aclose()
 
 
 @define
@@ -214,11 +224,11 @@ class AuthenticatedClient:
     def get_httpx_client(self) -> httpx.Client:
         """Get the underlying httpx.Client, constructing a new one if not previously set"""
         if self._client is None:
-            self._headers[self.auth_header_name] = f"{self.prefix} {self.token}" if self.prefix else self.token
+            headers = {**self._headers, self.auth_header_name: f"{self.prefix} {self.token}" if self.prefix else self.token}
             self._client = httpx.Client(
                 base_url=self._base_url,
                 cookies=self._cookies,
-                headers=self._headers,
+                headers=headers,
                 timeout=self._timeout,
                 verify=self._verify_ssl,
                 follow_redirects=self._follow_redirects,
@@ -235,6 +245,11 @@ class AuthenticatedClient:
         """Exit a context manager for internal httpx.Client (see httpx docs)"""
         self.get_httpx_client().__exit__(*args, **kwargs)
 
+    def close(self) -> None:
+        """Close the underlying httpx.Client, if it has been created"""
+        if self._client is not None:
+            self._client.close()
+
     def set_async_httpx_client(self, async_client: httpx.AsyncClient) -> "AuthenticatedClient":
         """Manually the underlying httpx.AsyncClient
 
@@ -246,11 +261,11 @@ class AuthenticatedClient:
     def get_async_httpx_client(self) -> httpx.AsyncClient:
         """Get the underlying httpx.AsyncClient, constructing a new one if not previously set"""
         if self._async_client is None:
-            self._headers[self.auth_header_name] = f"{self.prefix} {self.token}" if self.prefix else self.token
+            headers = {**self._headers, self.auth_header_name: f"{self.prefix} {self.token}" if self.prefix else self.token}
             self._async_client = httpx.AsyncClient(
                 base_url=self._base_url,
                 cookies=self._cookies,
-                headers=self._headers,
+                headers=headers,
                 timeout=self._timeout,
                 verify=self._verify_ssl,
                 follow_redirects=self._follow_redirects,
@@ -266,3 +281,8 @@ class AuthenticatedClient:
     async def __aexit__(self, *args: Any, **kwargs: Any) -> None:
         """Exit a context manager for underlying httpx.AsyncClient (see httpx docs)"""
         await self.get_async_httpx_client().__aexit__(*args, **kwargs)
+
+    async def aclose(self) -> None:
+        """Close the underlying httpx.AsyncClient, if it has been created"""
+        if self._async_client is not None:
+            await self._async_client.aclose()

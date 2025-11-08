@@ -3,6 +3,7 @@ from typing import Any, TypeVar
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
+from attrs import validators
 
 T = TypeVar("T", bound="SendMessageRequest")
 
@@ -12,10 +13,10 @@ class SendMessageRequest:
     """Request to send a message.
 
     Attributes:
-        content (str): Message content
+        content (str): Message content (1-2000 characters)
     """
 
-    content: str
+    content: str = _attrs_field(validator=[validators.instance_of(str), validators.min_len(1), validators.max_len(2000)])
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
