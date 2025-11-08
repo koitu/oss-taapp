@@ -7,4 +7,5 @@ This package contains the generated OpenAPI client used to call the chat client 
         options:
             show_root_heading: true
             show_source: false
+            show_submodules: true
 <!-- prettier-ignore-end -->
