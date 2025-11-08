@@ -8,8 +8,12 @@ implementing the Adapter Pattern.
 """
 
 from mail_client_service_adapter.adapter_impl import (
-    ServiceAdapterClient,
-    get_client_impl,
-    register,
+    ServiceAdapterClient as ServiceAdapterClient,
+)
+from mail_client_service_adapter.adapter_impl import (
+    get_client_impl as get_client_impl,
+)
+from mail_client_service_adapter.adapter_impl import (
+    register as register,
 )
 

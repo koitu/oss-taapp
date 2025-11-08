@@ -22,6 +22,16 @@ Usage:
 
 """
 
-from discord_client_impl.database.manager import CredentialManager, get_credential_manager
-from discord_client_impl.database.models import Base, DiscordCredential
+from discord_client_impl.database.manager import (
+    CredentialManager as CredentialManager,
+)
+from discord_client_impl.database.manager import (
+    get_credential_manager as get_credential_manager,
+)
+from discord_client_impl.database.models import (
+    Base as Base,
+)
+from discord_client_impl.database.models import (
+    DiscordCredential as DiscordCredential,
+)
 
