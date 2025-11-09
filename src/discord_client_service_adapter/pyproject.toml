@@ -55,4 +55,4 @@ ignore = []
 
 [tool.uv.sources]
 chat-client-api = { workspace = true }
-discord-client-service-client = { path = "../clients/discord_client_service_client", editable = true }
+discord-client-service-client = { workspace = true }

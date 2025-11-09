@@ -12,6 +12,7 @@ members = [
     "discord-client-impl",
     "discord-client-service",
     "discord-client-service-adapter",
+    "discord-client-service-client",
     "gmail-client-impl",
     "mail-client-api",
     "mail-client-service",

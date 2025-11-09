@@ -43,6 +43,7 @@ members = [
   "src/gmail_client_impl",
   "src/services/mail_client_service",
   "src/clients",
+  "src/clients/discord_client_service_client",
   "src/mail_client_service_adapter",
   "src/chat_client_api",
   "src/discord_client_impl",
