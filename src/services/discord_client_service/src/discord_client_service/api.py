@@ -87,8 +87,12 @@ def oauth_login() -> OAuthInitResponse:
     try:
         client = DiscordClient()
         # Create a server-side state and pass it to Discord so the callback can be correlated.
-        server_state = create_state()
-        auth_url, generated_state = client._get_authorization_url(state=server_state)
+        # create_state expects an optional guild_id parameter; pass None when
+        # no guild is known at login-init time.
+        server_state = create_state(None)
+        # generated state value from the client is not currently used by the
+        # server; prefix with underscore to satisfy linters about unused vars
+        auth_url, _generated_state = client._get_authorization_url(state=server_state)
 
         # Return the authorization URL and the generated state. The frontend may
         # encode any additional information (for example guild_id) into the state
@@ -129,7 +133,11 @@ async def oauth_callback(
         state_entry = pop_state(state or "")
         gid = guild_id or (state_entry and state_entry.get("guild_id"))
         if not gid:
-            raise ValueError("Missing guild_id in callback; ensure state contains guild id or provide guild_id query param")
+            msg = (
+                "Missing guild_id in callback; ensure state contains guild id "
+                "or provide guild_id query param"
+            )
+            raise ValueError(msg)
 
         await store_user_credentials(guild_id=gid, token_data=token_data)
         logger.info("Successfully stored credentials for guild: %s", gid)
@@ -139,7 +147,6 @@ async def oauth_callback(
         resp = RedirectResponse(url="/docs")
         # HttpOnly cookie so client-side JS cannot read token; secure flag recommended in production
         resp.set_cookie("session_id", session_id, httponly=True, samesite="lax")
-        return resp
 
     except ValueError as e:
         logger.exception("Token exchange failed during callback")
@@ -153,6 +160,9 @@ async def oauth_callback(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"OAuth callback failed: {e}",
         ) from e
+    else:
+        # Only return the response when no exception was raised in the try block.
+        return resp
 
 
 @app.get(
@@ -160,7 +170,10 @@ async def oauth_callback(
     response_model=dict[str, bool | str],
     summary="Check authentication status",
 )
-async def auth_status(guild_id: str, _auth: None = Depends(require_guild_access)) -> dict[str, bool | str]:
+async def auth_status(
+    guild_id: str,
+    _auth: None = Depends(require_guild_access),
+) -> dict[str, bool | str]:
     """Check if guild is authenticated."""
     authenticated = await check_user_authenticated(guild_id)
     return {"authenticated": authenticated, "guild_id": guild_id}
@@ -171,7 +184,10 @@ async def auth_status(guild_id: str, _auth: None = Depends(require_guild_access)
     response_model=OperationResponse,
     summary="Logout guild",
 )
-async def oauth_logout(guild_id: str, _auth: None = Depends(require_guild_access)) -> OperationResponse:
+async def oauth_logout(
+    guild_id: str,
+    _auth: None = Depends(require_guild_access),
+) -> OperationResponse:
     """Logout guild by deleting stored credentials."""
     try:
         deleted = await delete_user_credentials(guild_id)
@@ -184,15 +200,19 @@ async def oauth_logout(guild_id: str, _auth: None = Depends(require_guild_access
         # Attempt to have the bot leave the guild. Prefer the application bot
         # token via get_bot_client_for_guild(). If that isn't available, log a
         # warning and continue — we still consider the logout successful.
+        # Try to obtain a bot client for the guild. If none available, skip
+        # attempting to leave the guild. Narrow exception handling to expected
+        # error types so we don't silently swallow unrelated problems.
         try:
             bot_client = await get_bot_client_for_guild(guild_id)
+        except ValueError:
+            logger.debug("No bot client available to leave guild %s; skipping leave", guild_id)
+        else:
             try:
                 bot_client.leave_guild(guild_id)
                 logger.info("Bot left guild %s after logout", guild_id)
-            except Exception as e:
+            except (AttributeError, RuntimeError) as e:
                 logger.warning("Failed to make bot leave guild %s: %s", guild_id, e)
-        except Exception:
-            logger.debug("No bot client available to leave guild %s; skipping leave", guild_id)
 
         logger.info("Successfully logged out guild: %s", guild_id)
         return OperationResponse(
@@ -214,7 +234,10 @@ async def oauth_logout(guild_id: str, _auth: None = Depends(require_guild_access
     response_model=ChannelListResponse,
     summary="Get guild channels",
 )
-async def get_channels(guild_id: str, _auth: None = Depends(require_guild_access)) -> ChannelListResponse:
+async def get_channels(
+    guild_id: str,
+    _auth: None = Depends(require_guild_access),
+) -> ChannelListResponse:
     """Get list of Discord channels for a guild."""
     try:
         # Use a bot token for guild-level channel listing. Prefer the application
@@ -249,7 +272,11 @@ async def get_channels(guild_id: str, _auth: None = Depends(require_guild_access
     response_model=ChannelInfo,
     summary="Get channel info",
 )
-async def get_channel(guild_id: str, channel_id: str, _auth: None = Depends(require_guild_access)) -> ChannelInfo:
+async def get_channel(
+    guild_id: str,
+    channel_id: str,
+    _auth: None = Depends(require_guild_access),
+) -> ChannelInfo:
     """Get information about a specific Discord channel."""
     try:
         client = await get_client_for_user(guild_id)

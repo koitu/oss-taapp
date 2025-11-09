@@ -88,4 +88,7 @@ def require_guild_access(guild_id: str, session_id: str | None = Cookie(None)) -
     Raises HTTPException(403) when access is not allowed.
     """
     if not check_session(session_id, guild_id):
-        raise HTTPException(status_code=403, detail="Forbidden: session does not allow access to this guild")
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: session does not allow access to this guild",
+        )

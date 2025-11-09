@@ -51,6 +51,10 @@ class DiscordClient(Client):
             client_id: Discord application client ID (for OAuth flow).
             client_secret: Discord application client secret (for OAuth flow).
             redirect_uri: OAuth2 redirect URI (for OAuth flow).
+            token_type: Authorization header token type to use when sending requests
+                (e.g. "Bot" or "Bearer"). If not provided, the environment
+                variable `DISCORD_DEFAULT_TOKEN_TYPE` is consulted or defaults
+                to "Bot" for backwards compatibility.
 
         """
         self.client_id = client_id or os.environ.get("DISCORD_CLIENT_ID")
@@ -105,12 +109,13 @@ class DiscordClient(Client):
         scopes = ["identify", "guilds", "messages.read", "bot"]
 
         # For bot installs, request the specific permission bits the bot needs.
-        # Use named constants for clarity: VIEW_CHANNEL, SEND_MESSAGES, READ_MESSAGE_HISTORY.
-        VIEW_CHANNEL = 0x00000400  # 1024
-        SEND_MESSAGES = 0x00000800  # 2048
-        READ_MESSAGE_HISTORY = 0x00010000  # 65536
+        # Use named constants for clarity (lowercase to satisfy local variable naming):
+        # view_channel, send_messages, read_message_history.
+        view_channel = 0x00000400  # 1024
+        send_messages = 0x00000800  # 2048
+        read_message_history = 0x00010000  # 65536
 
-        permissions = VIEW_CHANNEL | SEND_MESSAGES | READ_MESSAGE_HISTORY  # = 68608
+        permissions = view_channel | send_messages | read_message_history  # = 68608
 
         # Integration type: Guild Install (this authorizes the bot for a guild).
         # Build authorization URL. Include explicit response_type to make intent clear.

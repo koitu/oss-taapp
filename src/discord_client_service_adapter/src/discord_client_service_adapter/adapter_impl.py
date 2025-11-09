@@ -130,7 +130,7 @@ class ServiceAdapterClient(chat_client_api.Client):
 
         Args:
             service_url: Base URL of the running Discord service
-                guild_id: The guild ID for making authenticated requests
+            guild_id: The guild ID for making authenticated requests
 
         """
         self.service_url = service_url

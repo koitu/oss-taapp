@@ -22,68 +22,6 @@ def _get_kwargs(
 
     return _kwargs
 
-    guild_id: str,
-def _parse_response(
-    *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> AuthStatusAuthStatusUserIdGetResponseAuthStatusAuthStatusUserIdGet | HTTPValidationError | None:
-        "url": f"/auth/status/{guild_id}",
-        response_200 = AuthStatusAuthStatusUserIdGetResponseAuthStatusAuthStatusUserIdGet.from_dict(response.json())
-
-        return response_200
-
-    if response.status_code == 422:
-    guild_id: str,
-
-        return response_422
-
-    if client.raise_on_unexpected_status:
-        raise errors.UnexpectedStatus(response.status_code, response.content)
-    else:
-        return None
-
-        guild_id (str):
-def _build_response(
-    *, client: AuthenticatedClient | Client, response: httpx.Response
-    kwargs = _get_kwargs(
-        guild_id=guild_id,
-    )
-        content=response.content,
-        headers=response.headers,
-        parsed=_parse_response(client=client, response=response),
-    )
-
-
-def sync_detailed(
-    user_id: str,
-    *,
-    guild_id: str,
-) -> Response[AuthStatusAuthStatusUserIdGetResponseAuthStatusAuthStatusUserIdGet | HTTPValidationError]:
-    """Check authentication status
-    return sync_detailed(
-from http import HTTPStatus
-from typing import Any
-
-import httpx
-
-from ... import errors
-from ...client import AuthenticatedClient, Client
-from ...models.auth_status_auth_status_user_id_get_response_auth_status_auth_status_user_id_get import (
-    AuthStatusAuthStatusUserIdGetResponseAuthStatusAuthStatusUserIdGet,
-)
-from ...models.http_validation_error import HTTPValidationError
-from ...types import Response
-
-
-def _get_kwargs(
-    guild_id: str,
-) -> dict[str, Any]:
-    _kwargs: dict[str, Any] = {
-        "method": "get",
-        "url": f"/auth/status/{guild_id}",
-    }
-
-    return _kwargs
-
 
 def _parse_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
@@ -116,16 +54,16 @@ def _build_response(
 
 
 def sync_detailed(
-    guild_id: str,
+    user_id: str,
     *,
     client: AuthenticatedClient | Client,
 ) -> Response[AuthStatusAuthStatusUserIdGetResponseAuthStatusAuthStatusUserIdGet | HTTPValidationError]:
     """Check authentication status
 
-     Check if guild is authenticated.
+     Check if user is authenticated.
 
     Args:
-        guild_id (str):
+        user_id (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -136,7 +74,7 @@ def sync_detailed(
     """
 
     kwargs = _get_kwargs(
-        guild_id=guild_id,
+        user_id=user_id,
     )
 
     response = client.get_httpx_client().request(
@@ -147,16 +85,16 @@ def sync_detailed(
 
 
 def sync(
-    guild_id: str,
+    user_id: str,
     *,
     client: AuthenticatedClient | Client,
 ) -> AuthStatusAuthStatusUserIdGetResponseAuthStatusAuthStatusUserIdGet | HTTPValidationError | None:
     """Check authentication status
 
-     Check if guild is authenticated.
+     Check if user is authenticated.
 
     Args:
-        guild_id (str):
+        user_id (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -167,22 +105,22 @@ def sync(
     """
 
     return sync_detailed(
-        guild_id=guild_id,
+        user_id=user_id,
         client=client,
     ).parsed
 
 
 async def asyncio_detailed(
-    guild_id: str,
+    user_id: str,
     *,
     client: AuthenticatedClient | Client,
 ) -> Response[AuthStatusAuthStatusUserIdGetResponseAuthStatusAuthStatusUserIdGet | HTTPValidationError]:
     """Check authentication status
 
-     Check if guild is authenticated.
+     Check if user is authenticated.
 
     Args:
-        guild_id (str):
+        user_id (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -193,7 +131,7 @@ async def asyncio_detailed(
     """
 
     kwargs = _get_kwargs(
-        guild_id=guild_id,
+        user_id=user_id,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -202,16 +140,16 @@ async def asyncio_detailed(
 
 
 async def asyncio(
-    guild_id: str,
+    user_id: str,
     *,
     client: AuthenticatedClient | Client,
 ) -> AuthStatusAuthStatusUserIdGetResponseAuthStatusAuthStatusUserIdGet | HTTPValidationError | None:
     """Check authentication status
 
-     Check if guild is authenticated.
+     Check if user is authenticated.
 
     Args:
-        guild_id (str):
+        user_id (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -223,7 +161,7 @@ async def asyncio(
 
     return (
         await asyncio_detailed(
-            guild_id=guild_id,
+            user_id=user_id,
             client=client,
         )
     ).parsed
