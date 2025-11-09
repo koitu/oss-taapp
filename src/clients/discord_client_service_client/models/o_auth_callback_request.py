@@ -28,12 +28,8 @@ class OAuthCallbackRequest:
         code = self.code
 
         user_id = self.user_id
-
-        state: None | Unset | str
-        if isinstance(self.state, Unset):
-            state = UNSET
-        else:
-            state = self.state
+        # direct assignment; later check filters out UNSET
+        state = self.state
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)

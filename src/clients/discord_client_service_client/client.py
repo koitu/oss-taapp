@@ -47,10 +47,9 @@ class Client:
 
     def with_headers(self, headers: dict[str, str]) -> "Client":
         """Get a new client matching this one with additional headers"""
-        if self._client is not None:
-            self._client.headers.update(headers)
-        if self._async_client is not None:
-            self._async_client.headers.update(headers)
+        # Avoid mutating existing httpx client's headers in-place. Return a
+        # new attrs instance with merged headers so reused client instances
+        # don't observe surprising side-effects.
         return evolve(self, headers={**self._headers, **headers})
 
     def with_cookies(self, cookies: dict[str, str]) -> "Client":
@@ -80,10 +79,14 @@ class Client:
     def get_httpx_client(self) -> httpx.Client:
         """Get the underlying httpx.Client, constructing a new one if not previously set"""
         if self._client is None:
+            # Pass a shallow copy of headers to avoid sharing the internal
+            # headers dict with httpx (which could be mutated elsewhere),
+            # preventing surprising side-effects when the client instance is reused.
+            headers = dict(self._headers)
             self._client = httpx.Client(
                 base_url=self._base_url,
                 cookies=self._cookies,
-                headers=self._headers,
+                headers=headers,
                 timeout=self._timeout,
                 verify=self._verify_ssl,
                 follow_redirects=self._follow_redirects,
@@ -191,10 +194,9 @@ class AuthenticatedClient:
 
     def with_headers(self, headers: dict[str, str]) -> "AuthenticatedClient":
         """Get a new client matching this one with additional headers"""
-        if self._client is not None:
-            self._client.headers.update(headers)
-        if self._async_client is not None:
-            self._async_client.headers.update(headers)
+        # Avoid mutating existing httpx client's headers in-place. Return a
+        # new attrs instance with merged headers so reused client instances
+        # don't observe surprising side-effects.
         return evolve(self, headers={**self._headers, **headers})
 
     def with_cookies(self, cookies: dict[str, str]) -> "AuthenticatedClient":
@@ -224,7 +226,10 @@ class AuthenticatedClient:
     def get_httpx_client(self) -> httpx.Client:
         """Get the underlying httpx.Client, constructing a new one if not previously set"""
         if self._client is None:
-            headers = {**self._headers, self.auth_header_name: f"{self.prefix} {self.token}" if self.prefix else self.token}
+            # Build a fresh copy of headers and inject the auth header there
+            # to avoid mutating the stored headers mapping.
+            headers = dict(self._headers)
+            headers[self.auth_header_name] = f"{self.prefix} {self.token}" if self.prefix else self.token
             self._client = httpx.Client(
                 base_url=self._base_url,
                 cookies=self._cookies,
@@ -261,7 +266,10 @@ class AuthenticatedClient:
     def get_async_httpx_client(self) -> httpx.AsyncClient:
         """Get the underlying httpx.AsyncClient, constructing a new one if not previously set"""
         if self._async_client is None:
-            headers = {**self._headers, self.auth_header_name: f"{self.prefix} {self.token}" if self.prefix else self.token}
+            # Build a fresh copy of headers and inject the auth header there
+            # to avoid mutating the stored headers mapping.
+            headers = dict(self._headers)
+            headers[self.auth_header_name] = f"{self.prefix} {self.token}" if self.prefix else self.token
             self._async_client = httpx.AsyncClient(
                 base_url=self._base_url,
                 cookies=self._cookies,
