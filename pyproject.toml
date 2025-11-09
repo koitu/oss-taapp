@@ -58,6 +58,7 @@ extend-exclude = [
   "get_oauth_code.py",
   "test_real_callback.py",
   "test_callback.py",
+  "src/clients/discord_client_service_client/**",
 ]
 
 [tool.ruff.lint]
@@ -124,7 +125,7 @@ markers = [
 
 [tool.coverage.run]
 source = ["src"]
-omit = ["*/tests/*", "*/__main__.py", "src/clients/mail_client_service_client/**"]
+omit = ["*/tests/*", "*/__main__.py", "src/clients/mail_client_service_client/**", "src/clients/discord_client_service_client/**"]
 
 [tool.coverage.report]
 fail_under = 85 # Justification: A high threshold ensures most code is tested.
