@@ -108,6 +108,14 @@ module = [
 ]
 ignore_missing_imports = true
 
+# Ignore auto-generated client code
+[[tool.mypy.overrides]]
+module = [
+    "discord_client_service_client.*",
+    "mail_client_service_client.*",
+]
+follow_imports = "skip"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 pythonpath = [
