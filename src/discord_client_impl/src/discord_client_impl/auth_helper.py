@@ -1,9 +1,16 @@
-"""Authentication helper for Discord client with database integration."""
+"""Authentication helper for Discord client using in-memory session-backed credentials."""
 
 import logging
 
-from discord_client_impl.database import get_credential_manager
 from discord_client_impl.discord_impl import DiscordClient
+# Import session-backed credential helpers from the service package.
+# The service package is available on the PYTHONPATH as `discord_client_service` when
+# the workspace packages are installed in editable/development mode.
+from discord_client_service.auth_session import (
+    set_credential,
+    get_credential,
+    delete_credential,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +28,7 @@ async def get_client_for_user(guild_id: str) -> DiscordClient:
         ValueError: If no credentials found for guild or credentials expired without refresh.
 
     """
-    manager = get_credential_manager()
-    credentials = await manager.get_credentials(guild_id)
+    credentials = await get_credential(guild_id)
 
     if not credentials:
         error_msg = f"No credentials found for guild: {guild_id}"
@@ -39,7 +45,7 @@ async def get_client_for_user(guild_id: str) -> DiscordClient:
     except Exception:
         app_bot_token = None
 
-    if credentials and getattr(credentials, "token_type", "").lower() != "bot" and app_bot_token:
+    if credentials and str(credentials.get("token_type", "")).lower() != "bot" and app_bot_token:
         logger.info(
             "Stored token for guild %s is not a bot token; falling back to application bot token",
             guild_id,
@@ -47,36 +53,45 @@ async def get_client_for_user(guild_id: str) -> DiscordClient:
         return DiscordClient(access_token=app_bot_token, token_type="Bot")
 
     # Check if token is expired and needs refresh
-    if credentials.is_expired():
-        logger.info("Access token expired for guild %s, attempting refresh", guild_id)
-        client = DiscordClient()
-
+    # If credential has expiry and it's expired, try refresh if refresh_token present
+    if credentials and credentials.get("expires_at"):
         try:
-            # Refresh the token
-            new_token_data = client._refresh_access_token(credentials.refresh_token)
+            from datetime import datetime, timezone
 
-            # Update database with new tokens
-            # Note: Some OAuth servers return a new refresh token
-            await manager.update_tokens(
-                guild_id=guild_id,
-                access_token=new_token_data["access_token"],
-                expires_in=new_token_data.get("expires_in", 3600),
-                refresh_token=new_token_data.get("refresh_token"),
+            expires_iso = credentials.get("expires_at")
+            expires_dt = (
+                datetime.fromisoformat(expires_iso)
+                if isinstance(expires_iso, str)
+                else None
             )
-
-            # Return client with new token and use returned token_type when present
-            return DiscordClient(
-                access_token=new_token_data["access_token"],
-                token_type=new_token_data.get("token_type", "Bearer"),
-            )
-
-        except Exception as e:
-            logger.exception("Failed to refresh token for guild %s", guild_id)
-            error_msg = f"Failed to refresh expired token for guild {guild_id}: {e}"
-            raise ValueError(error_msg) from e
+            if expires_dt and expires_dt.tzinfo is None:
+                expires_dt = expires_dt.replace(tzinfo=timezone.utc)
+            if expires_dt and datetime.now(timezone.utc) >= expires_dt:
+                logger.info("Access token expired for guild %s, attempting refresh", guild_id)
+                client = DiscordClient()
+                try:
+                    new_token_data = client._refresh_access_token(credentials.get("refresh_token"))
+                    # Persist refreshed tokens in credential store
+                    await set_credential(guild_id, {
+                        "access_token": new_token_data["access_token"],
+                        "refresh_token": new_token_data.get("refresh_token"),
+                        "token_type": new_token_data.get("token_type", credentials.get("token_type", "Bearer")),
+                        "expires_at": new_token_data.get("expires_at") or new_token_data.get("expires_in"),
+                        "scope": new_token_data.get("scope", credentials.get("scope")),
+                    })
+                    return DiscordClient(
+                        access_token=new_token_data["access_token"],
+                        token_type=new_token_data.get("token_type", "Bearer"),
+                    )
+                except Exception as e:
+                    logger.exception("Failed to refresh token for guild %s", guild_id)
+                    raise ValueError(f"Failed to refresh expired token for guild {guild_id}: {e}") from e
+        except Exception:
+            # If parsing fails, continue and attempt to use whatever token we have
+            pass
 
     # Token is still valid, use it directly. Respect the stored token_type.
-    return DiscordClient(access_token=credentials.access_token, token_type=getattr(credentials, "token_type", "Bearer"))
+    return DiscordClient(access_token=credentials.get("access_token"), token_type=str(credentials.get("token_type", "Bearer")))
 
 
 async def get_bot_client_for_guild(guild_id: str) -> DiscordClient:
@@ -96,10 +111,9 @@ async def get_bot_client_for_guild(guild_id: str) -> DiscordClient:
         return DiscordClient(access_token=app_bot_token, token_type="Bot")
 
     # 2) fallback to stored credentials if they are bot tokens
-    manager = get_credential_manager()
-    credentials = await manager.get_credentials(guild_id)
-    if credentials and getattr(credentials, "token_type", "").lower() == "bot":
-        return DiscordClient(access_token=credentials.access_token, token_type="Bot")
+    credentials = await get_credential(guild_id)
+    if credentials and str(credentials.get("token_type", "")).lower() == "bot":
+        return DiscordClient(access_token=credentials.get("access_token"), token_type="Bot")
 
     raise ValueError("No bot token available for guild. Set DISCORD_BOT_TOKEN or install the bot to the guild.")
 
@@ -120,18 +134,18 @@ async def store_user_credentials(
                    - scope: Granted scopes
 
     """
-    manager = get_credential_manager()
-
+    # Persist credentials into in-memory credential store
     expires_in_value = token_data.get("expires_in", 3600)
-    expires_in = int(expires_in_value) if isinstance(expires_in_value, (int, str)) else 3600
-
-    await manager.store_credentials(
-        guild_id=guild_id,
-        access_token=str(token_data["access_token"]),
-        refresh_token=str(token_data["refresh_token"]),
-        expires_in=expires_in,
-        token_type=str(token_data.get("token_type", "Bearer")),
-        scope=str(token_data.get("scope", "")) if token_data.get("scope") else None,
+    await set_credential(
+        guild_id,
+        {
+            "access_token": str(token_data["access_token"]),
+            "refresh_token": str(token_data.get("refresh_token")),
+            "token_type": str(token_data.get("token_type", "Bearer")),
+            # store expires_at as ISO string if provided, otherwise compute not implemented here
+            "expires_at": token_data.get("expires_at") or None,
+            "scope": str(token_data.get("scope", "")) if token_data.get("scope") else None,
+        },
     )
 
     logger.info("Stored credentials for guild: %s", guild_id)
@@ -147,8 +161,7 @@ async def delete_user_credentials(guild_id: str) -> bool:
         True if credentials were deleted, False if not found.
 
     """
-    manager = get_credential_manager()
-    deleted = await manager.delete_credentials(guild_id)
+    deleted = await delete_credential(guild_id)
 
     if deleted:
         logger.info("Deleted credentials for guild: %s", guild_id)
@@ -168,6 +181,5 @@ async def check_user_authenticated(guild_id: str) -> bool:
         True if guild has credentials (even if expired), False otherwise.
 
     """
-    manager = get_credential_manager()
-    credentials = await manager.get_credentials(guild_id)
+    credentials = await get_credential(guild_id)
     return credentials is not None

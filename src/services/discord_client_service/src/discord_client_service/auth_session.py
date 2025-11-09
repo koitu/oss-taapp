@@ -14,6 +14,8 @@ from fastapi import Cookie, HTTPException
 # In-memory stores. Keys are hex strings.
 _STATE_STORE: dict[str, dict[str, Any]] = {}
 _SESSION_STORE: dict[str, dict[str, Any]] = {}
+# Credentials store (in-memory): maps guild_id -> credential dict
+_CREDENTIAL_STORE: dict[str, dict[str, Any]] = {}
 
 # TTLs in seconds
 STATE_TTL = 300  # 5 minutes for OAuth state
@@ -46,6 +48,24 @@ def create_session(allowed_guilds: list[str]) -> str:
     sid = uuid.uuid4().hex
     _SESSION_STORE[sid] = {"guilds": list(allowed_guilds), "created": _now()}
     return sid
+
+
+async def set_credential(guild_id: str, credential: dict[str, Any]) -> None:
+    """Store credential dict for a guild (in-memory)."""
+    _CREDENTIAL_STORE[guild_id] = dict(credential)
+
+
+async def get_credential(guild_id: str) -> dict[str, Any] | None:
+    """Retrieve stored credential dict for a guild, or None if missing."""
+    return _CREDENTIAL_STORE.get(guild_id)
+
+
+async def delete_credential(guild_id: str) -> bool:
+    """Delete stored credential for a guild. Returns True if deleted."""
+    if guild_id in _CREDENTIAL_STORE:
+        _CREDENTIAL_STORE.pop(guild_id, None)
+        return True
+    return False
 
 
 def check_session(session_id: str | None, guild_id: str) -> bool:
