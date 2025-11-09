@@ -6,17 +6,18 @@ from chat_client_api.exceptions import MessageDeleteError, MessageNotFoundError
 from discord_client_impl.auth_helper import (
     check_user_authenticated,
     delete_user_credentials,
-    get_client_for_user,
     get_bot_client_for_guild,
+    get_client_for_user,
     store_user_credentials,
 )
-from .auth_session import create_state, pop_state, create_session, require_guild_access
 from discord_client_impl.discord_impl import DiscordClient
-from fastapi import HTTPException, Query, status, Depends
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
 from discord_client_service.service import app
+
+from .auth_session import create_session, create_state, pop_state, require_guild_access
 
 logger = logging.getLogger(__name__)
 
