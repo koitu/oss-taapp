@@ -73,7 +73,7 @@ class CredentialManager:
 
     async def store_credentials(
         self,
-        user_id: str,
+        guild_id: str,
         access_token: str,
         refresh_token: str,
         expires_in: int,
@@ -92,14 +92,14 @@ class CredentialManager:
 
         Returns:
             DiscordCredential: Stored credential object.
-
+        
         """
         expires_at = datetime.now(UTC) + timedelta(seconds=expires_in)
 
         async with self.get_session() as session:
             # Check if credential exists
             result = await session.execute(
-                select(DiscordCredential).where(DiscordCredential.user_id == user_id)
+                select(DiscordCredential).where(DiscordCredential.guild_id == guild_id)
             )
             credential = result.scalar_one_or_none()
 
@@ -111,11 +111,11 @@ class CredentialManager:
                 credential.expires_at = expires_at
                 credential.scope = scope
                 credential.updated_at = datetime.now(UTC)
-                logger.info("Updated credentials for user: %s", user_id)
+                logger.info("Updated credentials for guild: %s", guild_id)
             else:
                 # Create new credential
                 credential = DiscordCredential(
-                    user_id=user_id,
+                    guild_id=guild_id,
                     access_token=access_token,
                     refresh_token=refresh_token,
                     token_type=token_type,
@@ -123,17 +123,17 @@ class CredentialManager:
                     scope=scope,
                 )
                 session.add(credential)
-                logger.info("Created new credentials for user: %s", user_id)
+                logger.info("Created new credentials for guild: %s", guild_id)
 
             await session.flush()
             await session.refresh(credential)
             return credential
 
-    async def get_credentials(self, user_id: str) -> DiscordCredential | None:
-        """Retrieve credentials for a user.
+    async def get_credentials(self, guild_id: str) -> DiscordCredential | None:
+        """Retrieve credentials for a guild.
 
         Args:
-            user_id: Unique user identifier.
+            guild_id: Unique guild identifier.
 
         Returns:
             DiscordCredential if found, None otherwise.
@@ -141,22 +141,22 @@ class CredentialManager:
         """
         async with self.get_session() as session:
             result = await session.execute(
-                select(DiscordCredential).where(DiscordCredential.user_id == user_id)
+                select(DiscordCredential).where(DiscordCredential.guild_id == guild_id)
             )
             credential = result.scalar_one_or_none()
 
             if credential:
-                logger.info("Retrieved credentials for user: %s", user_id)
+                logger.info("Retrieved credentials for guild: %s", guild_id)
             else:
-                logger.warning("No credentials found for user: %s", user_id)
+                logger.warning("No credentials found for guild: %s", guild_id)
 
             return credential
 
-    async def delete_credentials(self, user_id: str) -> bool:
-        """Delete credentials for a user.
+    async def delete_credentials(self, guild_id: str) -> bool:
+        """Delete credentials for a guild.
 
         Args:
-            user_id: Unique user identifier.
+            guild_id: Unique guild identifier.
 
         Returns:
             True if deleted, False if not found.
@@ -164,21 +164,21 @@ class CredentialManager:
         """
         async with self.get_session() as session:
             result = await session.execute(
-                select(DiscordCredential).where(DiscordCredential.user_id == user_id)
+                select(DiscordCredential).where(DiscordCredential.guild_id == guild_id)
             )
             credential = result.scalar_one_or_none()
 
             if credential:
                 await session.delete(credential)
-                logger.info("Deleted credentials for user: %s", user_id)
+                logger.info("Deleted credentials for guild: %s", guild_id)
                 return True
 
-            logger.warning("No credentials to delete for user: %s", user_id)
+            logger.warning("No credentials to delete for guild: %s", guild_id)
             return False
 
     async def update_tokens(
         self,
-        user_id: str,
+        guild_id: str,
         access_token: str,
         expires_in: int,
         refresh_token: str | None = None,
@@ -186,7 +186,7 @@ class CredentialManager:
         """Update access token after refresh.
 
         Args:
-            user_id: Unique user identifier.
+            guild_id: Unique guild identifier.
             access_token: New OAuth2 access token.
             expires_in: Token expiry time in seconds.
             refresh_token: New refresh token (if provided by OAuth server).
@@ -199,7 +199,7 @@ class CredentialManager:
 
         async with self.get_session() as session:
             result = await session.execute(
-                select(DiscordCredential).where(DiscordCredential.user_id == user_id)
+                select(DiscordCredential).where(DiscordCredential.guild_id == guild_id)
             )
             credential = result.scalar_one_or_none()
 
@@ -209,12 +209,12 @@ class CredentialManager:
                 if refresh_token:
                     credential.refresh_token = refresh_token
                 credential.updated_at = datetime.now(UTC)
-                logger.info("Updated tokens for user: %s", user_id)
+                logger.info("Updated tokens for guild: %s", guild_id)
                 await session.flush()
                 await session.refresh(credential)
                 return credential
 
-            logger.warning("No credentials found to update for user: %s", user_id)
+            logger.warning("No credentials found to update for guild: %s", guild_id)
             return None
 
     async def list_all_credentials(self) -> list[DiscordCredential]:

@@ -7,10 +7,13 @@ from discord_client_impl.auth_helper import (
     check_user_authenticated,
     delete_user_credentials,
     get_client_for_user,
+    get_bot_client_for_guild,
     store_user_credentials,
 )
+from .auth_session import create_state, pop_state, create_session, require_guild_access
 from discord_client_impl.discord_impl import DiscordClient
-from fastapi import HTTPException, Query, status
+from fastapi import HTTPException, Query, status, Depends
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
 from discord_client_service.service import app
@@ -31,14 +34,14 @@ class OAuthCallbackRequest(BaseModel):
 
     code: str = Field(..., description="Authorization code from OAuth provider")
     state: str | None = Field(None, description="State parameter for CSRF validation")
-    user_id: str = Field(..., description="User ID to associate with credentials")
+    guild_id: str = Field(..., description="Guild ID to associate with credentials")
 
 
 class OAuthCallbackResponse(BaseModel):
     """OAuth2 callback response."""
 
     status: str = Field(..., description="Status message")
-    user_id: str = Field(..., description="User ID credentials were stored for")
+    guild_id: str = Field(..., description="Guild ID credentials were stored for")
 
 
 class MessageDetail(BaseModel):
@@ -101,12 +104,20 @@ class ErrorResponse(BaseModel):
     summary="Initialize OAuth2 flow",
 )
 def oauth_login(
-    state: str | None = Query(None, description="Optional state parameter"),
+    guild_id: str | None = Query(None, description="Optional guild id to associate with install"),
 ) -> OAuthInitResponse:
     """Initialize OAuth2 flow."""
     try:
         client = DiscordClient()
-        auth_url, generated_state = client._get_authorization_url(state=state)
+        # Create a server-side state tied to the (optional) guild_id and pass
+        # the state to Discord so the callback can be correlated.
+        server_state = create_state(guild_id)
+        auth_url, generated_state = client._get_authorization_url(state=server_state)
+
+        # Return the authorization URL and the generated state. The frontend may
+        # encode any additional information (for example guild_id) into the state
+        # so the callback can recover it. We simply pass the generated state back
+        # to the caller so they can include it in the redirect flow.
         logger.info("Generated OAuth authorization URL")
         return OAuthInitResponse(authorization_url=auth_url, state=generated_state)
     except Exception as e:
@@ -117,21 +128,44 @@ def oauth_login(
         ) from e
 
 
-@app.post(
+@app.get(
     "/auth/callback",
-    response_model=OAuthCallbackResponse,
-    summary="Handle OAuth2 callback",
+    summary="Handle OAuth2 callback (GET)",
 )
-async def oauth_callback(request: OAuthCallbackRequest) -> OAuthCallbackResponse:
-    """Handle OAuth2 callback after user authorization."""
+async def oauth_callback(
+    code: str = Query(..., description="Authorization code from OAuth provider"),
+    state: str | None = Query(None, description="State parameter (may contain guild_id)"),
+    guild_id: str | None = Query(None, description="Optional guild_id override"),
+) -> RedirectResponse:
+    """Handle OAuth2 callback after user authorization.
+
+    This endpoint expects the OAuth provider to redirect here with query params.
+    It will exchange the code for tokens, store the credentials associated with
+    the guild_id (either provided explicitly or encoded in state), and then
+    redirect the browser to /docs.
+    """
     try:
         client = DiscordClient()
-        token_data = client._exchange_code_for_token(request.code)
-        await store_user_credentials(user_id=request.user_id, token_data=token_data)
-        logger.info("Successfully stored credentials for user: %s", request.user_id)
-        return OAuthCallbackResponse(status="success", user_id=request.user_id)
+        token_data = client._exchange_code_for_token(code)
+
+        # Consume server-side state to obtain the guild_id (and protect against replay)
+        state_entry = pop_state(state or "")
+        gid = guild_id or (state_entry and state_entry.get("guild_id"))
+        if not gid:
+            raise ValueError("Missing guild_id in callback; ensure state contains guild id or provide guild_id query param")
+
+        await store_user_credentials(guild_id=gid, token_data=token_data)
+        logger.info("Successfully stored credentials for guild: %s", gid)
+
+        # Create a session for the user that permits access to this guild, set cookie
+        session_id = create_session([gid])
+        resp = RedirectResponse(url="/docs")
+        # HttpOnly cookie so client-side JS cannot read token; secure flag recommended in production
+        resp.set_cookie("session_id", session_id, httponly=True, samesite="lax")
+        return resp
+
     except ValueError as e:
-        logger.exception("Token exchange failed")
+        logger.exception("Token exchange failed during callback")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Token exchange failed: {e}",
@@ -145,27 +179,41 @@ async def oauth_callback(request: OAuthCallbackRequest) -> OAuthCallbackResponse
 
 
 @app.delete(
-    "/auth/logout/{user_id}",
+    "/auth/logout/{guild_id}",
     response_model=OperationResponse,
-    summary="Logout user",
+    summary="Logout guild",
 )
-async def oauth_logout(user_id: str) -> OperationResponse:
-    """Logout user by deleting stored credentials."""
+async def oauth_logout(guild_id: str, _auth: None = Depends(require_guild_access)) -> OperationResponse:
+    """Logout guild by deleting stored credentials."""
     try:
-        deleted = await delete_user_credentials(user_id)
+        deleted = await delete_user_credentials(guild_id)
         if not deleted:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"No credentials found for user: {user_id}",
+                detail=f"No credentials found for guild: {guild_id}",
             )
-        logger.info("Successfully logged out user: %s", user_id)
+
+        # Attempt to have the bot leave the guild. Prefer the application bot
+        # token via get_bot_client_for_guild(). If that isn't available, log a
+        # warning and continue — we still consider the logout successful.
+        try:
+            bot_client = await get_bot_client_for_guild(guild_id)
+            try:
+                bot_client.leave_guild(guild_id)
+                logger.info("Bot left guild %s after logout", guild_id)
+            except Exception as e:
+                logger.warning("Failed to make bot leave guild %s: %s", guild_id, e)
+        except Exception:
+            logger.debug("No bot client available to leave guild %s; skipping leave", guild_id)
+
+        logger.info("Successfully logged out guild: %s", guild_id)
         return OperationResponse(
-            status="success", message=f"User {user_id} logged out successfully"
+            status="success", message=f"Guild {guild_id} logged out successfully"
         )
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception("Logout failed for user: %s", user_id)
+        logger.exception("Logout failed for guild: %s", guild_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Logout failed: {e}",
@@ -173,30 +221,33 @@ async def oauth_logout(user_id: str) -> OperationResponse:
 
 
 @app.get(
-    "/auth/status/{user_id}",
+    "/auth/status/{guild_id}",
     response_model=dict[str, bool | str],
     summary="Check authentication status",
 )
-async def auth_status(user_id: str) -> dict[str, bool | str]:
-    """Check if user is authenticated."""
-    authenticated = await check_user_authenticated(user_id)
-    return {"authenticated": authenticated, "user_id": user_id}
+async def auth_status(guild_id: str, _auth: None = Depends(require_guild_access)) -> dict[str, bool | str]:
+    """Check if guild is authenticated."""
+    authenticated = await check_user_authenticated(guild_id)
+    return {"authenticated": authenticated, "guild_id": guild_id}
+
 
 
 # Discord Message Endpoints
 @app.get(
-    "/{user_id}/channels/{channel_id}/messages",
+    "/{guild_id}/channels/{channel_id}/messages",
     response_model=MessageListResponse,
     summary="Get messages from channel",
 )
 async def get_messages(
-    user_id: str,
+    guild_id: str,
     channel_id: str,
     limit: int = Query(10, ge=1, le=100, description="Maximum number of messages"),
+    _auth: None = Depends(require_guild_access),
 ) -> MessageListResponse:
     """Get messages from a Discord channel."""
     try:
-        client = await get_client_for_user(user_id)
+        # Client credentials are identified by guild; retrieve client by guild.
+        client = await get_client_for_user(guild_id)
         messages = list(client.get_messages(channel_id=channel_id, max_results=limit))
 
         message_list = [
@@ -216,10 +267,10 @@ async def get_messages(
         return MessageListResponse(messages=message_list, count=len(message_list))
 
     except ValueError as e:
-        logger.warning("User %s not authenticated: %s", user_id, e)
+        logger.warning("Guild %s not authenticated: %s", guild_id, e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"User not authenticated: {e}",
+            detail=f"Guild not authenticated: {e}",
         ) from e
     except Exception as e:
         logger.exception("Failed to retrieve messages")
@@ -230,18 +281,19 @@ async def get_messages(
 
 
 @app.post(
-    "/{user_id}/channels/{channel_id}/messages",
+    "/{guild_id}/channels/{channel_id}/messages",
     response_model=MessageDetail,
     summary="Send message to channel",
 )
 async def send_message(
-    user_id: str,
+    guild_id: str,
     channel_id: str,
     request: SendMessageRequest,
+    _auth: None = Depends(require_guild_access),
 ) -> MessageDetail:
     """Send a message to a Discord channel."""
     try:
-        client = await get_client_for_user(user_id)
+        client = await get_client_for_user(guild_id)
         sent_message = client.send_message(channel_id=channel_id, content=request.content)
 
         logger.info("Sent message to channel %s", channel_id)
@@ -257,10 +309,10 @@ async def send_message(
 
     except ValueError as e:
         if "not authenticated" in str(e).lower():
-            logger.warning("User %s not authenticated", user_id)
+            logger.warning("Guild %s not authenticated", guild_id)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"User not authenticated: {e}",
+                detail=f"Guild not authenticated: {e}",
             ) from e
         logger.exception("Failed to send message")
         raise HTTPException(
@@ -276,18 +328,19 @@ async def send_message(
 
 
 @app.delete(
-    "/{user_id}/channels/{channel_id}/messages/{message_id}",
+    "/{guild_id}/channels/{channel_id}/messages/{message_id}",
     response_model=OperationResponse,
     summary="Delete message",
 )
 async def delete_message(
-    user_id: str,
+    guild_id: str,
     channel_id: str,
     message_id: str,
+    _auth: None = Depends(require_guild_access),
 ) -> OperationResponse:
     """Delete a message from a Discord channel."""
     try:
-        client = await get_client_for_user(user_id)
+        client = await get_client_for_user(guild_id)
         client.delete_message(channel_id=channel_id, message_id=message_id)
 
         logger.info("Deleted message %s", message_id)
@@ -306,7 +359,7 @@ async def delete_message(
             detail=str(e),
         ) from e
     except ValueError as e:
-        logger.warning("User %s not authenticated", user_id)
+        logger.warning("Guild %s not authenticated", guild_id)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"User not authenticated: {e}",
@@ -321,15 +374,17 @@ async def delete_message(
 
 # Discord Channel Endpoints
 @app.get(
-    "/{user_id}/channels",
+    "/guilds/{guild_id}/channels",
     response_model=ChannelListResponse,
-    summary="Get user channels",
+    summary="Get guild channels",
 )
-async def get_channels(user_id: str) -> ChannelListResponse:
-    """Get list of Discord channels accessible to the user."""
+async def get_channels(guild_id: str, _auth: None = Depends(require_guild_access)) -> ChannelListResponse:
+    """Get list of Discord channels for a guild."""
     try:
-        client = await get_client_for_user(user_id)
-        channels = list(client.get_channels())
+        # Use a bot token for guild-level channel listing. Prefer the application
+        # bot token (DISCORD_BOT_TOKEN) via get_bot_client_for_guild().
+        client = await get_bot_client_for_guild(guild_id)
+        channels = list(client.get_guild_channels(guild_id=guild_id))
 
         channel_list = [
             ChannelInfo(id=channel.id, name=channel.name, type=channel.channel_type)
@@ -340,7 +395,7 @@ async def get_channels(user_id: str) -> ChannelListResponse:
         return ChannelListResponse(channels=channel_list, count=len(channel_list))
 
     except ValueError as e:
-        logger.warning("User %s not authenticated", user_id)
+        logger.warning("Guild %s not authenticated", guild_id)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"User not authenticated: {e}",
@@ -354,14 +409,14 @@ async def get_channels(user_id: str) -> ChannelListResponse:
 
 
 @app.get(
-    "/{user_id}/channels/{channel_id}",
+    "/{guild_id}/channels/{channel_id}",
     response_model=ChannelInfo,
     summary="Get channel info",
 )
-async def get_channel(user_id: str, channel_id: str) -> ChannelInfo:
+async def get_channel(guild_id: str, channel_id: str, _auth: None = Depends(require_guild_access)) -> ChannelInfo:
     """Get information about a specific Discord channel."""
     try:
-        client = await get_client_for_user(user_id)
+        client = await get_client_for_user(guild_id)
         channel = client.get_channel(channel_id=channel_id)
 
         logger.info("Retrieved channel %s", channel_id)
@@ -373,10 +428,10 @@ async def get_channel(user_id: str, channel_id: str) -> ChannelInfo:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Channel {channel_id} not found",
             ) from e
-        logger.warning("User %s not authenticated", user_id)
+        logger.warning("Guild %s not authenticated", guild_id)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"User not authenticated: {e}",
+            detail=f"Guild not authenticated: {e}",
         ) from e
     except Exception as e:
         logger.exception("Failed to retrieve channel")

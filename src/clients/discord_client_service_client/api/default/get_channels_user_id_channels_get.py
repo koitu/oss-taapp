@@ -11,11 +11,11 @@ from ...types import Response
 
 
 def _get_kwargs(
-    user_id: str,
+    guild_id: str,
 ) -> dict[str, Any]:
     _kwargs: dict[str, Any] = {
         "method": "get",
-        "url": f"/{user_id}/channels",
+        "url": f"/guilds/{guild_id}/channels",
     }
 
     return _kwargs
@@ -52,7 +52,7 @@ def _build_response(
 
 
 def sync_detailed(
-    user_id: str,
+    guild_id: str,
     *,
     client: AuthenticatedClient | Client,
 ) -> Response[ChannelListResponse | HTTPValidationError]:
@@ -72,7 +72,7 @@ def sync_detailed(
     """
 
     kwargs = _get_kwargs(
-        user_id=user_id,
+        guild_id=guild_id,
     )
 
     response = client.get_httpx_client().request(
@@ -83,7 +83,7 @@ def sync_detailed(
 
 
 def sync(
-    user_id: str,
+    guild_id: str,
     *,
     client: AuthenticatedClient | Client,
 ) -> ChannelListResponse | HTTPValidationError | None:
@@ -103,13 +103,13 @@ def sync(
     """
 
     return sync_detailed(
-        user_id=user_id,
+        guild_id=guild_id,
         client=client,
     ).parsed
 
 
 async def asyncio_detailed(
-    user_id: str,
+    guild_id: str,
     *,
     client: AuthenticatedClient | Client,
 ) -> Response[ChannelListResponse | HTTPValidationError]:
@@ -129,7 +129,7 @@ async def asyncio_detailed(
     """
 
     kwargs = _get_kwargs(
-        user_id=user_id,
+        guild_id=guild_id,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -138,7 +138,7 @@ async def asyncio_detailed(
 
 
 async def asyncio(
-    user_id: str,
+    guild_id: str,
     *,
     client: AuthenticatedClient | Client,
 ) -> ChannelListResponse | HTTPValidationError | None:
@@ -159,7 +159,7 @@ async def asyncio(
 
     return (
         await asyncio_detailed(
-            user_id=user_id,
+            guild_id=guild_id,
             client=client,
         )
     ).parsed

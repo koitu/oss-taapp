@@ -42,6 +42,7 @@ class DiscordClient(Client):
         client_id: str | None = None,
         client_secret: str | None = None,
         redirect_uri: str | None = None,
+        token_type: str | None = None,
     ) -> None:
         """Initialize Discord client with OAuth2 credentials.
 
@@ -58,12 +59,16 @@ class DiscordClient(Client):
             "DISCORD_REDIRECT_URI", "http://localhost:8001/auth/callback"
         )
         self.access_token = access_token
+        # Create HTTP client
+        # Token type controls the Authorization header verb (Bearer vs Bot)
+        # If not provided, default to Bot for backwards compatibility with previous changes.
+        self.token_type = token_type or os.environ.get("DISCORD_DEFAULT_TOKEN_TYPE", "Bot")
 
         # Create HTTP client
         if self.access_token:
             self._http_client: httpx.Client = httpx.Client(
                 base_url=self.DISCORD_API_BASE,
-                headers={"Authorization": f"Bearer {self.access_token}"},
+                headers={"Authorization": f"{self.token_type} {self.access_token}"},
                 timeout=30.0,
             )
         else:
@@ -195,7 +200,7 @@ class DiscordClient(Client):
             self._http_client.close()
             self._http_client = httpx.Client(
                 base_url=self.DISCORD_API_BASE,
-                headers={"Authorization": f"Bearer {self.access_token}"},
+                headers={"Authorization": f"{self.token_type} {self.access_token}"},
                 timeout=30.0,
             )
 
@@ -404,6 +409,25 @@ class DiscordClient(Client):
         """Close the HTTP client."""
         self._http_client.close()
 
+    def get_guild_channels(self, guild_id: str) -> Iterator[Channel]:
+        """Retrieve channels for a specific guild."""
+        self._ensure_authenticated()
+
+        try:
+            response = self._http_client.get(f"/guilds/{guild_id}/channels")
+            response.raise_for_status()
+            channels = response.json()
+
+            for channel_data in channels:
+                yield DiscordChannel(channel_data)
+
+        except httpx.HTTPStatusError as e:
+            logger.exception("Failed to get guild channels")
+            raise ValueError(f"Failed to retrieve guild channels: {e}") from e
+        except Exception as e:
+            logger.exception("Failed to get guild channels")
+            raise ValueError(f"Failed to retrieve guild channels: {e}") from e
+
     def __enter__(self) -> "DiscordClient":
         """Context manager entry."""
         return self
@@ -411,3 +435,23 @@ class DiscordClient(Client):
     def __exit__(self, *args: object) -> None:
         """Context manager exit."""
         self.close()
+
+    def leave_guild(self, guild_id: str) -> bool:
+        """Make the bot leave a guild.
+
+        Returns True on success, raises an exception on failure.
+        """
+        # For bot token clients, DELETE /users/@me/guilds/{guild_id} removes the
+        # current user (bot) from the guild.
+        self._ensure_authenticated()
+
+        try:
+            response = self._http_client.delete(f"/users/@me/guilds/{guild_id}")
+            response.raise_for_status()
+            return True
+        except httpx.HTTPStatusError as e:
+            logger.exception("Failed to leave guild %s", guild_id)
+            raise ValueError(f"Failed to leave guild {guild_id}: {e}") from e
+        except Exception as e:
+            logger.exception("Failed to leave guild %s", guild_id)
+            raise ValueError(f"Failed to leave guild {guild_id}: {e}") from e

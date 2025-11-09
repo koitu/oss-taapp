@@ -11,12 +11,12 @@ from ...types import Response
 
 
 def _get_kwargs(
-    user_id: str,
+    guild_id: str,
     channel_id: str,
 ) -> dict[str, Any]:
     _kwargs: dict[str, Any] = {
         "method": "get",
-        "url": f"/{user_id}/channels/{channel_id}",
+        "url": f"/{guild_id}/channels/{channel_id}",
     }
 
     return _kwargs
@@ -53,7 +53,7 @@ def _build_response(
 
 
 def sync_detailed(
-    user_id: str,
+    guild_id: str,
     channel_id: str,
     *,
     client: AuthenticatedClient | Client,
@@ -75,7 +75,7 @@ def sync_detailed(
     """
 
     kwargs = _get_kwargs(
-        user_id=user_id,
+        guild_id=guild_id,
         channel_id=channel_id,
     )
 
@@ -87,7 +87,7 @@ def sync_detailed(
 
 
 def sync(
-    user_id: str,
+    guild_id: str,
     channel_id: str,
     *,
     client: AuthenticatedClient | Client,
@@ -109,14 +109,14 @@ def sync(
     """
 
     return sync_detailed(
-        user_id=user_id,
+        guild_id=guild_id,
         channel_id=channel_id,
         client=client,
     ).parsed
 
 
 async def asyncio_detailed(
-    user_id: str,
+    guild_id: str,
     channel_id: str,
     *,
     client: AuthenticatedClient | Client,
@@ -138,7 +138,7 @@ async def asyncio_detailed(
     """
 
     kwargs = _get_kwargs(
-        user_id=user_id,
+        guild_id=guild_id,
         channel_id=channel_id,
     )
 
@@ -148,7 +148,7 @@ async def asyncio_detailed(
 
 
 async def asyncio(
-    user_id: str,
+    guild_id: str,
     channel_id: str,
     *,
     client: AuthenticatedClient | Client,
@@ -171,7 +171,7 @@ async def asyncio(
 
     return (
         await asyncio_detailed(
-            user_id=user_id,
+            guild_id=guild_id,
             channel_id=channel_id,
             client=client,
         )

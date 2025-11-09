@@ -186,7 +186,7 @@ class AuthenticatedClient:
     _async_client: httpx.AsyncClient | None = field(default=None, init=False)
 
     token: str
-    prefix: str = "Bearer"
+    prefix: str = "Bot"
     auth_header_name: str = "Authorization"
 
     def with_headers(self, headers: dict[str, str]) -> "AuthenticatedClient":

@@ -118,27 +118,27 @@ class ServiceAdapterClient(chat_client_api.Client):
 
     Attributes:
         service_url: Base URL of the Discord service
-        user_id: The user ID for whom to make requests
+        guild_id: The guild ID for whom to make requests
         _http_client: The auto-generated HTTP client
 
     """
 
     def __init__(
-        self, service_url: str = "http://localhost:8000", user_id: str | None = None
+        self, service_url: str = "http://localhost:8000", guild_id: str | None = None
     ) -> None:
         """Initialize the service adapter client.
 
         Args:
             service_url: Base URL of the running Discord service
-            user_id: The user ID for making authenticated requests
+                guild_id: The guild ID for making authenticated requests
 
         """
         self.service_url = service_url
-        self.user_id = user_id or "default_user"
+        self.guild_id = guild_id or "default_guild"
         self._http_client = GeneratedClient(base_url=service_url)
         logger.info(
-            "Initialized ServiceAdapterClient for user %s at %s",
-            self.user_id,
+            "Initialized ServiceAdapterClient for guild %s at %s",
+            self.guild_id,
             service_url,
         )
 
@@ -159,7 +159,7 @@ class ServiceAdapterClient(chat_client_api.Client):
         try:
             response = get_messages_user_id_channels_channel_id_messages_get.sync(
                 client=self._http_client,
-                user_id=self.user_id,
+                guild_id=self.guild_id,
                 channel_id=channel_id,
                 limit=100,
             )
@@ -205,7 +205,7 @@ class ServiceAdapterClient(chat_client_api.Client):
         try:
             response = get_messages_user_id_channels_channel_id_messages_get.sync(
                 client=self._http_client,
-                user_id=self.user_id,
+                guild_id=self.guild_id,
                 channel_id=channel_id,
                 limit=max_results,
             )
@@ -246,7 +246,7 @@ class ServiceAdapterClient(chat_client_api.Client):
             request = SendMessageRequest(content=content)
             response = send_message_user_id_channels_channel_id_messages_post.sync(
                 client=self._http_client,
-                user_id=self.user_id,
+                guild_id=self.guild_id,
                 channel_id=channel_id,
                 body=request,
             )
@@ -285,7 +285,7 @@ class ServiceAdapterClient(chat_client_api.Client):
             response = (
                 delete_message_user_id_channels_channel_id_messages_message_id_delete.sync(
                     client=self._http_client,
-                    user_id=self.user_id,
+                    guild_id=self.guild_id,
                     channel_id=channel_id,
                     message_id=message_id,
                 )
@@ -315,7 +315,7 @@ class ServiceAdapterClient(chat_client_api.Client):
         try:
             response = get_channel_user_id_channels_channel_id_get.sync(
                 client=self._http_client,
-                user_id=self.user_id,
+                guild_id=self.guild_id,
                 channel_id=channel_id,
             )
             if isinstance(response, ChannelInfo):
@@ -347,7 +347,7 @@ class ServiceAdapterClient(chat_client_api.Client):
         try:
             response = get_channels_user_id_channels_get.sync(
                 client=self._http_client,
-                user_id=self.user_id,
+                guild_id=self.guild_id,
             )
             if response and hasattr(response, "channels") and response.channels:
                 for ch in response.channels:

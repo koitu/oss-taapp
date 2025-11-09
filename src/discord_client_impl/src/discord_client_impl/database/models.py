@@ -21,7 +21,9 @@ class DiscordCredential(Base):
 
     __tablename__ = "discord_credentials"
 
-    user_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    # Keep the physical DB column name as `user_id` for compatibility with existing databases,
+    # but expose it in the code as `guild_id` so the rest of the codebase uses the new name.
+    guild_id: Mapped[str] = mapped_column(String(255), primary_key=True, name="user_id")
     access_token: Mapped[str] = mapped_column(String(512), nullable=False)
     refresh_token: Mapped[str] = mapped_column(String(512), nullable=False)
     token_type: Mapped[str] = mapped_column(String(50), default="Bearer")
@@ -41,7 +43,7 @@ class DiscordCredential(Base):
 
     def __repr__(self) -> str:
         """Return string representation of credential."""
-        return f"<DiscordCredential(user_id='{self.user_id}', expires_at='{self.expires_at}')>"
+        return f"<DiscordCredential(guild_id='{self.guild_id}', expires_at='{self.expires_at}')>"
 
     def to_dict(self) -> dict[str, Any]:
         """Convert credential to dictionary format.
@@ -51,7 +53,7 @@ class DiscordCredential(Base):
 
         """
         return {
-            "user_id": self.user_id,
+            "guild_id": self.guild_id,
             "access_token": self.access_token,
             "refresh_token": self.refresh_token,
             "token_type": self.token_type,
