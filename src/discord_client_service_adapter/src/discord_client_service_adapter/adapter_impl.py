@@ -17,11 +17,11 @@ import chat_client_api
 from chat_client_api.message import Channel, ChatMessage
 from discord_client_service_client import Client as GeneratedClient
 from discord_client_service_client.api.default import (
-    delete_message_user_id_channels_channel_id_messages_message_id_delete,
-    get_channel_user_id_channels_channel_id_get,
-    get_channels_user_id_channels_get,
-    get_messages_user_id_channels_channel_id_messages_get,
-    send_message_user_id_channels_channel_id_messages_post,
+    delete_message_guild_id_channels_channel_id_messages_message_id_delete,
+    get_channel_guild_id_channels_channel_id_get,
+    get_channels_guilds_guild_id_channels_get,
+    get_messages_guild_id_channels_channel_id_messages_get,
+    send_message_guild_id_channels_channel_id_messages_post,
 )
 from discord_client_service_client.models.channel_info import ChannelInfo
 from discord_client_service_client.models.message_detail import MessageDetail
@@ -157,7 +157,7 @@ class ServiceAdapterClient(chat_client_api.Client):
 
         """
         try:
-            response = get_messages_user_id_channels_channel_id_messages_get.sync(
+            response = get_messages_guild_id_channels_channel_id_messages_get.sync(
                 client=self._http_client,
                 guild_id=self.guild_id,
                 channel_id=channel_id,
@@ -203,7 +203,7 @@ class ServiceAdapterClient(chat_client_api.Client):
 
         """
         try:
-            response = get_messages_user_id_channels_channel_id_messages_get.sync(
+            response = get_messages_guild_id_channels_channel_id_messages_get.sync(
                 client=self._http_client,
                 guild_id=self.guild_id,
                 channel_id=channel_id,
@@ -244,7 +244,7 @@ class ServiceAdapterClient(chat_client_api.Client):
         """
         try:
             request = SendMessageRequest(content=content)
-            response = send_message_user_id_channels_channel_id_messages_post.sync(
+            response = send_message_guild_id_channels_channel_id_messages_post.sync(
                 client=self._http_client,
                 guild_id=self.guild_id,
                 channel_id=channel_id,
@@ -283,7 +283,7 @@ class ServiceAdapterClient(chat_client_api.Client):
         """
         try:
             response = (
-                delete_message_user_id_channels_channel_id_messages_message_id_delete.sync(
+                delete_message_guild_id_channels_channel_id_messages_message_id_delete.sync(
                     client=self._http_client,
                     guild_id=self.guild_id,
                     channel_id=channel_id,
@@ -313,7 +313,7 @@ class ServiceAdapterClient(chat_client_api.Client):
 
         """
         try:
-            response = get_channel_user_id_channels_channel_id_get.sync(
+            response = get_channel_guild_id_channels_channel_id_get.sync(
                 client=self._http_client,
                 guild_id=self.guild_id,
                 channel_id=channel_id,
@@ -345,7 +345,7 @@ class ServiceAdapterClient(chat_client_api.Client):
 
         """
         try:
-            response = get_channels_user_id_channels_get.sync(
+            response = get_channels_guilds_guild_id_channels_get.sync(
                 client=self._http_client,
                 guild_id=self.guild_id,
             )
