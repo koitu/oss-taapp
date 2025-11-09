@@ -291,7 +291,7 @@ class ServiceAdapterClient(chat_client_api.Client):
                 )
             )
             if response and hasattr(response, "status"):
-                return response.status == "success"
+                return bool(response.status == "success")
             return False  # noqa: TRY300
         except Exception:
             logger.exception(
