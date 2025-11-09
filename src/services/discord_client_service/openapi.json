@@ -29,6 +29,27 @@
         }
       }
     },
+    "/openapi.json": {
+      "get": {
+        "summary": "Get Openapi Schema",
+        "description": "Serve the OpenAPI schema.\n\nReturns:\n    The OpenAPI schema as a dictionary.",
+        "operationId": "get_openapi_schema_openapi_json_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Openapi Schema Openapi Json Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/login": {
       "get": {
         "summary": "Initialize OAuth2 flow",

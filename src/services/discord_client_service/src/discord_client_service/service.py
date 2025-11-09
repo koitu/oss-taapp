@@ -85,7 +85,7 @@ def health_check() -> dict[str, str]:
     return {"status": "healthy", "service": "discord-client-service"}
 
 
-@app.get("/openapi.json", include_in_schema=False)
+@app.get("/openapi.json")
 def get_openapi_schema() -> dict[str, Any]:
     """Serve the OpenAPI schema.
 
