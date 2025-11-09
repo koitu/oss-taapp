@@ -55,26 +55,6 @@
         "summary": "Initialize OAuth2 flow",
         "description": "Initialize OAuth2 flow.",
         "operationId": "oauth_login_auth_login_get",
-        "parameters": [
-          {
-            "name": "state",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Optional state parameter",
-              "title": "State"
-            },
-            "description": "Optional state parameter"
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -85,42 +65,60 @@
                 }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
         }
       }
     },
-    "/auth/callback": {
-      "post": {
-        "summary": "Handle OAuth2 callback",
-        "description": "Handle OAuth2 callback after user authorization.",
-        "operationId": "oauth_callback_auth_callback_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/OAuthCallbackRequest"
-              }
+    "/auth/status/{guild_id}": {
+      "get": {
+        "summary": "Check authentication status",
+        "description": "Check if guild is authenticated.",
+        "operationId": "auth_status_auth_status__guild_id__get",
+        "parameters": [
+          {
+            "name": "guild_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Guild Id"
             }
           },
-          "required": true
-        },
+          {
+            "name": "session_id",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OAuthCallbackResponse"
+                  "type": "object",
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "title": "Response Auth Status Auth Status  Guild Id  Get"
                 }
               }
             }
@@ -138,19 +136,35 @@
         }
       }
     },
-    "/auth/logout/{user_id}": {
+    "/auth/logout/{guild_id}": {
       "delete": {
-        "summary": "Logout user",
-        "description": "Logout user by deleting stored credentials.",
-        "operationId": "oauth_logout_auth_logout__user_id__delete",
+        "summary": "Logout guild",
+        "description": "Logout guild by deleting stored credentials.",
+        "operationId": "oauth_logout_auth_logout__guild_id__delete",
         "parameters": [
           {
-            "name": "user_id",
+            "name": "guild_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "User Id"
+              "title": "Guild Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session Id"
             }
           }
         ],
@@ -178,19 +192,35 @@
         }
       }
     },
-    "/auth/status/{user_id}": {
+    "/guilds/{guild_id}/channels": {
       "get": {
-        "summary": "Check authentication status",
-        "description": "Check if user is authenticated.",
-        "operationId": "auth_status_auth_status__user_id__get",
+        "summary": "Get guild channels",
+        "description": "Get list of Discord channels for a guild.",
+        "operationId": "get_channels_guilds__guild_id__channels_get",
         "parameters": [
           {
-            "name": "user_id",
+            "name": "guild_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "User Id"
+              "title": "Guild Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session Id"
             }
           }
         ],
@@ -200,18 +230,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "anyOf": [
-                      {
-                        "type": "boolean"
-                      },
-                      {
-                        "type": "string"
-                      }
-                    ]
-                  },
-                  "title": "Response Auth Status Auth Status  User Id  Get"
+                  "$ref": "#/components/schemas/ChannelListResponse"
                 }
               }
             }
@@ -229,19 +248,84 @@
         }
       }
     },
-    "/{user_id}/channels/{channel_id}/messages": {
+    "/{guild_id}/channels/{channel_id}": {
       "get": {
-        "summary": "Get messages from channel",
-        "description": "Get messages from a Discord channel.",
-        "operationId": "get_messages__user_id__channels__channel_id__messages_get",
+        "summary": "Get channel info",
+        "description": "Get information about a specific Discord channel.",
+        "operationId": "get_channel__guild_id__channels__channel_id__get",
         "parameters": [
           {
-            "name": "user_id",
+            "name": "guild_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "User Id"
+              "title": "Guild Id"
+            }
+          },
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Channel Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/{guild_id}/channels/{channel_id}/messages": {
+      "get": {
+        "summary": "Get messages from channel",
+        "description": "Get messages from a Discord channel.",
+        "operationId": "get_messages__guild_id__channels__channel_id__messages_get",
+        "parameters": [
+          {
+            "name": "guild_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Guild Id"
             }
           },
           {
@@ -266,6 +350,22 @@
               "title": "Limit"
             },
             "description": "Maximum number of messages"
+          },
+          {
+            "name": "session_id",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session Id"
+            }
           }
         ],
         "responses": {
@@ -294,15 +394,15 @@
       "post": {
         "summary": "Send message to channel",
         "description": "Send a message to a Discord channel.",
-        "operationId": "send_message__user_id__channels__channel_id__messages_post",
+        "operationId": "send_message__guild_id__channels__channel_id__messages_post",
         "parameters": [
           {
-            "name": "user_id",
+            "name": "guild_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "User Id"
+              "title": "Guild Id"
             }
           },
           {
@@ -312,6 +412,22 @@
             "schema": {
               "type": "string",
               "title": "Channel Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session Id"
             }
           }
         ],
@@ -349,19 +465,19 @@
         }
       }
     },
-    "/{user_id}/channels/{channel_id}/messages/{message_id}": {
+    "/{guild_id}/channels/{channel_id}/messages/{message_id}": {
       "delete": {
         "summary": "Delete message",
         "description": "Delete a message from a Discord channel.",
-        "operationId": "delete_message__user_id__channels__channel_id__messages__message_id__delete",
+        "operationId": "delete_message__guild_id__channels__channel_id__messages__message_id__delete",
         "parameters": [
           {
-            "name": "user_id",
+            "name": "guild_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "User Id"
+              "title": "Guild Id"
             }
           },
           {
@@ -381,6 +497,22 @@
               "type": "string",
               "title": "Message Id"
             }
+          },
+          {
+            "name": "session_id",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session Id"
+            }
           }
         ],
         "responses": {
@@ -390,95 +522,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/OperationResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/{user_id}/channels": {
-      "get": {
-        "summary": "Get user channels",
-        "description": "Get list of Discord channels accessible to the user.",
-        "operationId": "get_channels__user_id__channels_get",
-        "parameters": [
-          {
-            "name": "user_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "User Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChannelListResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/{user_id}/channels/{channel_id}": {
-      "get": {
-        "summary": "Get channel info",
-        "description": "Get information about a specific Discord channel.",
-        "operationId": "get_channel__user_id__channels__channel_id__get",
-        "parameters": [
-          {
-            "name": "user_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "User Id"
-            }
-          },
-          {
-            "name": "channel_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Channel Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChannelInfo"
                 }
               }
             }
@@ -644,77 +687,17 @@
         "title": "MessageListResponse",
         "description": "List of Discord messages."
       },
-      "OAuthCallbackRequest": {
-        "properties": {
-          "code": {
-            "type": "string",
-            "title": "Code",
-            "description": "Authorization code from OAuth provider"
-          },
-          "state": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "State",
-            "description": "State parameter for CSRF validation"
-          },
-          "user_id": {
-            "type": "string",
-            "title": "User Id",
-            "description": "User ID to associate with credentials"
-          }
-        },
-        "type": "object",
-        "required": [
-          "code",
-          "user_id"
-        ],
-        "title": "OAuthCallbackRequest",
-        "description": "OAuth2 callback request."
-      },
-      "OAuthCallbackResponse": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "title": "Status",
-            "description": "Status message"
-          },
-          "user_id": {
-            "type": "string",
-            "title": "User Id",
-            "description": "User ID credentials were stored for"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status",
-          "user_id"
-        ],
-        "title": "OAuthCallbackResponse",
-        "description": "OAuth2 callback response."
-      },
       "OAuthInitResponse": {
         "properties": {
           "authorization_url": {
             "type": "string",
             "title": "Authorization Url",
             "description": "URL to redirect user for OAuth"
-          },
-          "state": {
-            "type": "string",
-            "title": "State",
-            "description": "CSRF protection state parameter"
           }
         },
         "type": "object",
         "required": [
-          "authorization_url",
-          "state"
+          "authorization_url"
         ],
         "title": "OAuthInitResponse",
         "description": "OAuth2 initialization response."

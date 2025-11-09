@@ -26,22 +26,6 @@ class OAuthInitResponse(BaseModel):
     """OAuth2 initialization response."""
 
     authorization_url: str = Field(..., description="URL to redirect user for OAuth")
-    state: str = Field(..., description="CSRF protection state parameter")
-
-
-class OAuthCallbackRequest(BaseModel):
-    """OAuth2 callback request."""
-
-    code: str = Field(..., description="Authorization code from OAuth provider")
-    state: str | None = Field(None, description="State parameter for CSRF validation")
-    guild_id: str = Field(..., description="Guild ID to associate with credentials")
-
-
-class OAuthCallbackResponse(BaseModel):
-    """OAuth2 callback response."""
-
-    status: str = Field(..., description="Status message")
-    guild_id: str = Field(..., description="Guild ID credentials were stored for")
 
 
 class MessageDetail(BaseModel):
@@ -91,27 +75,18 @@ class OperationResponse(BaseModel):
     message: str = Field(..., description="Status message")
 
 
-class ErrorResponse(BaseModel):
-    """Error response."""
-
-    detail: str = Field(..., description="Error details")
-
-
-# OAuth2 Endpoints
+# OAuth2 Endpoints (ordered as requested)
 @app.get(
     "/auth/login",
     response_model=OAuthInitResponse,
     summary="Initialize OAuth2 flow",
 )
-def oauth_login(
-    guild_id: str | None = Query(None, description="Optional guild id to associate with install"),
-) -> OAuthInitResponse:
+def oauth_login() -> OAuthInitResponse:
     """Initialize OAuth2 flow."""
     try:
         client = DiscordClient()
-        # Create a server-side state tied to the (optional) guild_id and pass
-        # the state to Discord so the callback can be correlated.
-        server_state = create_state(guild_id)
+        # Create a server-side state and pass it to Discord so the callback can be correlated.
+        server_state = create_state()
         auth_url, generated_state = client._get_authorization_url(state=server_state)
 
         # Return the authorization URL and the generated state. The frontend may
@@ -119,7 +94,7 @@ def oauth_login(
         # so the callback can recover it. We simply pass the generated state back
         # to the caller so they can include it in the redirect flow.
         logger.info("Generated OAuth authorization URL")
-        return OAuthInitResponse(authorization_url=auth_url, state=generated_state)
+        return OAuthInitResponse(authorization_url=auth_url)
     except Exception as e:
         logger.exception("Failed to generate authorization URL")
         raise HTTPException(
@@ -131,6 +106,7 @@ def oauth_login(
 @app.get(
     "/auth/callback",
     summary="Handle OAuth2 callback (GET)",
+    include_in_schema=False,
 )
 async def oauth_callback(
     code: str = Query(..., description="Authorization code from OAuth provider"),
@@ -178,6 +154,17 @@ async def oauth_callback(
         ) from e
 
 
+@app.get(
+    "/auth/status/{guild_id}",
+    response_model=dict[str, bool | str],
+    summary="Check authentication status",
+)
+async def auth_status(guild_id: str, _auth: None = Depends(require_guild_access)) -> dict[str, bool | str]:
+    """Check if guild is authenticated."""
+    authenticated = await check_user_authenticated(guild_id)
+    return {"authenticated": authenticated, "guild_id": guild_id}
+
+
 @app.delete(
     "/auth/logout/{guild_id}",
     response_model=OperationResponse,
@@ -220,16 +207,73 @@ async def oauth_logout(guild_id: str, _auth: None = Depends(require_guild_access
         ) from e
 
 
+# Discord Channel Endpoints
 @app.get(
-    "/auth/status/{guild_id}",
-    response_model=dict[str, bool | str],
-    summary="Check authentication status",
+    "/guilds/{guild_id}/channels",
+    response_model=ChannelListResponse,
+    summary="Get guild channels",
 )
-async def auth_status(guild_id: str, _auth: None = Depends(require_guild_access)) -> dict[str, bool | str]:
-    """Check if guild is authenticated."""
-    authenticated = await check_user_authenticated(guild_id)
-    return {"authenticated": authenticated, "guild_id": guild_id}
+async def get_channels(guild_id: str, _auth: None = Depends(require_guild_access)) -> ChannelListResponse:
+    """Get list of Discord channels for a guild."""
+    try:
+        # Use a bot token for guild-level channel listing. Prefer the application
+        # bot token (DISCORD_BOT_TOKEN) via get_bot_client_for_guild().
+        client = await get_bot_client_for_guild(guild_id)
+        channels = list(client.get_guild_channels(guild_id=guild_id))
 
+        channel_list = [
+            ChannelInfo(id=channel.id, name=channel.name, type=channel.channel_type)
+            for channel in channels
+        ]
+
+        logger.info("Retrieved %d channels", len(channel_list))
+        return ChannelListResponse(channels=channel_list, count=len(channel_list))
+
+    except ValueError as e:
+        logger.warning("Guild %s not authenticated", guild_id)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"User not authenticated: {e}",
+        ) from e
+    except Exception as e:
+        logger.exception("Failed to retrieve channels")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve channels: {e}",
+        ) from e
+
+
+@app.get(
+    "/{guild_id}/channels/{channel_id}",
+    response_model=ChannelInfo,
+    summary="Get channel info",
+)
+async def get_channel(guild_id: str, channel_id: str, _auth: None = Depends(require_guild_access)) -> ChannelInfo:
+    """Get information about a specific Discord channel."""
+    try:
+        client = await get_client_for_user(guild_id)
+        channel = client.get_channel(channel_id=channel_id)
+
+        logger.info("Retrieved channel %s", channel_id)
+        return ChannelInfo(id=channel.id, name=channel.name, type=channel.channel_type)
+
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Channel {channel_id} not found",
+            ) from e
+        logger.warning("Guild %s not authenticated", guild_id)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Guild not authenticated: {e}",
+        ) from e
+    except Exception as e:
+        logger.exception("Failed to retrieve channel")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve channel: {e}",
+        ) from e
 
 
 # Discord Message Endpoints
@@ -369,73 +413,4 @@ async def delete_message(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete message: {e}",
-        ) from e
-
-
-# Discord Channel Endpoints
-@app.get(
-    "/guilds/{guild_id}/channels",
-    response_model=ChannelListResponse,
-    summary="Get guild channels",
-)
-async def get_channels(guild_id: str, _auth: None = Depends(require_guild_access)) -> ChannelListResponse:
-    """Get list of Discord channels for a guild."""
-    try:
-        # Use a bot token for guild-level channel listing. Prefer the application
-        # bot token (DISCORD_BOT_TOKEN) via get_bot_client_for_guild().
-        client = await get_bot_client_for_guild(guild_id)
-        channels = list(client.get_guild_channels(guild_id=guild_id))
-
-        channel_list = [
-            ChannelInfo(id=channel.id, name=channel.name, type=channel.channel_type)
-            for channel in channels
-        ]
-
-        logger.info("Retrieved %d channels", len(channel_list))
-        return ChannelListResponse(channels=channel_list, count=len(channel_list))
-
-    except ValueError as e:
-        logger.warning("Guild %s not authenticated", guild_id)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"User not authenticated: {e}",
-        ) from e
-    except Exception as e:
-        logger.exception("Failed to retrieve channels")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve channels: {e}",
-        ) from e
-
-
-@app.get(
-    "/{guild_id}/channels/{channel_id}",
-    response_model=ChannelInfo,
-    summary="Get channel info",
-)
-async def get_channel(guild_id: str, channel_id: str, _auth: None = Depends(require_guild_access)) -> ChannelInfo:
-    """Get information about a specific Discord channel."""
-    try:
-        client = await get_client_for_user(guild_id)
-        channel = client.get_channel(channel_id=channel_id)
-
-        logger.info("Retrieved channel %s", channel_id)
-        return ChannelInfo(id=channel.id, name=channel.name, type=channel.channel_type)
-
-    except ValueError as e:
-        if "not found" in str(e).lower():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Channel {channel_id} not found",
-            ) from e
-        logger.warning("Guild %s not authenticated", guild_id)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Guild not authenticated: {e}",
-        ) from e
-    except Exception as e:
-        logger.exception("Failed to retrieve channel")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve channel: {e}",
         ) from e
