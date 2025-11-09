@@ -73,7 +73,7 @@ def sync_detailed(
      Get messages from a Discord channel.
 
     Args:
-        user_id (str):
+        guild_id (str):
         channel_id (str):
         limit (Union[Unset, int]): Maximum number of messages Default: 10.
 
@@ -110,7 +110,7 @@ def sync(
      Get messages from a Discord channel.
 
     Args:
-        user_id (str):
+        guild_id (str):
         channel_id (str):
         limit (Union[Unset, int]): Maximum number of messages Default: 10.
 
@@ -142,7 +142,7 @@ async def asyncio_detailed(
      Get messages from a Discord channel.
 
     Args:
-        user_id (str):
+        guild_id (str):
         channel_id (str):
         limit (Union[Unset, int]): Maximum number of messages Default: 10.
 
@@ -177,7 +177,7 @@ async def asyncio(
      Get messages from a Discord channel.
 
     Args:
-        user_id (str):
+        guild_id (str):
         channel_id (str):
         limit (Union[Unset, int]): Maximum number of messages Default: 10.
 

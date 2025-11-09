@@ -74,7 +74,7 @@ def sync_detailed(
      Send a message to a Discord channel.
 
     Args:
-        user_id (str):
+        guild_id (str):
         channel_id (str):
         body (SendMessageRequest): Request to send a message.
 
@@ -111,7 +111,7 @@ def sync(
      Send a message to a Discord channel.
 
     Args:
-        user_id (str):
+        guild_id (str):
         channel_id (str):
         body (SendMessageRequest): Request to send a message.
 
@@ -143,7 +143,7 @@ async def asyncio_detailed(
      Send a message to a Discord channel.
 
     Args:
-        user_id (str):
+        guild_id (str):
         channel_id (str):
         body (SendMessageRequest): Request to send a message.
 
@@ -178,7 +178,7 @@ async def asyncio(
      Send a message to a Discord channel.
 
     Args:
-        user_id (str):
+        guild_id (str):
         channel_id (str):
         body (SendMessageRequest): Request to send a message.
 

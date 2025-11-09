@@ -19,7 +19,9 @@ theme:
     - content.code.copy
 
 nav:
-  - Overview: index.md
+  - Overview:
+      - Overview: index.md
+      - Discord Service Summary: api/discord_service_summary.md
   - Architecture: component.md
   - Testing: testing.md
   - CircleCI: circleci-setup.md

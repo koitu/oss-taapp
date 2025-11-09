@@ -61,7 +61,7 @@ def sync_detailed(
      Logout user by deleting stored credentials.
 
     Args:
-        user_id (str):
+        user_id (str): The ID of the user to logout.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -92,7 +92,7 @@ def sync(
      Logout user by deleting stored credentials.
 
     Args:
-        user_id (str):
+        user_id (str): The ID of the user to logout.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -118,7 +118,7 @@ async def asyncio_detailed(
      Logout user by deleting stored credentials.
 
     Args:
-        user_id (str):
+        user_id (str): The ID of the user to logout.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -147,7 +147,7 @@ async def asyncio(
      Logout user by deleting stored credentials.
 
     Args:
-        user_id (str):
+        user_id (str): The ID of the user to logout.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

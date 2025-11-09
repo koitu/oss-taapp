@@ -63,7 +63,7 @@ def sync_detailed(
      Get information about a specific Discord channel.
 
     Args:
-        user_id (str):
+        guild_id (str):
         channel_id (str):
 
     Raises:
@@ -97,7 +97,7 @@ def sync(
      Get information about a specific Discord channel.
 
     Args:
-        user_id (str):
+        guild_id (str):
         channel_id (str):
 
     Raises:
@@ -126,7 +126,7 @@ async def asyncio_detailed(
      Get information about a specific Discord channel.
 
     Args:
-        user_id (str):
+        guild_id (str):
         channel_id (str):
 
     Raises:
@@ -158,7 +158,7 @@ async def asyncio(
      Get information about a specific Discord channel.
 
     Args:
-        user_id (str):
+        guild_id (str):
         channel_id (str):
 
     Raises:

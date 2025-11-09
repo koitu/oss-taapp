@@ -65,7 +65,7 @@ def sync_detailed(
      Delete a message from a Discord channel.
 
     Args:
-        user_id (str):
+        guild_id (str):
         channel_id (str):
         message_id (str):
 
@@ -102,7 +102,7 @@ def sync(
      Delete a message from a Discord channel.
 
     Args:
-        user_id (str):
+        guild_id (str):
         channel_id (str):
         message_id (str):
 
@@ -134,7 +134,7 @@ async def asyncio_detailed(
      Delete a message from a Discord channel.
 
     Args:
-        user_id (str):
+        guild_id (str):
         channel_id (str):
         message_id (str):
 
@@ -169,7 +169,7 @@ async def asyncio(
      Delete a message from a Discord channel.
 
     Args:
-        user_id (str):
+        guild_id (str):
         channel_id (str):
         message_id (str):
 
