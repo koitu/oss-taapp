@@ -95,17 +95,27 @@ class DiscordClient(Client):
             redirect_uri=self.redirect_uri,
         )
 
-        # Discord requires specific scopes for reading/sending messages
+        # Discord requires specific scopes for reading/sending messages.
+        # Requested scopes: identity, guilds, messages.read and bot.
         scopes = ["identify", "guilds", "messages.read", "bot"]
 
-        permissions = 1024 | 2048 | 65536  # = 68608
+        # For bot installs, request the specific permission bits the bot needs.
+        # Use named constants for clarity: VIEW_CHANNEL, SEND_MESSAGES, READ_MESSAGE_HISTORY.
+        VIEW_CHANNEL = 0x00000400  # 1024
+        SEND_MESSAGES = 0x00000800  # 2048
+        READ_MESSAGE_HISTORY = 0x00010000  # 65536
 
-        # Build authorization URL
+        permissions = VIEW_CHANNEL | SEND_MESSAGES | READ_MESSAGE_HISTORY  # = 68608
+
+        # Integration type: Guild Install (this authorizes the bot for a guild).
+        # Build authorization URL. Include explicit response_type to make intent clear.
         authorization_url, state_value = oauth_client.create_authorization_url(
             self.OAUTH2_AUTHORIZE_URL,
             scope=" ".join(scopes),
             state=state,
             permissions=permissions,
+            response_type="code",
+            prompt="consent",
         )
 
         return authorization_url, state_value
