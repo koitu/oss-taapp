@@ -8,6 +8,7 @@ This section provides brief documentation pages for each of the important packag
 - mail_client_service — the FastAPI HTTP service exposing the mail client
 - clients — generated OpenAPI client packages
 - discord_client_impl — Discord concrete implementation
+- discord_client_service - the FastAPI HTTP service exposing the discord client
 - discord_client_service_adapter — Discord service adapter
 - discord_client_service_client — generated Discord service client
 - chat_client_api — abstract chat API interfaces
