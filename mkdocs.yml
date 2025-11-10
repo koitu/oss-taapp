@@ -30,7 +30,6 @@ nav:
     - Contributing: contributing.md
     - Design: design.md
     - Discord Service Docs: discord.md
-    - HW2 Test Results: hw2-test-results.md
   - Packages:
     - Packages Index: packages/index.md
     - mail_client_api: packages/mail_client_api.md
@@ -40,6 +39,7 @@ nav:
     - clients (generated): packages/clients.md
     - discord_client_impl: packages/discord_client_impl.md
     - discord_client_service_adapter: packages/discord_client_service_adapter.md
+    - discord_client_service: packages/discord_client_service.md
     - discord_client_service_client: packages/discord_client_service_client.md
     - chat_client_api: packages/chat_client_api.md
   - API Reference:
