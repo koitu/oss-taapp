@@ -1,10 +1,11 @@
 """Tests for auth_session in-memory helpers."""
 
 import time
+
 import pytest
+from fastapi import HTTPException
 
 from discord_client_service import auth_session
-from fastapi import HTTPException
 
 
 def test_create_and_pop_state_and_ttl():

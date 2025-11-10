@@ -1,9 +1,6 @@
 """Extra tests for service module (lifespan and openapi)."""
 
 import asyncio
-import importlib
-import sys
-from pathlib import Path
 
 import pytest
 

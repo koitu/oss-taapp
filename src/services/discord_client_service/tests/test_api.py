@@ -6,14 +6,13 @@ dependencies.
 """
 
 from collections.abc import Generator
+from importlib import util
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
-from discord_client_service import service, api
-
-from importlib import util
-from pathlib import Path
+from discord_client_service import api, service
 
 # Load the sibling test helper module (works whether pytest imports tests as
 # modules or as plain files). This avoids relative import issues during
@@ -34,7 +33,6 @@ FakeMessage = test_fake.FakeMessage
 @pytest.fixture
 def client() -> Generator[TestClient, None, None]:
     """Provide a TestClient with auth dependency overridden and fake clients patched in."""
-
     # Override auth dependency so tests don't need real sessions/cookies
     try:
         from discord_client_service.auth_session import require_guild_access

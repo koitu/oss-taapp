@@ -12,7 +12,6 @@ import httpx
 import pytest
 
 import chat_client_api
-from discord_client_service_adapter import adapter_impl as _maybe_unused
 from discord_client_service_adapter import ServiceAdapterClient
 
 pytestmark = pytest.mark.e2e

@@ -6,9 +6,9 @@ the HTTP routes can be tested deterministically.
 
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
-from chat_client_api.exceptions import MessageDeleteError, MessageNotFoundError
+from chat_client_api.exceptions import MessageNotFoundError
 
 
 class FakeChannel:

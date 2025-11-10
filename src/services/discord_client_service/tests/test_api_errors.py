@@ -3,7 +3,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from discord_client_service import service, api
+from discord_client_service import api, service
 
 
 @pytest.fixture

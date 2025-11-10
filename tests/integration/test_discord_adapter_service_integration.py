@@ -13,9 +13,9 @@ from unittest.mock import MagicMock
 
 import httpx
 import pytest
+from discord_client_service import api, service
 from fastapi.testclient import TestClient
 
-from discord_client_service import service, api
 from discord_client_service_adapter import ServiceAdapterClient
 
 pytestmark = pytest.mark.integration
@@ -34,7 +34,6 @@ def mock_discord_bot_client() -> MagicMock:
 @pytest.fixture(scope="module")
 def test_client(mock_discord_user_client: MagicMock, mock_discord_bot_client: MagicMock) -> Generator[TestClient, None, None]:
     """Start the FastAPI TestClient with auth dependency overridden and fake clients patched in."""
-
     try:
         from discord_client_service.auth_session import require_guild_access
 
