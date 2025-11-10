@@ -19,37 +19,52 @@ This project is built on the principle of "programming integrated over time." Th
 
 ## Core Components
 
-The project is a `uv` workspace containing several related packages under `src/`. Each package has a focused responsibility and can be used independently:
+This repository is a `uv` workspace containing multiple related packages under `src/` plus a small `services/` folder. The codebase is component-oriented: each package focuses on a single responsibility and can be used independently or swapped via dependency injection.
 
-- **`mail_client_api`**: Defines the abstract `Client` base class (ABC) and message abstractions. This package is the stable contract that implementations must satisfy.
-- **`gmail_client_impl`**: A concrete implementation that implements the `mail_client_api` contract using the Gmail API (`GmailClient` and message implementations).
-- **`mail_client_service_adapter`**: An adapter layer that translates between the mail client implementation and the service API (handler code used by the service).
-- **`mail_client_service`** (located under `src/services/mail_client_service`): A small HTTP service that exposes the mail client functionality, orchestration and end-to-end glue.
-- **`clients`** (under `src/clients`, e.g. `mail_client_service_client`): Generated OpenAPI client(s) used to call the service from other components or tests.
+- **`mail_client_api`**: The abstract contract (ABCs) for mail clients and message/value objects. Consumers depend on this stable API.
+- **`gmail_client_impl`**: A concrete implementation of the mail client API that uses the Gmail APIs and OAuth credentials.
+- **`mail_client_service_adapter`**: Adapter code that exposes an implementation behind the service API (handlers/translation logic).
+- **`discord_client_impl`** and **`discord_client_service_adapter`**: Companion packages for Discord integration (implementation + adapter layer) — this repo contains Discord-related tools and OpenAPI generation helpers.
+- **`chat_client_api`**: An API package present in `src/` that follows the same contract/implementation pattern for chat clients.
+- **`clients`**: Generated OpenAPI client packages (for example `discord_client_service_client`)
+- **`services/`**: Local HTTP services that expose component functionality (for example `services/discord_client_service`). These are small FastAPI apps used for integration and end-to-end testing.
+ - **`src/services/`**: Local HTTP services that expose component functionality (for example `src/services/discord_client_service`). These are small FastAPI apps used for integration and end-to-end testing.
+
+Note: The exact packages in `src/` may evolve; see the `src/` directory for the current, authoritative list of workspace members.
 
 ## Project Structure
 
 ```
-ta-assignment/
-├── src/                          # Source packages (workspace members)
-│   ├── clients/                  # Generated API clients (e.g. mail_client_service_client)
-│   ├── gmail_client_impl/        # Gmail-specific implementation of the mail client
-│   ├── mail_client_api/          # Abstract mail client contract (Client, Message)
-│   └── mail_client_service_adapter/ # Adapter that exposes implementations as the service API
-│   └── services/
-│       └── mail_client_service/  # Small HTTP service exposing the mail client API
-├── tests/                        # Integration and E2E tests
-│   ├── integration/              # Component integration tests
-│   └── e2e/                      # End-to-end application tests
-├── docs/                         # Documentation source files
-├── .circleci/                    # CircleCI configuration
-├── Dockerfile                     # Dockerfile to containerize FastAPI service
-├── CONTRIBUTING.md                # Contributor guide
-├── DESIGN.md                      # Design document for new components
-├── main.py                        # Main application entry point / demo
-├── pyproject.toml                 # Project configuration (dependencies, tools)
-├── uv.lock                        # Locked dependency versions
-└── credentials.json               # Google OAuth credentials (local only)
+oss-taapp/                           # repository root
+├── src/                             # Source packages (workspace members)
+│   ├── chat_client_api/             # Chat client API package
+│   ├── clients/                     # Generated API clients (e.g. discord_client_service_client and mail_client_service_client)
+│   ├── discord_client_impl/         # Discord implementation package
+│   ├── discord_client_service_adapter/  # Discord adapter layer
+│   ├── gmail_client_impl/           # Gmail implementation of mail client API
+│   ├── mail_client_api/             # Abstract mail client contract (Client, Message)
+│   ├── mail_client_service_adapter/ # Adapter that exposes implementations as the service API
+│   ├── services/                    # Small FastAPI services (e.g. discord_client_service and mail_client_service)
+├── tests/                           # Integration and E2E tests
+│   ├── integration/
+│   └── e2e/
+├── docs/                            # Documentation source files and generated site (site/)
+├── .circleci/                       # CI configuration (CircleCI)
+├── Dockerfile                        # Dockerfile to containerize services
+├── generate_discord_openapi.py       # helper to generate OpenAPI clients for Discord
+├── run_service.py                    # run a local service (FastAPI) for testing  --> Gmail
+├── run_discord_service.py            # run the Discord-oriented service  --> Discord
+├── main.py                           # Main demo / entrypoint script
+├── pyproject.toml                    # Project configuration (dependencies, tools)
+├── uv.lock                           # Locked dependency versions (workspace)
+├── credentials.json                  # Local Google OAuth credentials (optional)
+├── token.json                        # OAuth token created after initial auth
+├── .env.example                      # Sample .env file
+├── .md files                         # Top-level project markdown documents
+├── CONTRIBUTING.md                   # Contribution guidelines
+├── DESIGN.md                         # Design notes
+├── Discord.md                        # Discord integration notes
+└── README.md                         # This file
 ```
 
 ## Project Setup
@@ -75,24 +90,43 @@ ta-assignment/
     cd ta-assignment
     ```
 
-3.  **Set Up Google Credentials:**
+3.  **Set Up Gmail Credentials:**
     -   Follow the [Google Cloud instructions](https://developers.google.com/gmail/api/quickstart/python#authorize_credentials_for_a_desktop_application) to enable the Gmail API and download your OAuth 2.0 credentials.
-    -   Rename the downloaded file to `credentials.json` and place it in the root of this project.
-    -   **Alternative**: For CI/CD environments, you can use environment variables instead:
-        ```bash
-        export GMAIL_CLIENT_ID="your_client_id"
-        export GMAIL_CLIENT_SECRET="your_client_secret"
-        export GMAIL_REFRESH_TOKEN="your_refresh_token"
+    -   Rename the downloaded file to `credentials.json` and place it in the root of this project. Running the demo or the service for the first time will initiate the OAuth flow and create a `token.json` file with the user tokens.
+    -   **Alternative (CI/CD / non-interactive):** Instead of using a local `credentials.json` and interactive flow, you can provide credentials via environment variables:
+        ```powershell
+        $env:GMAIL_CLIENT_ID = "your_client_id"
+        $env:GMAIL_CLIENT_SECRET = "your_client_secret"
+        $env:GMAIL_REFRESH_TOKEN = "your_refresh_token"
         ```
-    -   **Important:** Credential files contain secrets and are ignored by `.gitignore`.
+    -   **Security note:** Credential files and tokens contain sensitive data and are ignored by `.gitignore`. Keep them out of source control and use secret management in CI/CD.
 
-4.  **Create and Sync the Virtual Environment:**
+4.  **Set Up Discord Credentials (optional - for Discord integration):**
+    -   Create a Discord application at https://discord.com/developers/applications and register a new application for your bot or OAuth client.
+    -   Under the application settings, create a bot and/or configure OAuth2 Redirect URIs for any web-based flows.
+    -   Record the following values from the Discord developer dashboard and provide them to the application as environment variables:
+        - `DISCORD_CLIENT_ID` — the application's client ID
+        - `DISCORD_CLIENT_SECRET` — the application's client secret
+        - `DISCORD_REDIRECT_URI` — the OAuth redirect URI used for OAuth flows
+        - `DISCORD_PUBLIC_KEY` — public key used to verify interactions (if using interactions/webhooks)
+        - `DISCORD_BOT_TOKEN` — bot token
+    -   Example (PowerShell):
+        ```powershell
+        $env:DISCORD_CLIENT_ID = "your_discord_client_id"
+        $env:DISCORD_CLIENT_SECRET = "your_discord_client_secret"
+        $env:DISCORD_REDIRECT_URI = "https://your-app/callback"
+        $env:DISCORD_PUBLIC_KEY = "your_public_key"
+        $env:DISCORD_BOT_TOKEN = "your_bot_token"
+        ```
+    -   **Notes:** Discord credentials are not required for the Gmail-focused parts of this template. Use Discord credentials only if you plan to run the Discord-related services or adapters included in `src/` and `services/`.
+
+5.  **Create and Sync the Virtual Environment:**
     This single command creates a `.venv` folder and installs all packages (including workspace members and development tools) defined in `uv.lock`.
     ```bash
     uv sync --all-packages --extra dev
     ```
 
-5.  **Activate the Virtual Environment:**
+6.  **Activate the Virtual Environment:**
     ```bash
     # macOS / Linux
     source .venv/bin/activate
@@ -100,12 +134,12 @@ ta-assignment/
     .venv\Scripts\Activate.ps1
     ```
 
-6.  **Perform Initial Authentication:**
-    Run the main application once to perform the interactive OAuth flow. This will open a browser window for you to grant permission.
-    ```bash
+7.  **Perform Initial Authentication (Gmail):**
+    Run the main application once (or the Gmail service) to perform the interactive OAuth flow. This will open a browser window for you to grant permission and will create a `token.json` file containing the user tokens.
+    ```powershell
     uv run python main.py
     ```
-    After you approve, a `token.json` file will be created. This file is also ignored by `.gitignore` and will be used for authentication in subsequent runs.
+    If you're using CI/CD with pre-provisioned refresh tokens, this step is not required.
 
 ## Development Workflow
 
@@ -117,6 +151,12 @@ To run the main demonstration script:
 ```bash
 uv run python main.py
 ```
+
+To run the Discord service (local FastAPI service):
+```powershell
+uv run python run_discord_service.py
+```
+Then open http://localhost:8001/docs in your browser to view the Discord service API docs.
 
 ### Running the Toolchain
 
@@ -181,6 +221,7 @@ uv run python main.py
 
 This project uses MkDocs for documentation.
 ```bash
+uv run mkdocs build
 # Start the live-reloading documentation server
 uv run mkdocs serve
 ```
@@ -211,10 +252,26 @@ The project uses pytest markers to categorize tests:
 
 ### Authentication in Tests
 
-The testing infrastructure handles different authentication scenarios:
+The testing infrastructure handles different authentication scenarios for each external service. Below are the details for Gmail and Discord.
+
+#### Gmail
+
 - **Local Development**: Uses `credentials.json` and `token.json` files
 - **CI/CD Environment**: Uses environment variables (`GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`)
 - **Missing Credentials**: Tests fail fast with clear error messages (no hanging)
+
+#### Discord
+
+- **Local Development**: Provide the Discord credentials as environment variables in your shell or in a `.env` file before running tests. The repository expects the following variables when running Discord-related tests locally:
+    - `DISCORD_CLIENT_ID`
+    - `DISCORD_CLIENT_SECRET`
+    - `DISCORD_REDIRECT_URI`
+    - `DISCORD_PUBLIC_KEY`
+    - `DISCORD_BOT_TOKEN`
+
+- **CI/CD Environment**: In CI or other non-interactive environments, supply the same Discord values via your CI secret management (for example, repository secrets or a secret manager). Tests that require Discord credentials will read these environment variables and behave accordingly.
+
+- **Missing Credentials**: Tests that require Discord credentials will fail fast with a clear error message indicating which environment variables are missing. They will not wait for interactive input.
 
 ## Continuous Integration
 
@@ -234,8 +291,22 @@ See `docs/circleci-setup.md` for detailed CI/CD setup instructions.
 3. **Check code quality**: `uv run ruff check . && uv run ruff format --check .`
 4. **Fix formatting**: `uv run ruff format .`
 5. **View documentation**: `uv run mkdocs serve`
-6. **Run backend service**: `uv run python3 run_service.py`
-7. **Demo of the frontend client**: `uv run python3 test_adapter.py`
+6. **Run backend services**:
+     - **Gmail backend (local FastAPI service)** — runs the Gmail-focused service (default port 8000):
+
+         ```powershell
+         uv run python run_service.py
+         ```
+
+         Then open `http://localhost:8000/docs` to view the Gmail service API docs.
+
+     - **Discord backend (local FastAPI service)** — runs the Discord-focused service (default port 8001):
+
+         ```powershell
+         uv run python run_discord_service.py
+         ```
+
+         Then open `http://localhost:8001/docs` to view the Discord service API docs.
 
 ### Best Practices
 - Run unit tests (`uv run pytest src/`) during development for fast feedback
@@ -245,54 +316,57 @@ See `docs/circleci-setup.md` for detailed CI/CD setup instructions.
 
 ## Running with Docker
 
-The application can be containerized using Docker for easy deployment and distribution.
+The application can be containerized using Docker for easy local testing and distribution. The examples below show how to build and run the Discord-focused service packaged as `discord-service`.
 
 ### Building the Docker Image
 
 ```bash
-docker build -t gmail-service .
+docker build -t discord-service .
 ```
 
-This builds a Docker image named `gmail-service` using the provided Dockerfile. The build process:
+This builds a Docker image named `discord-service` using the provided Dockerfile. The build process:
 - Uses Python 3.11 slim base image
 - Installs `uv` for dependency management
 - Copies project files and installs dependencies
-- Exposes port 8000 for the FastAPI service
+- Exposes port 8001 for the Discord FastAPI service (local default)
 
 ### Running the Container
 
-**Basic run (FastAPI service):**
+**Basic run (Discord FastAPI service):**
 ```bash
-docker run -p 8000:8000 gmail-service
+docker run -p 8001:8001 discord-service
 ```
 
-The service will be available at `http://localhost:8000`. You can access:
-- API documentation: `http://localhost:8000/docs`
-- Alternative docs: `http://localhost:8000/redoc`
+The service will be available at `http://localhost:8001`. You can access:
+- API documentation: `http://localhost:8001/docs`
 
-**Note:** If you visit `http://localhost:8000/` (root path), you'll see a 404 error. This is normal - the service has specific endpoints like `/messages`, `/health`, etc. Use `/docs` to see all available endpoints.
+**Note:** If you visit `http://localhost:8001/` (root path), you may see a 404 error. This is normal — the service exposes specific endpoints (for example the Discord adapter endpoints). Use `/docs` to view available routes.
 
-**Running with Gmail credentials (environment variables):**
+**Running with Discord credentials (environment variables):**
 ```bash
-docker run -p 8000:8000 \
-  -e GMAIL_CLIENT_ID="your_client_id" \
-  -e GMAIL_CLIENT_SECRET="your_client_secret" \
-  -e GMAIL_REFRESH_TOKEN="your_refresh_token" \
-  gmail-service
+docker run -p 8001:8001 \
+    -e DISCORD_CLIENT_ID="your_client_id" \
+    -e DISCORD_CLIENT_SECRET="your_client_secret" \
+    -e DISCORD_REDIRECT_URI="https://your-app/callback" \
+    -e DISCORD_PUBLIC_KEY="your_public_key" \
+    -e DISCORD_BOT_TOKEN="your_bot_token" \
+    discord-service
 ```
 
-**Running the main.py demo:**
+**Running the Discord service demo:**
 ```bash
-docker run gmail-service uv run python main.py
+docker run discord-service uv run python run_discord_service.py
 ```
 
-**Running with credential files:**
+**Running with credential files (local .env):**
+If you prefer to supply credentials via a file, you can mount a local `.env` (or another file) into the container. Example (host current directory):
 ```bash
-docker run -p 8000:8000 \
-  -v $(pwd)/credentials.json:/app/credentials.json \
-  -v $(pwd)/token.json:/app/token.json \
-  gmail-service
+docker run -p 8001:8001 \
+    -v $(pwd)/.env:/app/.env \
+    discord-service
 ```
+
+The container will read environment variables from the mounted file if your entrypoint or startup logic loads `.env` values.
 
 ## Deployment
 
@@ -314,6 +388,7 @@ Secrets are securely stored in **Google Secret Manager**.
 - `DISCORD_CLIENT_SECRET`
 - `DISCORD_REDIRECT_URI`
 - `DISCORD_PUBLIC_KEY`
+- `DISCORD_BOT_TOKEN`
 
 ### CI/CD Pipeline
 

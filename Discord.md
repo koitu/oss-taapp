@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the complete implementation of a Discord chat service following service-oriented architecture patterns. The implementation demonstrates how to build a scalable, maintainable chat client system with OAuth2 authentication, database-backed credential storage, and both local and remote access patterns.
+This document describes the Discord chat service implementation in this repository. It documents the architecture and usage for the current codebase, which uses session-based credential handling (no per-user database) and a service adapter + generated client to offer both local and remote access patterns.
 
 ## Architecture
 
@@ -13,7 +13,7 @@ The implementation follows the Adapter pattern and service-oriented architecture
 1. **Local Path**: Direct usage of the Discord client implementation
 2. **Service Path**: Remote access through a FastAPI service with an adapter that presents a familiar local interface
 
-This dual-path approach demonstrates architectural flexibility and separation of concerns.
+This dual-path approach demonstrates architectural flexibility and separation of concerns. Note: recent code changes removed the per-user database and `user_id`-based routing in favor of session-based authentication.
 
 ### Component Overview
 
@@ -46,7 +46,7 @@ This dual-path approach demonstrates architectural flexibility and separation of
          │                        │
          │                        ▼
          │             ┌──────────────────────────┐
-         │             │ DiscordClient + Database │
+         │             │ DiscordClient + Session  │
          │             └──────────┬───────────────┘
          │                        │
          └────────────────────────┘
@@ -59,6 +59,12 @@ This dual-path approach demonstrates architectural flexibility and separation of
 
 ## Implementation Phases
 
+### Changes from previous version
+
+- Removed per-user database storage: the service no longer stores credentials per `user_id` in a repository database.
+- Authentication and credential state are now managed using sessions (server-side or signed cookies), not a persistent per-user DB.
+- API routes no longer include `user_id` in the path; endpoints operate on the current authenticated session.
+
 ### Phase 1: Abstract Chat Client API
 
 **Purpose**: Define platform-agnostic interfaces for chat operations.
@@ -70,7 +76,7 @@ This dual-path approach demonstrates architectural flexibility and separation of
 
 **Key Design Decisions**:
 - Used abstract base classes (ABC) to enforce interface contracts
-- Designed for multi-user support with `get_client(user_id)` factory pattern
+- Designed for multi-session support: clients are obtained for the current session or created directly (no `user_id` path parameter required)
 - Properties instead of methods for immutable attributes
 - Iterator return types for memory-efficient batch operations
 
@@ -100,38 +106,26 @@ This dual-path approach demonstrates architectural flexibility and separation of
 2. User authorizes application in browser
 3. Discord redirects with authorization code
 4. Exchange code for access token and refresh token
-5. Store tokens for future use
+5. Store tokens in the current session for future use
 
-### Phase 3: Database Layer
+### Phase 3: Session-based Credential Management
 
-**Purpose**: Persist OAuth2 credentials per user with automatic token refresh.
+**Purpose**: Maintain OAuth2 credential state tied to a user's session rather than persisting credentials in a per-user database.
 
 **Components**:
-- `DiscordCredential`: SQLAlchemy model for storing OAuth2 tokens
-- `CredentialManager`: Async database operations (CRUD)
-- `auth_helper`: Convenience functions for getting authenticated clients
+- Session middleware (server-side session store or signed session cookie)
+- Token management logic within the Discord client/service: tokens are kept in the active session and refreshed as needed
+- `auth_helper`: convenience functions to obtain an authenticated client from the current session
 
 **Key Design Decisions**:
-- SQLAlchemy 2.0 with async support (asyncio + aiosqlite)
-- Per-user credential storage (not global singleton)
-- Token expiration tracking with timezone awareness
-- Automatic token refresh when expired
-- Separate database per deployment (configurable path)
+- Credentials are stored in the active session (server-side store or secure signed cookie) instead of an application database.
+- Session-based approach simplifies multi-tenant concerns and reduces persistent storage of sensitive tokens in this repository's default design.
+- Automatic token refresh still occurs when the access token is expired; refreshed tokens are written back into the session.
+- Sessions typically require a session secret and an appropriate session backend (in-memory, Redis, or signed cookie).
 
-**Database Schema**:
-```
-discord_credentials
-├── user_id (Primary Key)
-├── access_token
-├── refresh_token
-├── token_type
-├── expires_at
-├── scope
-├── created_at
-└── updated_at
-```
+**Assumptions**: The repository currently expects session usage for authentication. For multi-instance production deployments, configure a shared session backend (Redis or similar) and a secure session secret.
 
-**Location**: `src/discord_client_impl/database/`
+**Location**: Session and auth-related code lives with the FastAPI service in `src/services/discord_client_service/` and the Discord client implementation in `src/discord_client_impl/`.
 
 ### Phase 4: FastAPI Service
 
@@ -139,32 +133,32 @@ discord_credentials
 
 **Components**:
 - FastAPI application with OpenAPI documentation
-- OAuth2 endpoints: login, callback, logout, status
+- OAuth2 endpoints: login, callback, logout, status (session-based)
 - Message endpoints: GET, POST, DELETE
 - Channel endpoints: GET (list and individual)
 - Health check endpoint
-- Database lifespan management
+- Session lifespan and middleware (session init + cleanup)
 
 **Key Design Decisions**:
-- RESTful design with user_id in URL path for multi-tenancy
+- RESTful design using the authenticated session; `user_id` is not required in path parameters, Instead `guild_id` is required
 - Pydantic models for request/response validation
 - Proper HTTP status codes (200, 400, 401, 404, 500)
 - Async endpoints for non-blocking I/O
-- Lifespan context manager for database initialization
+- Lifespan context manager for session initialization if needed
 - Comprehensive logging for debugging
 
 **API Structure**:
 ```
-GET  /health
-GET  /auth/login
-POST /auth/callback
-DELETE /auth/logout/{user_id}
-GET  /auth/status/{user_id}
-GET  /{user_id}/channels
-GET  /{user_id}/channels/{channel_id}
-GET  /{user_id}/channels/{channel_id}/messages
-POST /{user_id}/channels/{channel_id}/messages
-DELETE /{user_id}/channels/{channel_id}/messages/{message_id}
+GET     /health
+GET     /openapi.json
+GET     /auth/login
+GET     /auth/status/{guild_id}
+DELETE  /auth/logout/{guild_id}
+GET     /guilds/{guild_id}/channels
+GET     /{guild_id}/channels/{channel_id}
+GET     /{guild_id}/channels/{channel_id}/messages
+POST    /{guild_id}/channels/{channel_id}/messages
+DELETE  /{guild_id}/channels/{channel_id}/messages/{message_id}
 ```
 
 **Location**: `src/services/discord_client_service/`
@@ -217,127 +211,62 @@ DELETE /{user_id}/channels/{channel_id}/messages/{message_id}
 
 1. **Python Environment**:
    - Python 3.11 or higher
-   - `uv` package manager installed
+   - `uv` package manager (used in this workspace) or use pip/venv as preferred
 
 2. **Discord Application**:
-   - Create application at https://discord.com/developers/applications
+   - Create an application at https://discord.com/developers/applications
    - Note the Application ID (Client ID)
    - Generate a Client Secret under OAuth2 → General
-   - Add redirect URI: `http://localhost:8000/auth/callback`
+   - Add redirect URI: such as `http://localhost:8001/auth/callback`
 
 ### Installation
 
-```bash
-# Clone the repository
-cd oss-taapp
+```powershell
+# From the repository root
+cd .\oss-taapp
 
-# Sync dependencies
+# Sync dependencies (if using uv as the project manager)
 uv sync
-
-# Set up environment variables
-./setup_discord_env.sh
-# Or manually create .env with:
-# DISCORD_CLIENT_ID=your_client_id
-# DISCORD_CLIENT_SECRET=your_client_secret
-# DISCORD_REDIRECT_URI=http://localhost:8000/auth/callback
-# DISCORD_DB_PATH=discord_credentials.db
 ```
 
 ### Configuration
 
-The system uses environment variables for configuration:
+The system uses environment variables for configuration. In the current session-driven design, you'll need:
 
 - `DISCORD_CLIENT_ID`: OAuth2 client identifier from Discord Developer Portal
 - `DISCORD_CLIENT_SECRET`: OAuth2 client secret (keep secure)
 - `DISCORD_REDIRECT_URI`: OAuth2 callback URL (must match Discord settings)
-- `DISCORD_DB_PATH`: Path to SQLite database file for credentials
+- `DISCORD_PUBLIC_KEY`: public key for the app
+- `DISCORD_BOT_TOKEN`: bot token for discord
+
+Note: The per-user database variable (previously `DISCORD_DB_PATH`) is no longer required by the default code in this repo.
 
 ## Running the System
 
 ### Option 1: Automated Test Suite
 
-```bash
-./run_tests.sh
+```
+uv run ruff check .
+uv run mypy src tests
+uv run pytest
 ```
 
 This runs:
-- Unit tests for all components (38 tests)
+- Unit tests for all components
 - Type checking with mypy strict mode
 - Linting with ruff
 
-### Option 2: Manual Service Testing
+### Option 2: Service Adapter Testing
 
-**Step 1: Start the FastAPI service**
-
-```bash
-cd src/services/discord_client_service
-uv run uvicorn discord_client_service.service:app --reload --port 8000
-```
-
-**Step 2: Test health endpoint**
-
-```bash
-curl http://localhost:8000/health
-```
-
-Expected response:
-```json
-{"status":"healthy","service":"discord-client-service"}
-```
-
-**Step 3: Access API documentation**
-
-Open http://localhost:8000/docs in a browser to see interactive Swagger UI.
-
-**Step 4: Complete OAuth flow**
-
-Initialize authentication:
-```bash
-curl http://localhost:8000/auth/login
-```
-
-This returns an authorization URL. Open it in a browser, authorize the application, and copy the code parameter from the callback URL.
-
-Complete the callback:
-```bash
-curl -X POST http://localhost:8000/auth/callback \
-  -H "Content-Type: application/json" \
-  -d '{"code": "YOUR_CODE_HERE", "user_id": "test_user_123"}'
-```
-
-**Step 5: Test Discord operations**
-
-List channels:
-```bash
-curl http://localhost:8000/test_user_123/channels
-```
-
-Get messages:
-```bash
-curl "http://localhost:8000/test_user_123/channels/CHANNEL_ID/messages?limit=5"
-```
-
-Send message:
-```bash
-curl -X POST "http://localhost:8000/test_user_123/channels/CHANNEL_ID/messages" \
-  -H "Content-Type: application/json" \
-  -d '{"content": "Hello from the API!"}'
-```
-
-### Option 3: Service Adapter Testing
-
-The service adapter provides the same interface as the local client but routes through the HTTP service:
+The service adapter provides the same interface as the local client but routes through the HTTP service. Note: adapters no longer accept a `user_id`; they operate with the current authenticated session or an authenticated HTTP client instance.
 
 ```python
 from discord_client_service_adapter import ServiceAdapterClient
 
 # Initialize adapter (service must be running)
-client = ServiceAdapterClient(
-    service_url="http://localhost:8000",
-    user_id="test_user_123"
-)
+client = ServiceAdapterClient(service_url="http://localhost:8000")
 
-# Use same interface as local client
+# If the adapter supports attaching session cookies or an auth token, do that before calling methods.
 channels = list(client.get_channels())
 messages = list(client.get_messages(channel_id="123", max_results=10))
 sent = client.send_message(channel_id="123", content="Test message")
@@ -345,163 +274,49 @@ sent = client.send_message(channel_id="123", content="Test message")
 
 ## Implementation Logic and Design Rationale
 
-### Multi-User Support
+### Multi-User / Multi-Session Support
 
-**Problem**: Traditional implementations use global singletons or single-user patterns.
+**Problem**: Traditional single-user credential storage doesn't fit multi-session applications.
 
-**Solution**: Every component accepts `user_id` parameter. The database stores per-user credentials. The factory pattern `get_client(user_id)` retrieves the appropriate client.
+**Solution**: The current code uses session-bound credential state. The service maintains OAuth2 tokens inside the user's session, and client operations act on the authenticated session.
 
 **Benefits**:
-- Multiple users can use the same service instance
-- Credentials are isolated per user
-- Scales to multi-tenant scenarios
+- Multiple concurrent sessions are supported without a per-user DB schema in this repository
+- Credentials are scoped to sessions, reducing risk of long-lived database storage in this codebase
+- Scales to multi-tenant scenarios when combined with a shared session backend (Redis) in production
 
-### OAuth2 with Database Persistence
+### OAuth2 with Session Persistence
 
-**Problem**: Simple file-based token storage is not production-ready.
+**Problem**: Persisting tokens in a database may be unnecessary for some deployments and increases responsibility for secure storage.
 
-**Solution**: SQLAlchemy database with proper credential management, token expiration tracking, and automatic refresh.
+**Solution**: Store OAuth2 tokens in the user's session for the lifetime of the session. Tokens are refreshed transparently and updated back into the session.
 
 **Implementation Details**:
-- Tokens stored encrypted in database (application-level)
-- Expiration checked before each request
-- Automatic refresh using refresh token when expired
-- Timezone-aware timestamps (UTC)
-
-### Service-Oriented Architecture
-
-**Problem**: Monolithic applications are hard to scale and maintain.
-
-**Solution**: Separate FastAPI service exposing HTTP API, with generated client and adapter.
-
-**Benefits**:
-- Service can be deployed independently
-- Multiple clients can connect (web, mobile, CLI)
-- Easy to add rate limiting, caching, monitoring
-- Clear separation of concerns
-
-### Adapter Pattern
-
-**Problem**: User code should not need to change when switching between local and service implementations.
-
-**Solution**: ServiceAdapterClient implements the same Chat Client API interface as DiscordClient, but delegates to HTTP client.
-
-**Benefits**:
-- User code unchanged: `client.get_messages()` works for both
-- Easy to switch implementations (config change)
-- Hides network complexity (retries, timeouts, serialization)
-
-### Type Safety Throughout
-
-**Problem**: Dynamic typing leads to runtime errors.
-
-**Solution**: Full type annotations, mypy strict mode, Pydantic models.
-
-**Implementation**:
-- All functions have type annotations
-- Abstract base classes enforce contracts
-- Pydantic validates request/response at runtime
-- OpenAPI client is fully typed
-- mypy strict mode catches type errors at development time
-
-### Testing Strategy
-
-**Unit Tests**: Test individual components in isolation
-- Abstract interfaces (12 tests)
-- Message and channel implementations (9 tests)
-- Database operations (13 tests)
-- Registration and factory (4 tests)
-
-**Type Checking**: Enforce type safety
-- mypy strict mode on all modules
-- No type: ignore comments
-- Explicit type annotations
-
-**Linting**: Maintain code quality
-- ruff with comprehensive rule set
-- Consistent formatting
-- Documented exceptions
-
-**Integration Tests**: Verify end-to-end functionality
-- Manual testing with real Discord API
-- Service adapter integration tests
-- OAuth flow verification
+- Tokens are placed into the session object after the OAuth callback completes.
+- Before making API calls, the client checks token expiry and refreshes using the refresh token when needed, updating the session state.
+- Sessions should be secured with HTTPS and appropriate cookie flags (Secure, HttpOnly, SameSite) when used in production.
 
 ## Project Structure
 
 ```
 src/
 ├── chat_client_api/              # Abstract interfaces
-│   ├── src/chat_client_api/
-│   │   ├── __init__.py
-│   │   ├── client.py            # Client ABC
-│   │   └── message.py           # ChatMessage, Channel ABCs
-│   └── tests/
-│
-├── discord_client_impl/          # Discord implementation
-│   ├── src/discord_client_impl/
-│   │   ├── __init__.py
-│   │   ├── discord_impl.py      # DiscordClient
-│   │   ├── message_impl.py      # DiscordMessage, DiscordChannel
-│   │   ├── auth_helper.py       # Auth convenience functions
-│   │   └── database/
-│   │       ├── models.py        # SQLAlchemy models
-│   │       └── manager.py       # CredentialManager
-│   └── tests/
-│
-├── services/discord_client_service/  # FastAPI service
-│   └── src/discord_client_service/
-│       ├── __init__.py
-│       ├── service.py           # FastAPI app
-│       └── api.py               # Endpoint definitions
-│
-├── clients/discord_client_service_client/  # Generated client
-│   ├── __init__.py
-│   ├── client.py                # HTTP client
-│   ├── api/                     # Generated API modules
-│   ├── models/                  # Generated Pydantic models
-│   └── types.py                 # Type utilities
-│
-└── discord_client_service_adapter/  # Service adapter
-    └── src/discord_client_service_adapter/
-        ├── __init__.py
-        └── adapter_impl.py      # ServiceAdapterClient
+├── discord_client_impl/          # Discord implementation (client, token handling)
+├── services/discord_client_service/  # FastAPI service (session middleware + routes)
+├── clients/discord_client_service_client/  # Generated OpenAPI client
+└── discord_client_service_adapter/  # Service adapter (adapts HTTP client to chat_client_api)
 ```
-
-## Code Quality Metrics
-
-- **Type Coverage**: 100% (all functions typed)
-- **Mypy Compliance**: Strict mode, no errors
-- **Ruff Compliance**: All checks pass
-- **Test Coverage**: 38 unit tests
-  - chat_client_api: 100% coverage
-  - discord_client_impl: Core functionality covered
-- **Lines of Code**: ~5000 (including generated)
-- **Packages Created**: 6
 
 ## Key Takeaways
 
 1. **Abstract Interfaces**: Define clear contracts before implementation
 2. **OAuth2 Best Practices**: Use authorization code flow with refresh tokens
-3. **Database-Backed Credentials**: Production-ready multi-user support
+3. **Session-Backed Credentials**: The current repository favors session-bound credential storage.
 4. **Service-Oriented Design**: Separation of concerns, independent deployment
 5. **Code Generation**: Let tools generate boilerplate (OpenAPI client)
 6. **Adapter Pattern**: Hide implementation details, present familiar interface
 7. **Type Safety**: Catch errors early with static type checking
 8. **Comprehensive Testing**: Unit tests, integration tests, type checking
-
-## Future Enhancements
-
-Potential improvements for production use:
-
-1. **Authentication Service**: Separate OAuth service for credential management
-2. **Rate Limiting**: Implement rate limiting in FastAPI service
-3. **Caching**: Cache channel lists and metadata
-4. **WebSocket Support**: Add real-time message streaming
-5. **Retry Logic**: Implement exponential backoff for failed requests
-6. **Metrics**: Add Prometheus metrics for monitoring
-7. **Logging**: Structured logging with correlation IDs
-8. **Error Recovery**: More sophisticated error handling and recovery
 
 ## References
 
@@ -510,7 +325,3 @@ Potential improvements for production use:
 - OAuth2 RFC: https://tools.ietf.org/html/rfc6749
 - OpenAPI Specification: https://swagger.io/specification/
 - Python Type Hints: https://docs.python.org/3/library/typing.html
-
-## Conclusion
-
-This implementation demonstrates a complete, production-quality chat service architecture. The design emphasizes type safety, maintainability, and architectural flexibility. The dual-path approach (local and service) shows how to build systems that can grow from simple library usage to distributed microservices while maintaining a consistent interface for client code.
