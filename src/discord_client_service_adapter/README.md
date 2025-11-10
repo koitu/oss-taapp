@@ -11,13 +11,19 @@ The adapter allows user code to interact with Discord through a remote HTTP serv
 ```python
 from discord_client_service_adapter import ServiceAdapterClient
 
-# Create adapter pointing to running service
+# Create adapter pointing to a running service
+# NOTE: this adapter no longer accepts `user_id`.
+# You must provide an authenticated `session` and the `installed_guild_id`
+# (the guild/server where the client/bot is installed) so the service can
+# perform guild-scoped operations on behalf of the caller.
 client = ServiceAdapterClient(
     service_url="http://localhost:8000",
-    user_id="my_user_id"
+    session="<session-token-or-session-object>",
+    installed_guild_id="1234567890"
 )
 
-# Use the same interface as local DiscordClient
+# Use the same interface as the local DiscordClient implementation
+# (iterable/getters and send_message stay the same)
 messages = list(client.get_messages(channel_id="123456", max_results=10))
 client.send_message(channel_id="123456", content="Hello from adapter!")
 ```
@@ -31,6 +37,10 @@ User Code → ServiceAdapterClient → Generated HTTP Client → FastAPI Service
 The adapter translates between:
 - The local `chat_client_api.Client` interface (Python objects, iterators)
 - The remote HTTP API (JSON requests/responses, status codes)
+
+Authentication and scoping:
+- The adapter requires a `session` (an authenticated session token or session object) to be supplied when constructing `ServiceAdapterClient`. The session is used by the service to authenticate requests on behalf of the user or bot.
+- Many Discord operations are guild-scoped for bots; the adapter therefore accepts `installed_guild_id` to indicate the guild (server) where the client/bot is installed. This ensures the service performs actions in the correct guild context.
 
 ## Dependencies
 
