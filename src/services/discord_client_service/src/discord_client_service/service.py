@@ -10,8 +10,13 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
-from discord_client_impl.database import get_credential_manager
+# Database-backed credential storage has been removed in favor of
+# an in-memory session-backed credential store implemented in
+# `discord_client_service.auth_session`.
+# Previously this module initialized the database on startup; that
+# initialization is no longer needed.
 from fastapi import FastAPI
 
 logger = logging.getLogger(__name__)
@@ -50,17 +55,13 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         None: Control during application runtime.
 
     """
-    # Startup: Initialize database
-    logger.info("Initializing Discord service...")
-    manager = get_credential_manager()
-    await manager.init_db()
-    logger.info("Database initialized successfully")
+    # Startup: nothing to initialize for DB (sessions are in-memory)
+    logger.info("Initializing Discord service (no database)...")
 
     yield
 
-    # Shutdown: Close database connections
-    logger.info("Shutting down Discord service...")
-    await manager.close()
+    # Shutdown: nothing to close
+    logger.info("Shutting down Discord service")
     logger.info("Service shutdown complete")
 
 
@@ -82,3 +83,14 @@ def health_check() -> dict[str, str]:
 
     """
     return {"status": "healthy", "service": "discord-client-service"}
+
+
+@app.get("/openapi.json")
+def get_openapi_schema() -> dict[str, Any]:
+    """Serve the OpenAPI schema.
+
+    Returns:
+        The OpenAPI schema as a dictionary.
+
+    """
+    return app.openapi()

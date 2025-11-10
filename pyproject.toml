@@ -43,6 +43,7 @@ members = [
   "src/gmail_client_impl",
   "src/services/mail_client_service",
   "src/clients",
+  "src/clients/discord_client_service_client",
   "src/mail_client_service_adapter",
   "src/chat_client_api",
   "src/discord_client_impl",
@@ -58,6 +59,7 @@ extend-exclude = [
   "get_oauth_code.py",
   "test_real_callback.py",
   "test_callback.py",
+  "src/clients/discord_client_service_client/**",
 ]
 
 [tool.ruff.lint]
@@ -106,6 +108,14 @@ module = [
 ]
 ignore_missing_imports = true
 
+# Ignore auto-generated client code
+[[tool.mypy.overrides]]
+module = [
+    "discord_client_service_client.*",
+    "mail_client_service_client.*",
+]
+follow_imports = "skip"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 pythonpath = [
@@ -124,7 +134,7 @@ markers = [
 
 [tool.coverage.run]
 source = ["src"]
-omit = ["*/tests/*", "*/__main__.py", "src/clients/mail_client_service_client/**"]
+omit = ["*/tests/*", "*/__main__.py", "src/clients/mail_client_service_client/**", "src/clients/discord_client_service_client/**"]
 
 [tool.coverage.report]
 fail_under = 85 # Justification: A high threshold ensures most code is tested.

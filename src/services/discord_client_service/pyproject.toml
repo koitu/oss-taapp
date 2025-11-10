@@ -20,7 +20,7 @@ test = [
 
 [tool.pytest.ini_options]
 pythonpath = [".", "src"]
-testpaths = ["tests", "src"]
+testpaths = ["tests"]
 addopts = ["--cov", "--cov-report=term-missing"]
 
 [tool.coverage.run]
@@ -52,6 +52,7 @@ extend = "../../../pyproject.toml"
 
 [tool.ruff.lint]
 ignore = []
+per-file-ignores = { "**/api.py" = ["SLF001"], "**/tests/**" = ["INP001"] }
 
 [tool.uv.sources]
 discord-client-impl = { workspace = true }

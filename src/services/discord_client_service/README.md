@@ -27,7 +27,9 @@ uvicorn discord_client_service.service:app --reload
 
 The service will be available at `http://localhost:8000`.
 
-API documentation is available at `http://localhost:8000/docs`.
+API documentation is available at:
+- Interactive docs: `http://localhost:8000/docs`
+- OpenAPI schema: `http://localhost:8000/openapi.json`
 
 ## Environment Variables
 
@@ -88,3 +90,17 @@ Linting:
 ```bash
 ruff check .
 ```
+
+### Regenerating OpenAPI Schema
+
+After making changes to the API endpoints, regenerate the `openapi.json` file:
+
+```bash
+# From project root
+uv run python generate_discord_openapi.py
+```
+
+The `openapi.json` file is committed to the repository to enable:
+- Client code generation with `openapi-python-client`
+- API documentation and schema validation
+- Third-party integrations

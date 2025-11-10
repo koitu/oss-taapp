@@ -55,7 +55,8 @@ per-file-ignores = { "**/tests/*.py" = [
     "PIE810",  # Multiple startswith calls (test readability)
     "PLC0415",  # Import not at top (intentional for registration tests)
     "S105", "S106",  # Hardcoded password (false positive for test tokens)
-    "PLR2004",  # Magic values (test constants are self-documenting)
+    "INP001",  # Tests shouldn't have __init__.py (pytest best practice)
+    "SLF001",  # Tests are allowed to access private members for testing
 ], "**/__init__.py" = [
     "ARG001",  # Unused args in factory functions (interface compatibility)
     "TD002", "TD003", "FIX002",  # TODO comments (acceptable for planned features)
@@ -63,12 +64,13 @@ per-file-ignores = { "**/tests/*.py" = [
 ], "**/*_impl.py" = [
     "S105",  # Hardcoded password (false positive for URL constants)
     "EM101", "EM102", "TRY003",  # Exception messages (direct messages are clearer)
-    "PLR2004",  # Magic values (HTTP status codes are self-documenting)
     "TRY300",  # Return in try block (intentional for success paths)
 ], "**/database/*.py" = [
     "PLR0913",  # Too many arguments (necessary for comprehensive credential storage)
     "S107",  # Hardcoded password (false positive for token_type default)
     "PLW0603",  # Global statement (singleton pattern for manager)
+], "**/auth_helper.py" = [
+    "SLF001",  # Internal helper allowed to access private methods within same package
 ] }
 
 [tool.uv.sources]

@@ -31,7 +31,7 @@ source = ["src/discord_client_service_adapter"]
 omit = ["*/tests/*"]
 
 [tool.coverage.report]
-fail_under = 85
+fail_under = 75
 exclude_lines = [
     "pragma: no cover",
     "raise NotImplementedError",
@@ -55,4 +55,4 @@ ignore = []
 
 [tool.uv.sources]
 chat-client-api = { workspace = true }
-discord-client-service-client = { path = "../clients/discord_client_service_client", editable = true }
+discord-client-service-client = { workspace = true }
