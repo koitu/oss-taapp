@@ -7,7 +7,7 @@ available so it doesn't fail CI unintentionally.
 
 import os
 from collections.abc import Iterator
-from typing import Any
+from typing import cast
 
 import httpx
 import pytest
@@ -57,7 +57,9 @@ def test_discord_service_adapter_e2e() -> None:  # noqa: C901
     # function that accepts an optional user id (prefixed with an underscore
     # to signal it's intentionally unused) to avoid lambda-specific lint
     # warnings.
-    def _adapter_factory(_user_id: str | None = None) -> Any:
+    def _adapter_factory(user_id: str | None = None) -> chat_client_api.Client:
+        # adapter is a ServiceAdapterClient which implements chat_client_api.Client
+        # parameter named to match the original `get_client` signature
         return adapter
 
     chat_client_api.get_client = _adapter_factory
@@ -87,8 +89,10 @@ def test_discord_service_adapter_e2e() -> None:  # noqa: C901
 
         fake_client = _FakeClient()
 
-        def _fake_factory(_user_id: str | None = None) -> Any:
-            return fake_client
+        def _fake_factory(user_id: str | None = None) -> chat_client_api.Client:
+            # The tiny in-memory fake client mirrors the minimal interface used in
+            # this test. Use cast to satisfy the static type checker.
+            return cast("chat_client_api.Client", fake_client)
 
         chat_client_api.get_client = _fake_factory
         client = chat_client_api.get_client()

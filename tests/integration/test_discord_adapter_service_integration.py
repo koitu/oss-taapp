@@ -14,6 +14,8 @@ from unittest.mock import MagicMock
 
 logger = logging.getLogger(__name__)
 
+from typing import Any, cast
+
 import httpx
 import pytest
 from discord_client_service import api, service
@@ -63,9 +65,10 @@ def test_client(mock_discord_user_client: MagicMock, mock_discord_bot_client: Ma
     async def _check_user_authenticated(guild_id: str) -> bool:
         return True
 
-    api.get_client_for_user = _get_client_for_user
-    api.get_bot_client_for_guild = _get_bot_client_for_guild
-    api.check_user_authenticated = _check_user_authenticated
+    # Cast to Any so mypy permits assigning test doubles to module attributes
+    cast("Any", api).get_client_for_user = _get_client_for_user
+    cast("Any", api).get_bot_client_for_guild = _get_bot_client_for_guild
+    cast("Any", api).check_user_authenticated = _check_user_authenticated
 
     with TestClient(service.app) as client:
         yield client
