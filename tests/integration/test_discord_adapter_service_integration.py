@@ -8,8 +8,11 @@ The test uses an in-process httpx client bound to the FastAPI app so all
 networking stays in-process and fast.
 """
 
+import logging
 from collections.abc import Callable, Generator
 from unittest.mock import MagicMock
+
+logger = logging.getLogger(__name__)
 
 import httpx
 import pytest
@@ -23,11 +26,13 @@ pytestmark = pytest.mark.integration
 
 @pytest.fixture(scope="module")
 def mock_discord_user_client() -> MagicMock:
+    """Provide a MagicMock used as the Discord user client for tests."""
     return MagicMock()
 
 
 @pytest.fixture(scope="module")
 def mock_discord_bot_client() -> MagicMock:
+    """Provide a MagicMock used as the Discord bot client for tests."""
     return MagicMock()
 
 
@@ -41,15 +46,18 @@ def test_client(mock_discord_user_client: MagicMock, mock_discord_bot_client: Ma
             return None
 
         service.app.dependency_overrides[require_guild_access] = _no_auth
-    except Exception:
-        pass
+    except Exception as e:
+        # Log the exception so linters don't flag a bare except/pass.
+        logger.debug("Failed to override require_guild_access dependency: %s", e)
 
     # Patch the resolution functions used by the API module so the service
     # calls our mocked clients.
-    async def _get_client_for_user(guild_id: str):
+    async def _get_client_for_user(guild_id: str) -> MagicMock:
+        """Return the mocked user client for the given guild id."""
         return mock_discord_user_client
 
-    async def _get_bot_client_for_guild(guild_id: str):
+    async def _get_bot_client_for_guild(guild_id: str) -> MagicMock:
+        """Return the mocked bot client for the given guild id."""
         return mock_discord_bot_client
 
     async def _check_user_authenticated(guild_id: str) -> bool:
@@ -88,6 +96,7 @@ def _make_forward(test_client: TestClient) -> Callable[[httpx.Request], httpx.Re
 
 @pytest.mark.circleci
 def test_get_messages_via_adapter(test_client: TestClient, mock_discord_user_client: MagicMock) -> None:
+    """Adapter should request messages from the service and return them."""
     mock_msg = _make_message("m1")
     mock_discord_user_client.get_messages.return_value = [mock_msg]
 
@@ -103,6 +112,7 @@ def test_get_messages_via_adapter(test_client: TestClient, mock_discord_user_cli
 
 @pytest.mark.circleci
 def test_get_message_via_adapter(test_client: TestClient, mock_discord_user_client: MagicMock) -> None:
+    """Adapter.get_message should return the requested message by id."""
     mock_msg = _make_message("m2")
     mock_discord_user_client.get_messages.return_value = [mock_msg]
 
@@ -120,6 +130,7 @@ def test_get_message_via_adapter(test_client: TestClient, mock_discord_user_clie
 
 @pytest.mark.circleci
 def test_send_and_delete_via_adapter(test_client: TestClient, mock_discord_user_client: MagicMock, mock_discord_bot_client: MagicMock) -> None:
+    """Adapter should send a message via the service and allow deletion."""
     # Sending
     sent = MagicMock()
     sent.id = "s1"

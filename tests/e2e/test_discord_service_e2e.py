@@ -6,7 +6,8 @@ available so it doesn't fail CI unintentionally.
 """
 
 import os
-from pathlib import Path
+from collections.abc import Iterator
+from typing import Any
 
 import httpx
 import pytest
@@ -18,10 +19,13 @@ pytestmark = pytest.mark.e2e
 
 
 @pytest.mark.local_credentials
-def test_discord_service_adapter_e2e() -> None:
-    # Workspace root detection
-    workspace_root = Path(__file__).parent.parent.parent
+def test_discord_service_adapter_e2e() -> None:  # noqa: C901
+    """E2E: exercise the service adapter against a running discord_client_service.
 
+    This test is intended to run against real infrastructure (a running
+    service and a Discord). It will be skipped when no credentials or
+    service are available so it doesn't fail CI unintentionally.
+    """
     # Credentials: allow either bot token or OAuth client creds to be present
     required_env_vars = [
         "DISCORD_BOT_TOKEN",
@@ -30,7 +34,6 @@ def test_discord_service_adapter_e2e() -> None:
         "DISCORD_PUBLIC_KEY",
     ]
 
-    missing = [v for v in required_env_vars if not os.environ.get(v)]
     # If no useful env vars found, skip
     if all(v not in os.environ for v in required_env_vars):
         pytest.skip(f"No Discord credentials found in environment: {required_env_vars}")
@@ -46,10 +49,18 @@ def test_discord_service_adapter_e2e() -> None:
         pytest.skip(f"Discord service not reachable at {health_url}: {exc}")
 
     # Register adapter by creating instance and wiring it as chat_client_api.get_client
-    adapter = ServiceAdapterClient(service_url=service_url, guild_id=os.environ.get("DISCORD_TEST_GUILD", "test_guild"))
+    adapter = ServiceAdapterClient(
+        service_url=service_url, guild_id=os.environ.get("DISCORD_TEST_GUILD", "test_guild")
+    )
 
-    # Replace chat_client_api factory to return our adapter
-    chat_client_api.get_client = lambda user_id=None: adapter
+    # Replace chat_client_api factory to return our adapter. Define a tiny
+    # function that accepts an optional user id (prefixed with an underscore
+    # to signal it's intentionally unused) to avoid lambda-specific lint
+    # warnings.
+    def _adapter_factory(_user_id: str | None = None) -> Any:
+        return adapter
+
+    chat_client_api.get_client = _adapter_factory
 
     client = chat_client_api.get_client()
 
@@ -61,21 +72,25 @@ def test_discord_service_adapter_e2e() -> None:
         # Provide a tiny in-memory fake client that mirrors the minimal
         # interface used below: get_channels() and get_messages(...).
         class _FakeChannel:
-            def __init__(self):
+            def __init__(self) -> None:
                 self.id = "fake-channel"
                 self.name = "fake-channel"
 
         class _FakeClient:
-            def get_channels(self):
+            def get_channels(self) -> Iterator["_FakeChannel"]:
                 yield _FakeChannel()
 
-            def get_messages(self, channel_id, max_results=5):
+            def get_messages(self, channel_id: str, max_results: int = 5) -> Iterator[object]:
                 # Return empty iterator — nothing to validate further, but the
                 # test will still exercise the code path and not fail.
                 return iter(())
 
         fake_client = _FakeClient()
-        chat_client_api.get_client = lambda user_id=None: fake_client
+
+        def _fake_factory(_user_id: str | None = None) -> Any:
+            return fake_client
+
+        chat_client_api.get_client = _fake_factory
         client = chat_client_api.get_client()
         channels = list(client.get_channels())
 
