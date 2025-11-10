@@ -58,23 +58,21 @@ class HTTPValidationError:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.validation_error import ValidationError
+
         d = dict(src_dict)
         _detail = d.pop("detail", UNSET)
-        detail: list[ValidationError] | Unset = UNSET
-        if _detail is not UNSET:
+        detail: Unset | list[ValidationError]
+        if isinstance(_detail, Unset):
+            detail = UNSET
+        else:
             detail = []
             for detail_item_data in _detail:
                 detail_item = ValidationError.from_dict(detail_item_data)
-
-
-
                 detail.append(detail_item)
-
 
         http_validation_error = cls(
             detail=detail,
         )
-
 
         http_validation_error.additional_properties = d
         return http_validation_error
