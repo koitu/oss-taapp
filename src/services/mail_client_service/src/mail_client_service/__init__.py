@@ -1,6 +1,5 @@
 """Mail Client Service - FastAPI wrapper for mail client operations."""
 
-from .api import app
-from .mcp import mcp
+from .api import app as app
+from .mcp import mcp as mcp
 
-__all__ = ["app", "mcp"]

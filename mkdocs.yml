@@ -19,16 +19,40 @@ theme:
     - content.code.copy
 
 nav:
-  - Overview: index.md
+  - Overview:
+      - Overview: index.md
+      - Discord Service Summary: api/discord_service_summary.md
   - Architecture: component.md
   - Testing: testing.md
   - CircleCI: circleci-setup.md
+  - Repository:
+    - Project README: repository.md
+    - Contributing: contributing.md
+    - Design: design.md
+    - Discord Service Docs: discord.md
+  - Packages:
+    - Packages Index: packages/index.md
+    - mail_client_api: packages/mail_client_api.md
+    - gmail_client_impl: packages/gmail_client_impl.md
+    - mail_client_service_adapter: packages/mail_client_service_adapter.md
+    - mail_client_service: packages/mail_client_service.md
+    - clients (generated): packages/clients.md
+    - discord_client_impl: packages/discord_client_impl.md
+    - discord_client_service_adapter: packages/discord_client_service_adapter.md
+    - discord_client_service: packages/discord_client_service.md
+    - discord_client_service_client: packages/discord_client_service_client.md
+    - chat_client_api: packages/chat_client_api.md
   - API Reference:
-    - Mail Client API: api/mail_client_api.md
-    - Gmail Client Implementation: api/gmail_client_impl.md
-    - Mail Client Service Adapter: api/mail_client_service_adapter.md
-    - Mail Client Service Client: api/mail_client_service_client.md
-    - Mail Client Service: api/mail_client_service.md
+      - Mail Client API: api/mail_client_api.md
+      - Gmail Client Implementation: api/gmail_client_impl.md
+      - Mail Client Service Adapter: api/mail_client_service_adapter.md
+      - Mail Client Service Client: api/mail_client_service_client.md
+      - Mail Client Service: api/mail_client_service.md
+      - Discord Client Implementation: api/discord_client_impl.md
+      - Discord Client Service Adapter: api/discord_client_service_adapter.md
+      - Discord Client Service: api/discord_client_service.md
+      - Chat Client API: api/chat_client_api.md
+      - Discord Client Service Client: api/discord_client_service_client.md
 
 markdown_extensions:
   - pymdownx.highlight:
@@ -48,6 +72,10 @@ plugins:
                 - src/mail_client_service_adapter/src
                 - src/services/mail_client_service/src
                 - src/clients/mail_client_service_client
+                - src/discord_client_impl/src
+                - src/discord_client_service_adapter/src
+                - src/clients/discord_client_service_client
+
               show_source: false
               docstring_section_style: spacy
               members_order: source
