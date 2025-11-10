@@ -35,36 +35,36 @@ Note: The exact packages in `src/` may evolve; see the `src/` directory for the 
 ## Project Structure
 
 ```
-oss-taapp/                        # repository root
-├── src/                          # Source packages (workspace members)
-│   ├── chat_client_api/          # Chat client API package
-│   ├── clients/                  # Generated API clients (e.g. discord_client_service_client and mail_client_service_client)
-│   ├── discord_client_impl/      # Discord implementation package
-│   ├── discord_client_service_adapter/ # Discord adapter layer
-│   ├── gmail_client_impl/        # Gmail implementation of mail client API
-│   ├── mail_client_api/          # Abstract mail client contract (Client, Message)
+oss-taapp/                           # repository root
+├── src/                             # Source packages (workspace members)
+│   ├── chat_client_api/             # Chat client API package
+│   ├── clients/                     # Generated API clients (e.g. discord_client_service_client and mail_client_service_client)
+│   ├── discord_client_impl/         # Discord implementation package
+│   ├── discord_client_service_adapter/  # Discord adapter layer
+│   ├── gmail_client_impl/           # Gmail implementation of mail client API
+│   ├── mail_client_api/             # Abstract mail client contract (Client, Message)
 │   ├── mail_client_service_adapter/ # Adapter that exposes implementations as the service API
-│   ├── services/                 # Small FastAPI services (e.g. discord_client_service and mail_client_service)
-├── tests/                        # Integration and E2E tests
+│   ├── services/                    # Small FastAPI services (e.g. discord_client_service and mail_client_service)
+├── tests/                           # Integration and E2E tests
 │   ├── integration/
 │   └── e2e/
-├── docs/                         # Documentation source files and generated site (site/)
-├── .circleci/                    # CI configuration (CircleCI)
-├── Dockerfile                     # Dockerfile to containerize services
-├── generate_discord_openapi.py    # helper to generate OpenAPI clients for Discord
-├── run_service.py                 # run a local service (FastAPI) for testing  --> Gmail
-├── run_discord_service.py         # run the Discord-oriented service  --> Discord
-├── main.py                        # Main demo / entrypoint script
-├── pyproject.toml                 # Project configuration (dependencies, tools)
-├── uv.lock                        # Locked dependency versions (workspace)
-├── credentials.json               # Local Google OAuth credentials (optional)
-├── token.json                     # OAuth token created after initial auth
-├── .env.example                   # Sample .env file
-├── .md files                       # Top-level project markdown documents
-├── CONTRIBUTING.md             # Contribution guidelines
-├── DESIGN.md                   # Design notes
-├── Discord.md                  # Discord integration notes
-└── README.md                   # This file
+├── docs/                            # Documentation source files and generated site (site/)
+├── .circleci/                       # CI configuration (CircleCI)
+├── Dockerfile                        # Dockerfile to containerize services
+├── generate_discord_openapi.py       # helper to generate OpenAPI clients for Discord
+├── run_service.py                    # run a local service (FastAPI) for testing  --> Gmail
+├── run_discord_service.py            # run the Discord-oriented service  --> Discord
+├── main.py                           # Main demo / entrypoint script
+├── pyproject.toml                    # Project configuration (dependencies, tools)
+├── uv.lock                           # Locked dependency versions (workspace)
+├── credentials.json                  # Local Google OAuth credentials (optional)
+├── token.json                        # OAuth token created after initial auth
+├── .env.example                      # Sample .env file
+├── .md files                         # Top-level project markdown documents
+├── CONTRIBUTING.md                   # Contribution guidelines
+├── DESIGN.md                         # Design notes
+├── Discord.md                        # Discord integration notes
+└── README.md                         # This file
 ```
 
 ## Project Setup
@@ -90,24 +90,43 @@ oss-taapp/                        # repository root
     cd ta-assignment
     ```
 
-3.  **Set Up Google Credentials:**
+3.  **Set Up Gmail Credentials:**
     -   Follow the [Google Cloud instructions](https://developers.google.com/gmail/api/quickstart/python#authorize_credentials_for_a_desktop_application) to enable the Gmail API and download your OAuth 2.0 credentials.
-    -   Rename the downloaded file to `credentials.json` and place it in the root of this project.
-    -   **Alternative**: For CI/CD environments, you can use environment variables instead:
-        ```bash
-        export GMAIL_CLIENT_ID="your_client_id"
-        export GMAIL_CLIENT_SECRET="your_client_secret"
-        export GMAIL_REFRESH_TOKEN="your_refresh_token"
+    -   Rename the downloaded file to `credentials.json` and place it in the root of this project. Running the demo or the service for the first time will initiate the OAuth flow and create a `token.json` file with the user tokens.
+    -   **Alternative (CI/CD / non-interactive):** Instead of using a local `credentials.json` and interactive flow, you can provide credentials via environment variables:
+        ```powershell
+        $env:GMAIL_CLIENT_ID = "your_client_id"
+        $env:GMAIL_CLIENT_SECRET = "your_client_secret"
+        $env:GMAIL_REFRESH_TOKEN = "your_refresh_token"
         ```
-    -   **Important:** Credential files contain secrets and are ignored by `.gitignore`.
+    -   **Security note:** Credential files and tokens contain sensitive data and are ignored by `.gitignore`. Keep them out of source control and use secret management in CI/CD.
 
-4.  **Create and Sync the Virtual Environment:**
+4.  **Set Up Discord Credentials (optional - for Discord integration):**
+    -   Create a Discord application at https://discord.com/developers/applications and register a new application for your bot or OAuth client.
+    -   Under the application settings, create a bot (if your service uses a bot) and/or configure OAuth2 Redirect URIs for any web-based flows.
+    -   Record the following values from the Discord developer dashboard and provide them to the application as environment variables or via your secrets manager:
+        - `DISCORD_CLIENT_ID` — the application's client ID
+        - `DISCORD_CLIENT_SECRET` — the application's client secret
+        - `DISCORD_REDIRECT_URI` — the OAuth redirect URI used for OAuth flows
+        - `DISCORD_PUBLIC_KEY` — public key used to verify interactions (if using interactions/webhooks)
+        - `DISCORD_BOT_TOKEN` — bot token (if using a bot account)
+    -   Example (PowerShell):
+        ```powershell
+        $env:DISCORD_CLIENT_ID = "your_discord_client_id"
+        $env:DISCORD_CLIENT_SECRET = "your_discord_client_secret"
+        $env:DISCORD_REDIRECT_URI = "https://your-app/callback"
+        $env:DISCORD_PUBLIC_KEY = "your_public_key"
+        $env:DISCORD_BOT_TOKEN = "your_bot_token"
+        ```
+    -   **Notes:** Discord credentials are not required for the Gmail-focused parts of this template. Use Discord credentials only if you plan to run the Discord-related services or adapters included in `src/` and `services/`.
+
+5.  **Create and Sync the Virtual Environment:**
     This single command creates a `.venv` folder and installs all packages (including workspace members and development tools) defined in `uv.lock`.
     ```bash
     uv sync --all-packages --extra dev
     ```
 
-5.  **Activate the Virtual Environment:**
+6.  **Activate the Virtual Environment:**
     ```bash
     # macOS / Linux
     source .venv/bin/activate
@@ -115,12 +134,12 @@ oss-taapp/                        # repository root
     .venv\Scripts\Activate.ps1
     ```
 
-6.  **Perform Initial Authentication:**
-    Run the main application once to perform the interactive OAuth flow. This will open a browser window for you to grant permission.
-    ```bash
+7.  **Perform Initial Authentication (Gmail):**
+    Run the main application once (or the Gmail service) to perform the interactive OAuth flow. This will open a browser window for you to grant permission and will create a `token.json` file containing the user tokens.
+    ```powershell
     uv run python main.py
     ```
-    After you approve, a `token.json` file will be created. This file is also ignored by `.gitignore` and will be used for authentication in subsequent runs.
+    If you're using CI/CD with pre-provisioned refresh tokens, this step is not required.
 
 ## Development Workflow
 
