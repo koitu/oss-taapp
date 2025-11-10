@@ -19,37 +19,52 @@ This project is built on the principle of "programming integrated over time." Th
 
 ## Core Components
 
-The project is a `uv` workspace containing several related packages under `src/`. Each package has a focused responsibility and can be used independently:
+This repository is a `uv` workspace containing multiple related packages under `src/` plus a small `services/` folder. The codebase is component-oriented: each package focuses on a single responsibility and can be used independently or swapped via dependency injection.
 
-- **`mail_client_api`**: Defines the abstract `Client` base class (ABC) and message abstractions. This package is the stable contract that implementations must satisfy.
-- **`gmail_client_impl`**: A concrete implementation that implements the `mail_client_api` contract using the Gmail API (`GmailClient` and message implementations).
-- **`mail_client_service_adapter`**: An adapter layer that translates between the mail client implementation and the service API (handler code used by the service).
-- **`mail_client_service`** (located under `src/services/mail_client_service`): A small HTTP service that exposes the mail client functionality, orchestration and end-to-end glue.
-- **`clients`** (under `src/clients`, e.g. `mail_client_service_client`): Generated OpenAPI client(s) used to call the service from other components or tests.
+- **`mail_client_api`**: The abstract contract (ABCs) for mail clients and message/value objects. Consumers depend on this stable API.
+- **`gmail_client_impl`**: A concrete implementation of the mail client API that uses the Gmail APIs and OAuth credentials.
+- **`mail_client_service_adapter`**: Adapter code that exposes an implementation behind the service API (handlers/translation logic).
+- **`discord_client_impl`** and **`discord_client_service_adapter`**: Companion packages for Discord integration (implementation + adapter layer) — this repo contains Discord-related tools and OpenAPI generation helpers.
+- **`chat_client_api`**: An API package present in `src/` that follows the same contract/implementation pattern for chat clients.
+- **`clients`**: Generated OpenAPI client packages (for example `discord_client_service_client`)
+- **`services/`**: Local HTTP services that expose component functionality (for example `services/discord_client_service`). These are small FastAPI apps used for integration and end-to-end testing.
+ - **`src/services/`**: Local HTTP services that expose component functionality (for example `src/services/discord_client_service`). These are small FastAPI apps used for integration and end-to-end testing.
+
+Note: The exact packages in `src/` may evolve; see the `src/` directory for the current, authoritative list of workspace members.
 
 ## Project Structure
 
 ```
-ta-assignment/
+oss-taapp/                        # repository root
 ├── src/                          # Source packages (workspace members)
-│   ├── clients/                  # Generated API clients (e.g. mail_client_service_client)
-│   ├── gmail_client_impl/        # Gmail-specific implementation of the mail client
+│   ├── chat_client_api/          # Chat client API package
+│   ├── clients/                  # Generated API clients (e.g. discord_client_service_client and mail_client_service_client)
+│   ├── discord_client_impl/      # Discord implementation package
+│   ├── discord_client_service_adapter/ # Discord adapter layer
+│   ├── gmail_client_impl/        # Gmail implementation of mail client API
 │   ├── mail_client_api/          # Abstract mail client contract (Client, Message)
-│   └── mail_client_service_adapter/ # Adapter that exposes implementations as the service API
-│   └── services/
-│       └── mail_client_service/  # Small HTTP service exposing the mail client API
+│   ├── mail_client_service_adapter/ # Adapter that exposes implementations as the service API
+│   ├── services/                 # Small FastAPI services (e.g. discord_client_service and mail_client_service)
 ├── tests/                        # Integration and E2E tests
-│   ├── integration/              # Component integration tests
-│   └── e2e/                      # End-to-end application tests
-├── docs/                         # Documentation source files
-├── .circleci/                    # CircleCI configuration
-├── Dockerfile                     # Dockerfile to containerize FastAPI service
-├── CONTRIBUTING.md                # Contributor guide
-├── DESIGN.md                      # Design document for new components
-├── main.py                        # Main application entry point / demo
+│   ├── integration/
+│   └── e2e/
+├── docs/                         # Documentation source files and generated site (site/)
+├── .circleci/                    # CI configuration (CircleCI)
+├── Dockerfile                     # Dockerfile to containerize services
+├── generate_discord_openapi.py    # helper to generate OpenAPI clients for Discord
+├── run_service.py                 # run a local service (FastAPI) for testing  --> Gmail
+├── run_discord_service.py         # run the Discord-oriented service  --> Discord
+├── main.py                        # Main demo / entrypoint script
 ├── pyproject.toml                 # Project configuration (dependencies, tools)
-├── uv.lock                        # Locked dependency versions
-└── credentials.json               # Google OAuth credentials (local only)
+├── uv.lock                        # Locked dependency versions (workspace)
+├── credentials.json               # Local Google OAuth credentials (optional)
+├── token.json                     # OAuth token created after initial auth
+├── .env.example                   # Sample .env file
+├── .md files                       # Top-level project markdown documents
+├── CONTRIBUTING.md             # Contribution guidelines
+├── DESIGN.md                   # Design notes
+├── Discord.md                  # Discord integration notes
+└── README.md                   # This file
 ```
 
 ## Project Setup
@@ -181,6 +196,7 @@ uv run python main.py
 
 This project uses MkDocs for documentation.
 ```bash
+uv run mkdocs build
 # Start the live-reloading documentation server
 uv run mkdocs serve
 ```
@@ -314,6 +330,7 @@ Secrets are securely stored in **Google Secret Manager**.
 - `DISCORD_CLIENT_SECRET`
 - `DISCORD_REDIRECT_URI`
 - `DISCORD_PUBLIC_KEY`
+- `DISCORD_BOT_TOKEN`
 
 ### CI/CD Pipeline
 
