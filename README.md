@@ -103,13 +103,13 @@ oss-taapp/                           # repository root
 
 4.  **Set Up Discord Credentials (optional - for Discord integration):**
     -   Create a Discord application at https://discord.com/developers/applications and register a new application for your bot or OAuth client.
-    -   Under the application settings, create a bot (if your service uses a bot) and/or configure OAuth2 Redirect URIs for any web-based flows.
-    -   Record the following values from the Discord developer dashboard and provide them to the application as environment variables or via your secrets manager:
+    -   Under the application settings, create a bot and/or configure OAuth2 Redirect URIs for any web-based flows.
+    -   Record the following values from the Discord developer dashboard and provide them to the application as environment variables:
         - `DISCORD_CLIENT_ID` — the application's client ID
         - `DISCORD_CLIENT_SECRET` — the application's client secret
         - `DISCORD_REDIRECT_URI` — the OAuth redirect URI used for OAuth flows
         - `DISCORD_PUBLIC_KEY` — public key used to verify interactions (if using interactions/webhooks)
-        - `DISCORD_BOT_TOKEN` — bot token (if using a bot account)
+        - `DISCORD_BOT_TOKEN` — bot token
     -   Example (PowerShell):
         ```powershell
         $env:DISCORD_CLIENT_ID = "your_discord_client_id"
@@ -151,6 +151,12 @@ To run the main demonstration script:
 ```bash
 uv run python main.py
 ```
+
+To run the Discord service (local FastAPI service):
+```powershell
+uv run python run_discord_service.py
+```
+Then open http://localhost:8001/docs in your browser to view the Discord service API docs.
 
 ### Running the Toolchain
 
@@ -246,10 +252,26 @@ The project uses pytest markers to categorize tests:
 
 ### Authentication in Tests
 
-The testing infrastructure handles different authentication scenarios:
+The testing infrastructure handles different authentication scenarios for each external service. Below are the details for Gmail and Discord.
+
+#### Gmail
+
 - **Local Development**: Uses `credentials.json` and `token.json` files
 - **CI/CD Environment**: Uses environment variables (`GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`)
 - **Missing Credentials**: Tests fail fast with clear error messages (no hanging)
+
+#### Discord
+
+- **Local Development**: Provide the Discord credentials as environment variables in your shell or in a `.env` file before running tests. The repository expects the following variables when running Discord-related tests locally:
+    - `DISCORD_CLIENT_ID`
+    - `DISCORD_CLIENT_SECRET`
+    - `DISCORD_REDIRECT_URI`
+    - `DISCORD_PUBLIC_KEY`
+    - `DISCORD_BOT_TOKEN`
+
+- **CI/CD Environment**: In CI or other non-interactive environments, supply the same Discord values via your CI secret management (for example, repository secrets or a secret manager). Tests that require Discord credentials will read these environment variables and behave accordingly.
+
+- **Missing Credentials**: Tests that require Discord credentials will fail fast with a clear error message indicating which environment variables are missing. They will not wait for interactive input.
 
 ## Continuous Integration
 
@@ -269,8 +291,22 @@ See `docs/circleci-setup.md` for detailed CI/CD setup instructions.
 3. **Check code quality**: `uv run ruff check . && uv run ruff format --check .`
 4. **Fix formatting**: `uv run ruff format .`
 5. **View documentation**: `uv run mkdocs serve`
-6. **Run backend service**: `uv run python3 run_service.py`
-7. **Demo of the frontend client**: `uv run python3 test_adapter.py`
+6. **Run backend services**:
+     - **Gmail backend (local FastAPI service)** — runs the Gmail-focused service (default port 8000):
+
+         ```powershell
+         uv run python run_service.py
+         ```
+
+         Then open `http://localhost:8000/docs` to view the Gmail service API docs.
+
+     - **Discord backend (local FastAPI service)** — runs the Discord-focused service (default port 8001):
+
+         ```powershell
+         uv run python run_discord_service.py
+         ```
+
+         Then open `http://localhost:8001/docs` to view the Discord service API docs.
 
 ### Best Practices
 - Run unit tests (`uv run pytest src/`) during development for fast feedback
@@ -280,54 +316,57 @@ See `docs/circleci-setup.md` for detailed CI/CD setup instructions.
 
 ## Running with Docker
 
-The application can be containerized using Docker for easy deployment and distribution.
+The application can be containerized using Docker for easy local testing and distribution. The examples below show how to build and run the Discord-focused service packaged as `discord-service`.
 
 ### Building the Docker Image
 
 ```bash
-docker build -t gmail-service .
+docker build -t discord-service .
 ```
 
-This builds a Docker image named `gmail-service` using the provided Dockerfile. The build process:
+This builds a Docker image named `discord-service` using the provided Dockerfile. The build process:
 - Uses Python 3.11 slim base image
 - Installs `uv` for dependency management
 - Copies project files and installs dependencies
-- Exposes port 8000 for the FastAPI service
+- Exposes port 8001 for the Discord FastAPI service (local default)
 
 ### Running the Container
 
-**Basic run (FastAPI service):**
+**Basic run (Discord FastAPI service):**
 ```bash
-docker run -p 8000:8000 gmail-service
+docker run -p 8001:8001 discord-service
 ```
 
-The service will be available at `http://localhost:8000`. You can access:
-- API documentation: `http://localhost:8000/docs`
-- Alternative docs: `http://localhost:8000/redoc`
+The service will be available at `http://localhost:8001`. You can access:
+- API documentation: `http://localhost:8001/docs`
 
-**Note:** If you visit `http://localhost:8000/` (root path), you'll see a 404 error. This is normal - the service has specific endpoints like `/messages`, `/health`, etc. Use `/docs` to see all available endpoints.
+**Note:** If you visit `http://localhost:8001/` (root path), you may see a 404 error. This is normal — the service exposes specific endpoints (for example the Discord adapter endpoints). Use `/docs` to view available routes.
 
-**Running with Gmail credentials (environment variables):**
+**Running with Discord credentials (environment variables):**
 ```bash
-docker run -p 8000:8000 \
-  -e GMAIL_CLIENT_ID="your_client_id" \
-  -e GMAIL_CLIENT_SECRET="your_client_secret" \
-  -e GMAIL_REFRESH_TOKEN="your_refresh_token" \
-  gmail-service
+docker run -p 8001:8001 \
+    -e DISCORD_CLIENT_ID="your_client_id" \
+    -e DISCORD_CLIENT_SECRET="your_client_secret" \
+    -e DISCORD_REDIRECT_URI="https://your-app/callback" \
+    -e DISCORD_PUBLIC_KEY="your_public_key" \
+    -e DISCORD_BOT_TOKEN="your_bot_token" \
+    discord-service
 ```
 
-**Running the main.py demo:**
+**Running the Discord service demo:**
 ```bash
-docker run gmail-service uv run python main.py
+docker run discord-service uv run python run_discord_service.py
 ```
 
-**Running with credential files:**
+**Running with credential files (local .env):**
+If you prefer to supply credentials via a file, you can mount a local `.env` (or another file) into the container. Example (host current directory):
 ```bash
-docker run -p 8000:8000 \
-  -v $(pwd)/credentials.json:/app/credentials.json \
-  -v $(pwd)/token.json:/app/token.json \
-  gmail-service
+docker run -p 8001:8001 \
+    -v $(pwd)/.env:/app/.env \
+    discord-service
 ```
+
+The container will read environment variables from the mounted file if your entrypoint or startup logic loads `.env` values.
 
 ## Deployment
 
