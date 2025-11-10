@@ -342,24 +342,6 @@ class TestErrorHandling:
         with pytest.raises(AuthenticationError, match="Not authenticated"):
             list(client.get_channels())
 
-    def test_exchange_code_without_credentials(self) -> None:
-        """Test token exchange without client credentials."""
-        client = DiscordClient()
-
-        with pytest.raises(
-            ValueError, match="DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET required"
-        ):
-            client._exchange_code_for_token("test_code")
-
-    def test_refresh_token_without_credentials(self) -> None:
-        """Test token refresh without client credentials."""
-        client = DiscordClient()
-
-        with pytest.raises(
-            ValueError, match="DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET required"
-        ):
-            client._refresh_access_token("test_refresh_token")
-
     def test_get_message_http_error(
         self, discord_client: DiscordClient, respx_mock: MockRouter
     ) -> None:

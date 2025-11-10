@@ -57,10 +57,6 @@ class DiscordClient(Client):
                 to "Bot" for backwards compatibility.
 
         """
-        # Track whether credentials were explicitly provided by the caller.
-        # Tests expect that a client created without explicit credentials
-        # behaves as "no credentials" even if environment variables exist.
-        self._explicit_credentials_provided = client_id is not None or client_secret is not None
 
         self.client_id = client_id or os.environ.get("DISCORD_CLIENT_ID")
         self.client_secret = client_secret or os.environ.get("DISCORD_CLIENT_SECRET")
@@ -148,11 +144,7 @@ class DiscordClient(Client):
             ValueError: If credentials are not configured or exchange fails.
 
         """
-        # Require explicit credentials to be provided by the caller.
-        # If the instance was created without explicit credentials, treat
-        # it as "no credentials" (even if env vars exist) to keep tests
-        # hermetic and to avoid surprising behaviour.
-        if not self._explicit_credentials_provided or not self.client_id or not self.client_secret:
+        if not self.client_id or not self.client_secret:
             raise ValueError("DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET required")
 
         oauth_client = OAuth2Client(
@@ -187,7 +179,7 @@ class DiscordClient(Client):
             ValueError: If credentials are not configured or refresh fails.
 
         """
-        if not self._explicit_credentials_provided or not self.client_id or not self.client_secret:
+        if not self.client_id or not self.client_secret:
             raise ValueError("DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET required")
 
         oauth_client = OAuth2Client(
