@@ -70,7 +70,7 @@ This dual-path approach demonstrates architectural flexibility and separation of
 **Purpose**: Define platform-agnostic interfaces for chat operations.
 
 **Components**:
-- `ChatMessage`: Abstract base class for messages with properties like id, content, author, timestamp
+- `Message`: Abstract base class for messages with properties like id, content, author, timestamp
 - `Channel`: Abstract base class for channels with properties like id, name, type
 - `Client`: Abstract base class defining CRUD operations for messages and channels
 
@@ -88,7 +88,7 @@ This dual-path approach demonstrates architectural flexibility and separation of
 
 **Components**:
 - `DiscordClient`: Main client class handling OAuth2 and Discord API calls
-- `DiscordMessage`: Concrete implementation of ChatMessage
+- `DiscordMessage`: Concrete implementation of Message
 - `DiscordChannel`: Concrete implementation of Channel
 - OAuth2 methods: authorization URL generation, token exchange, token refresh
 
@@ -192,7 +192,7 @@ DELETE  /{guild_id}/channels/{channel_id}/messages/{message_id}
 
 **Components**:
 - `ServiceAdapterClient`: Implements Client interface
-- `ServiceMessage`: Implements ChatMessage interface
+- `ServiceMessage`: Implements Message interface
 - `ServiceChannel`: Implements Channel interface
 
 **Key Design Decisions**:

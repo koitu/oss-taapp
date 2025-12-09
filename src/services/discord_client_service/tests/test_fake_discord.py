@@ -27,7 +27,7 @@ class FakeChannel:
             channel_type: Type of the channel (default: "text").
 
         """
-        self.id = id_
+        self.channel_id = id_
         self.name = name
         self.channel_type = channel_type
 
@@ -39,8 +39,8 @@ class FakeMessage:
         self,
         id_: str,
         channel_id: str,
-        author_id: str = "user1",
-        author_name: str = "Alice",
+        sender_id: str = "user1",
+        sender_name: str = "Alice",
         content: str = "hello",
         timestamp: str = "2025-10-01T12:00:00Z",
         edited_timestamp: str | None = None,
@@ -50,8 +50,8 @@ class FakeMessage:
         Args:
             id_: Message id.
             channel_id: Channel the message belongs to.
-            author_id: Author identifier.
-            author_name: Author display name.
+            sender_id: Sender identifier.
+            sender_name: Sender display name.
             content: Message content.
             timestamp: ISO timestamp string.
             edited_timestamp: ISO timestamp string or None.
@@ -59,8 +59,8 @@ class FakeMessage:
         """
         self.id = id_
         self.channel_id = channel_id
-        self.author_id = author_id
-        self.author_name = author_name
+        self.sender_id = sender_id
+        self.sender_name = sender_name
         self.content = content
         self.timestamp = timestamp
         self.edited_timestamp = edited_timestamp
@@ -109,18 +109,18 @@ class FakeUserClient:
             msg = f"Channel {channel_id} not found"
             raise ValueError(msg) from e
 
-    def get_messages(self, channel_id: str, max_results: int = 10) -> list[FakeMessage]:
+    def get_messages(self, channel_id: str, limit: int = 10) -> list[FakeMessage]:
         """Return up to `max_results` messages for `channel_id`."""
-        return self._messages.get(channel_id, [])[:max_results]
+        return self._messages.get(channel_id, [])[:limit]
 
-    def send_message(self, channel_id: str, content: str) -> FakeMessage:
+    def send_message(self, channel_id: str, content: str) -> bool:
         """Create and store a new message in the given channel."""
         if not content:
             err = "message content empty"
             raise ValueError(err)
         msg = FakeMessage("m3", channel_id=channel_id, content=content)
         self._messages.setdefault(channel_id, []).append(msg)
-        return msg
+        return True
 
     def delete_message(self, channel_id: str, message_id: str) -> None:
         """Delete a message by id from a channel or raise MessageNotFoundError."""

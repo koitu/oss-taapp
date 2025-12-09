@@ -11,42 +11,37 @@ from ..types import UNSET, Unset
 T = TypeVar("T", bound="MessageDetail")
 
 
-
 @_attrs_define
 class MessageDetail:
-    """ Discord message details.
+    """Discord message details.
 
-        Attributes:
-            id (str): Message ID
-            channel_id (str): Channel ID
-            author_id (str): Author user ID
-            author_name (str): Author display name
-            content (str): Message content
-            timestamp (str): Message timestamp
-            edited_timestamp (None | str | Unset): Edit timestamp if edited
-     """
+    Attributes:
+        id (str): Message ID
+        channel_id (str): Channel ID
+        sender_id (str): Sender user ID
+        sender_name (str): Sender display name
+        content (str): Message content
+        timestamp (str): Message timestamp
+        edited_timestamp (None | str | Unset): Edit timestamp if edited
+    """
 
     id: str
     channel_id: str
-    author_id: str
-    author_name: str
+    sender_id: str
+    sender_name: str
     content: str
     timestamp: str
     edited_timestamp: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         id = self.id
 
         channel_id = self.channel_id
 
-        author_id = self.author_id
+        sender_id = self.sender_id
 
-        author_name = self.author_name
+        sender_name = self.sender_name
 
         content = self.content
 
@@ -58,23 +53,22 @@ class MessageDetail:
         else:
             edited_timestamp = self.edited_timestamp
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "channel_id": channel_id,
-            "author_id": author_id,
-            "author_name": author_name,
-            "content": content,
-            "timestamp": timestamp,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "channel_id": channel_id,
+                "sender_id": sender_id,
+                "sender_name": sender_name,
+                "content": content,
+                "timestamp": timestamp,
+            }
+        )
         if edited_timestamp is not UNSET:
             field_dict["edited_timestamp"] = edited_timestamp
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
@@ -83,9 +77,9 @@ class MessageDetail:
 
         channel_id = d.pop("channel_id")
 
-        author_id = d.pop("author_id")
+        sender_id = d.pop("sender_id")
 
-        author_name = d.pop("author_name")
+        sender_name = d.pop("sender_name")
 
         content = d.pop("content")
 
@@ -100,17 +94,15 @@ class MessageDetail:
 
         edited_timestamp = _parse_edited_timestamp(d.pop("edited_timestamp", UNSET))
 
-
         message_detail = cls(
             id=id,
             channel_id=channel_id,
-            author_id=author_id,
-            author_name=author_name,
+            sender_id=sender_id,
+            sender_name=sender_name,
             content=content,
             timestamp=timestamp,
             edited_timestamp=edited_timestamp,
         )
-
 
         message_detail.additional_properties = d
         return message_detail

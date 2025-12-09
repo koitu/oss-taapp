@@ -49,16 +49,14 @@ def test_discord_service_adapter_e2e() -> None:  # noqa: C901
         pytest.skip(f"Discord service not reachable at {health_url}: {exc}")
 
     # Register adapter by creating instance and wiring it as chat_client_api.get_client
-    adapter = ServiceAdapterClient(
-        service_url=service_url, guild_id=os.environ.get("DISCORD_TEST_GUILD", "test_guild")
-    )
+    adapter = ServiceAdapterClient(service_url=service_url, guild_id=os.environ.get("DISCORD_TEST_GUILD", "test_guild"))
 
     # Replace chat_client_api factory to return our adapter. Define a tiny
     # function that accepts an optional user id (prefixed with an underscore
     # to signal it's intentionally unused) to avoid lambda-specific lint
     # warnings.
-    def _adapter_factory(user_id: str | None = None) -> chat_client_api.Client:
-        # adapter is a ServiceAdapterClient which implements chat_client_api.Client
+    def _adapter_factory(user_id: str | None = None) -> chat_client_api.ChatInterface:
+        # adapter is a ServiceAdapterClient which implements chat_client_api.ChatInterface
         # parameter named to match the original `get_client` signature
         return adapter
 
@@ -82,17 +80,17 @@ def test_discord_service_adapter_e2e() -> None:  # noqa: C901
             def get_channels(self) -> Iterator["_FakeChannel"]:
                 yield _FakeChannel()
 
-            def get_messages(self, channel_id: str, max_results: int = 5) -> Iterator[object]:
-                # Return empty iterator — nothing to validate further, but the
+            def get_messages(self, channel_id: str, limit: int = 5) -> list[object]:
+                # Return empty list — nothing to validate further, but the
                 # test will still exercise the code path and not fail.
-                return iter(())
+                return []
 
         fake_client = _FakeClient()
 
-        def _fake_factory(user_id: str | None = None) -> chat_client_api.Client:
+        def _fake_factory(user_id: str | None = None) -> chat_client_api.ChatInterface:
             # The tiny in-memory fake client mirrors the minimal interface used in
             # this test. Use cast to satisfy the static type checker.
-            return cast("chat_client_api.Client", fake_client)
+            return cast("chat_client_api.ChatInterface", fake_client)
 
         chat_client_api.get_client = _fake_factory
         client = chat_client_api.get_client()
@@ -101,7 +99,7 @@ def test_discord_service_adapter_e2e() -> None:  # noqa: C901
     # Pick first channel and try to fetch messages
     channel = channels[0]
     assert getattr(channel, "id", None)
-    msgs = list(client.get_messages(channel_id=channel.id, max_results=5))
+    msgs = client.get_messages(channel_id=channel.channel_id, limit=5)
 
     # If there are messages, validate basic shape
     if msgs:

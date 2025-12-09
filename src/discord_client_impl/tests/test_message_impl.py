@@ -22,8 +22,8 @@ def test_discord_message_basic_properties() -> None:
 
     assert message.id == "123456789"
     assert message.channel_id == "987654321"
-    assert message.author_id == "111222333"
-    assert message.author_name == "Test User"
+    assert message.sender_id == "111222333"
+    assert message.sender_name == "Test User"
     assert message.content == "Hello, world!"
     assert message.timestamp == "2025-01-15T10:30:00.000000+00:00"
     assert message.edited_timestamp is None
@@ -64,7 +64,7 @@ def test_discord_message_author_fallback() -> None:
 
     message = DiscordMessage(raw_data)
 
-    assert message.author_name == "fallback_user"
+    assert message.sender_name == "fallback_user"
 
 
 def test_discord_message_missing_author() -> None:
@@ -78,8 +78,8 @@ def test_discord_message_missing_author() -> None:
 
     message = DiscordMessage(raw_data)
 
-    assert message.author_id == ""
-    assert message.author_name == "Unknown"
+    assert message.sender_id == ""
+    assert message.sender_name == "Unknown"
 
 
 def test_discord_channel_basic_properties() -> None:
@@ -92,7 +92,7 @@ def test_discord_channel_basic_properties() -> None:
 
     channel = DiscordChannel(raw_data)
 
-    assert channel.id == "123456789"
+    assert channel.channel_id == "123456789"
     assert channel.name == "general"
     assert channel.channel_type == "text"
 
@@ -110,7 +110,7 @@ def test_discord_channel_dm() -> None:
 
     channel = DiscordChannel(raw_data)
 
-    assert channel.id == "123456789"
+    assert channel.channel_id == "123456789"
     assert "alice" in channel.name
     assert "bob" in channel.name
     assert channel.channel_type == "dm"

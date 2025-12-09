@@ -64,7 +64,7 @@ def test_registration_overrides_get_channel() -> None:
     channel = chat_client_api.get_channel("123456789", raw_data)  # type: ignore[arg-type]
 
     assert channel is not None
-    assert channel.id == "123456789"
+    assert channel.channel_id == "123456789"
     assert channel.name == "general"
 
 

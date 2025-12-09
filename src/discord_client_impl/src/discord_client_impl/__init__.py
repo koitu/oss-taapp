@@ -22,7 +22,7 @@ from discord_client_impl.discord_impl import DiscordClient
 from discord_client_impl.message_impl import DiscordChannel, DiscordMessage
 
 
-def get_client_impl(user_id: str | None = None) -> chat_client_api.Client:
+def get_client_impl(user_id: str | None = None) -> chat_client_api.ChatInterface:
     """Create a Discord client instance.
 
     Args:
@@ -41,7 +41,7 @@ def get_client_impl(user_id: str | None = None) -> chat_client_api.Client:
     return DiscordClient()
 
 
-def get_message_impl(msg_id: str, raw_data: dict[str, str]) -> chat_client_api.ChatMessage:
+def get_message_impl(msg_id: str, raw_data: dict[str, str]) -> chat_client_api.Message:
     """Create a Discord message instance.
 
     Args:

@@ -164,12 +164,12 @@ class TestMessageOperations:
             return_value=Response(200, json=mock_messages)
         )
 
-        messages = list(discord_client.get_messages(channel_id="789", max_results=10))
+        messages = discord_client.get_messages(channel_id="789", limit=10)
 
         assert len(messages) == EXPECTED_MESSAGE_COUNT
         assert messages[0].id == "123456"
         assert messages[0].content == "Test message 1"
-        assert messages[0].author_name == "TestUser"
+        assert messages[0].sender_name == "TestUser"
 
     @respx.mock
     def test_get_messages_empty_channel(self, discord_client: DiscordClient) -> None:
@@ -178,7 +178,7 @@ class TestMessageOperations:
             return_value=Response(200, json=[])
         )
 
-        messages = list(discord_client.get_messages(channel_id="789"))
+        messages = discord_client.get_messages(channel_id="789")
 
         assert len(messages) == 0
 
@@ -217,11 +217,9 @@ class TestMessageOperations:
             return_value=Response(200, json=mock_response)
         )
 
-        message = discord_client.send_message(channel_id="789", content="Hello Discord!")
+        result = discord_client.send_message(channel_id="789", content="Hello Discord!")
 
-        assert message.id == "999"
-        assert message.content == "Hello Discord!"
-        assert message.channel_id == "789"
+        assert result is True
 
     @respx.mock
     def test_send_message_failure(self, discord_client: DiscordClient) -> None:
@@ -274,8 +272,8 @@ class TestChannelOperations:
         channels = list(discord_client.get_channels())
 
         assert len(channels) == EXPECTED_CHANNEL_COUNT
-        assert channels[0].id == "ch1"
-        assert channels[1].id == "ch2"
+        assert channels[0].channel_id == "ch1"
+        assert channels[1].channel_id == "ch2"
 
     @respx.mock
     def test_get_channel_by_id_success(self, discord_client: DiscordClient) -> None:
@@ -292,7 +290,7 @@ class TestChannelOperations:
 
         channel = discord_client.get_channel(channel_id="123")
 
-        assert channel.id == "123"
+        assert channel.channel_id == "123"
         assert channel.name == "test-channel"
         assert channel.channel_type == "text"
 

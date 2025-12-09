@@ -8,7 +8,7 @@ from typing import Any
 
 import httpx
 from authlib.integrations.httpx_client import OAuth2Client
-from chat_client_api.client import Client
+from chat_client_api.client import ChatInterface
 from chat_client_api.exceptions import (
     AuthenticationError,
     ChannelNotFoundError,
@@ -16,7 +16,7 @@ from chat_client_api.exceptions import (
     MessageNotFoundError,
     MessageSendError,
 )
-from chat_client_api.message import Channel, ChatMessage
+from chat_client_api.message import Channel, Message
 
 from discord_client_impl.message_impl import DiscordChannel, DiscordMessage
 
@@ -29,7 +29,7 @@ class HTTPStatus(IntEnum):
     NOT_FOUND = 404
 
 
-class DiscordClient(Client):
+class DiscordClient(ChatInterface):
     """Discord implementation of chat client with OAuth2 support."""
 
     DISCORD_API_BASE = "https://discord.com/api/v10"
@@ -219,7 +219,7 @@ class DiscordClient(Client):
         if not self.access_token:
             raise AuthenticationError("Not authenticated. Call exchange_code_for_token first.")
 
-    def get_message(self, channel_id: str, message_id: str) -> ChatMessage:
+    def get_message(self, channel_id: str, message_id: str) -> Message:
         """Retrieve a specific message from a channel.
 
         Args:
@@ -227,7 +227,7 @@ class DiscordClient(Client):
             message_id: The ID of the message to retrieve.
 
         Returns:
-            ChatMessage: The requested message.
+            Message: The requested message.
 
         Raises:
             AuthenticationError: If not authenticated.
@@ -252,21 +252,21 @@ class DiscordClient(Client):
             logger.exception("Failed to get message")
             raise MessageNotFoundError(f"Failed to retrieve message: {e}") from e
 
-    def get_messages(self, channel_id: str, max_results: int = 10) -> Iterator[ChatMessage]:
+    def get_messages(self, channel_id: str, limit: int = 10) -> list[Message]:
         """Retrieve recent messages from a channel.
 
         Args:
             channel_id: The ID of the channel to retrieve messages from.
-            max_results: Maximum number of messages to retrieve (default: 10, max: 100).
+            limit: Maximum number of messages to retrieve (default: 10, max: 100).
 
         Returns:
-            Iterator[ChatMessage]: An iterator of messages from the channel.
+            list[Message]: An iterator of messages from the channel.
 
         """
         self._ensure_authenticated()
 
         # Discord API limits to 100 messages per request
-        limit = min(max_results, 100)
+        limit = min(limit, 100)
 
         try:
             response = self._http_client.get(
@@ -275,9 +275,7 @@ class DiscordClient(Client):
             )
             response.raise_for_status()
             messages = response.json()
-
-            for msg_data in messages:
-                yield DiscordMessage(msg_data)
+            return [DiscordMessage(msg_data) for msg_data in messages]
 
         except httpx.HTTPStatusError as e:
             logger.exception("Failed to get messages")
@@ -286,7 +284,7 @@ class DiscordClient(Client):
             logger.exception("Failed to get messages")
             raise ValueError(f"Failed to retrieve messages: {e}") from e
 
-    def send_message(self, channel_id: str, content: str) -> ChatMessage:
+    def send_message(self, channel_id: str, content: str) -> bool:
         """Send a message to a channel.
 
         Args:
@@ -294,7 +292,7 @@ class DiscordClient(Client):
             content: The text content of the message.
 
         Returns:
-            ChatMessage: The sent message.
+            bool: True if the message was successfully sent.
 
         Raises:
             AuthenticationError: If not authenticated.
@@ -312,7 +310,7 @@ class DiscordClient(Client):
                 json={"content": content},
             )
             response.raise_for_status()
-            return DiscordMessage(response.json())
+            return True
         except httpx.HTTPStatusError as e:
             logger.exception("Failed to send message")
             raise MessageSendError(f"Failed to send message: {e}") from e

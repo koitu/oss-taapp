@@ -10,7 +10,7 @@ It provides base classes and factory functions that any chat implementation must
 ## Key Abstractions
 
 - **Client**: Main interface for chat operations (send, retrieve, delete messages)
-- **ChatMessage**: Represents a single chat message with metadata
+- **Message**: Represents a single chat message with metadata
 - **Channel**: Represents a chat channel or conversation
 
 ## Usage

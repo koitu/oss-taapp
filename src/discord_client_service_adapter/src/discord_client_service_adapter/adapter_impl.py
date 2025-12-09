@@ -1,6 +1,6 @@
 """Service Adapter Implementation for Discord.
 
-This module provides an adapter that implements the chat_client_api.Client interface
+This module provides an adapter that implements the chat_client_api.ChatInterface interface
 by wrapping the auto-generated OpenAPI client for the discord_client_service.
 
 This demonstrates the Adapter Pattern: hiding network/HTTP complexity behind
@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import chat_client_api
-from chat_client_api.message import Channel, ChatMessage
+from chat_client_api.message import Channel, Message
 from discord_client_service_client import Client as GeneratedClient
 from discord_client_service_client.api.default import (
     delete_message_guild_id_channels_channel_id_messages_message_id_delete,
@@ -24,7 +24,6 @@ from discord_client_service_client.api.default import (
     send_message_guild_id_channels_channel_id_messages_post,
 )
 from discord_client_service_client.models.channel_info import ChannelInfo
-from discord_client_service_client.models.message_detail import MessageDetail
 from discord_client_service_client.models.send_message_request import (
     SendMessageRequest,
 )
@@ -38,14 +37,14 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class ServiceMessage(ChatMessage):
-    """Simple ChatMessage implementation for service adapter responses."""
+class ServiceMessage(Message):
+    """Simple Message implementation for service adapter responses."""
 
     _id: str
     _channel_id: str
     _content: str
-    _author_id: str
-    _author_name: str
+    _sender_id: str
+    _sender_name: str
     _timestamp: str
     _edited_timestamp: str | None = None
 
@@ -65,14 +64,14 @@ class ServiceMessage(ChatMessage):
         return self._content
 
     @property
-    def author_id(self) -> str:
+    def sender_id(self) -> str:
         """Return the author's user ID."""
-        return self._author_id
+        return self._sender_id
 
     @property
-    def author_name(self) -> str:
+    def sender_name(self) -> str:
         """Return the author's display name."""
-        return self._author_name
+        return self._sender_name
 
     @property
     def timestamp(self) -> str:
@@ -94,7 +93,7 @@ class ServiceChannel(Channel):
     _channel_type: str
 
     @property
-    def id(self) -> str:
+    def channel_id(self) -> str:
         """Return the unique identifier of the channel."""
         return self._id
 
@@ -109,10 +108,10 @@ class ServiceChannel(Channel):
         return self._channel_type
 
 
-class ServiceAdapterClient(chat_client_api.Client):
+class ServiceAdapterClient(chat_client_api.ChatInterface):
     """Adapter that wraps the auto-generated Discord service client.
 
-    This class implements the chat_client_api.Client interface by delegating
+    This class implements the chat_client_api.ChatInterface interface by delegating
     to the auto-generated OpenAPI client. It translates between the HTTP/REST
     world and the local interface expected by our application.
 
@@ -142,7 +141,7 @@ class ServiceAdapterClient(chat_client_api.Client):
             service_url,
         )
 
-    def get_message(self, channel_id: str, message_id: str) -> ChatMessage:
+    def get_message(self, channel_id: str, message_id: str) -> Message:
         """Get a single message by ID from a channel.
 
         Args:
@@ -150,7 +149,7 @@ class ServiceAdapterClient(chat_client_api.Client):
             message_id: The message ID to retrieve
 
         Returns:
-            A ChatMessage object containing the message details
+            A Message object containing the message details
 
         Raises:
             ValueError: If the message cannot be retrieved
@@ -171,64 +170,61 @@ class ServiceAdapterClient(chat_client_api.Client):
                             _id=msg.id,
                             _channel_id=msg.channel_id,
                             _content=msg.content,
-                            _author_id=msg.author_id,
-                            _author_name=msg.author_name,
+                            _sender_id=msg.sender_id,
+                            _sender_name=msg.sender_name,
                             _timestamp=msg.timestamp,
-                            _edited_timestamp=None
-                            if isinstance(edited_ts, Unset)
-                            else edited_ts,
+                            _edited_timestamp=None if isinstance(edited_ts, Unset) else edited_ts,
                         )
             error_msg = f"Message {message_id} not found in channel {channel_id}"
             raise ValueError(error_msg)
         except ValueError:
             raise
         except Exception as e:
-            logger.exception(
-                "Failed to get message %s from channel %s", message_id, channel_id
-            )
+            logger.exception("Failed to get message %s from channel %s", message_id, channel_id)
             error_msg = f"Failed to get message: {e}"
             raise ValueError(error_msg) from e
 
-    def get_messages(
-        self, channel_id: str, max_results: int = 10
-    ) -> Iterator[ChatMessage]:
+    def get_messages(self, channel_id: str, limit: int = 10) -> list[Message]:
         """Get messages from a Discord channel.
 
         Args:
             channel_id: The Discord channel ID
-            max_results: Maximum number of messages to return
+            limit: Maximum number of messages to return
 
         Yields:
-            ChatMessage objects
+            Message objects
 
         """
+        results: list[Message] = []
         try:
             response = get_messages_guild_id_channels_channel_id_messages_get.sync(
                 client=self._http_client,
                 guild_id=self.guild_id,
                 channel_id=channel_id,
-                limit=max_results,
+                limit=limit,
             )
             if response and hasattr(response, "messages") and response.messages:
                 for msg in response.messages:
                     edited_ts = msg.edited_timestamp
-                    yield ServiceMessage(
-                        _id=msg.id,
-                        _channel_id=msg.channel_id,
-                        _content=msg.content,
-                        _author_id=msg.author_id,
-                        _author_name=msg.author_name,
-                        _timestamp=msg.timestamp,
-                        _edited_timestamp=None
-                        if isinstance(edited_ts, Unset)
-                        else edited_ts,
+                    results.append(
+                        ServiceMessage(
+                            _id=msg.id,
+                            _channel_id=msg.channel_id,
+                            _content=msg.content,
+                            _sender_id=msg.sender_id,
+                            _sender_name=msg.sender_name,
+                            _timestamp=msg.timestamp,
+                            _edited_timestamp=None if isinstance(edited_ts, Unset) else edited_ts,
+                        )
                     )
         except Exception as e:
             logger.exception("Failed to get messages from channel %s", channel_id)
             error_msg = f"Failed to get messages: {e}"
             raise ValueError(error_msg) from e
 
-    def send_message(self, channel_id: str, content: str) -> ChatMessage:
+        return results
+
+    def send_message(self, channel_id: str, content: str) -> bool:
         """Send a message to a Discord channel.
 
         Args:
@@ -236,10 +232,7 @@ class ServiceAdapterClient(chat_client_api.Client):
             content: The message content to send
 
         Returns:
-            The sent ChatMessage object
-
-        Raises:
-            ValueError: If the message cannot be sent
+            bool: True if the message was successfully sent, False otherwise
 
         """
         try:
@@ -250,21 +243,9 @@ class ServiceAdapterClient(chat_client_api.Client):
                 channel_id=channel_id,
                 body=request,
             )
-            if isinstance(response, MessageDetail):
-                edited_ts = response.edited_timestamp
-                return ServiceMessage(
-                    _id=response.id,
-                    _channel_id=response.channel_id,
-                    _content=response.content,
-                    _author_id=response.author_id,
-                    _author_name=response.author_name,
-                    _timestamp=response.timestamp,
-                    _edited_timestamp=None if isinstance(edited_ts, Unset) else edited_ts,
-                )
-            error_msg = "Failed to send message: no response from service"
-            raise ValueError(error_msg)
-        except ValueError:
-            raise
+            if response and hasattr(response, "status"):
+                return bool(response.status == "success")
+            return False  # noqa: TRY300
         except Exception as e:
             logger.exception("Failed to send message to channel %s", channel_id)
             error_msg = f"Failed to send message: {e}"
@@ -282,21 +263,17 @@ class ServiceAdapterClient(chat_client_api.Client):
 
         """
         try:
-            response = (
-                delete_message_guild_id_channels_channel_id_messages_message_id_delete.sync(
-                    client=self._http_client,
-                    guild_id=self.guild_id,
-                    channel_id=channel_id,
-                    message_id=message_id,
-                )
+            response = delete_message_guild_id_channels_channel_id_messages_message_id_delete.sync(
+                client=self._http_client,
+                guild_id=self.guild_id,
+                channel_id=channel_id,
+                message_id=message_id,
             )
             if response and hasattr(response, "status"):
                 return bool(response.status == "success")
             return False  # noqa: TRY300
         except Exception:
-            logger.exception(
-                "Failed to delete message %s from channel %s", message_id, channel_id
-            )
+            logger.exception("Failed to delete message %s from channel %s", message_id, channel_id)
             return False
 
     def get_channel(self, channel_id: str) -> Channel:
@@ -352,9 +329,7 @@ class ServiceAdapterClient(chat_client_api.Client):
             if response and hasattr(response, "channels") and response.channels:
                 for ch in response.channels:
                     # Use 'type_' attribute if 'type' doesn't exist
-                    channel_type = getattr(ch, "type", None) or getattr(
-                        ch, "type_", "unknown"
-                    )
+                    channel_type = getattr(ch, "type", None) or getattr(ch, "type_", "unknown")
                     yield ServiceChannel(
                         _id=ch.id,
                         _name=ch.name,

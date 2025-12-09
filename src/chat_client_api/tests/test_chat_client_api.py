@@ -7,14 +7,14 @@ import chat_client_api
 
 def test_api_exports_client() -> None:
     """Test that the API exports the Client class."""
-    assert hasattr(chat_client_api, "Client")
-    assert chat_client_api.Client is not None
+    assert hasattr(chat_client_api, "ChatInterface")
+    assert chat_client_api.ChatInterface is not None
 
 
 def test_api_exports_chat_message() -> None:
-    """Test that the API exports the ChatMessage class."""
-    assert hasattr(chat_client_api, "ChatMessage")
-    assert chat_client_api.ChatMessage is not None
+    """Test that the API exports the Message class."""
+    assert hasattr(chat_client_api, "Message")
+    assert chat_client_api.Message is not None
 
 
 def test_api_exports_channel() -> None:
@@ -50,13 +50,13 @@ def test_api_exports_get_channel() -> None:
 def test_client_is_abstract() -> None:
     """Test that Client cannot be instantiated directly."""
     with pytest.raises(TypeError):
-        chat_client_api.Client()  # type: ignore[abstract]
+        chat_client_api.ChatInterface()  # type: ignore[abstract]
 
 
 def test_chat_message_is_abstract() -> None:
-    """Test that ChatMessage cannot be instantiated directly."""
+    """Test that Message cannot be instantiated directly."""
     with pytest.raises(TypeError):
-        chat_client_api.ChatMessage()  # type: ignore[abstract]
+        chat_client_api.Message()  # type: ignore[abstract]
 
 
 def test_channel_is_abstract() -> None:

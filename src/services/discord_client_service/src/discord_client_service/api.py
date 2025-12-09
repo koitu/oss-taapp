@@ -34,8 +34,8 @@ class MessageDetail(BaseModel):
 
     id: str = Field(..., description="Message ID")
     channel_id: str = Field(..., description="Channel ID")
-    author_id: str = Field(..., description="Author user ID")
-    author_name: str = Field(..., description="Author display name")
+    sender_id: str = Field(..., description="Sender user ID")
+    sender_name: str = Field(..., description="Sender display name")
     content: str = Field(..., description="Message content")
     timestamp: str = Field(..., description="Message timestamp")
     edited_timestamp: str | None = Field(None, description="Edit timestamp if edited")
@@ -250,7 +250,7 @@ async def get_channels(
         channels = list(client.get_guild_channels(guild_id))
 
         channel_list = [
-            ChannelInfo(id=channel.id, name=channel.name, type=channel.channel_type)
+            ChannelInfo(id=channel.channel_id, name=channel.name, type=channel.channel_type)
             for channel in channels
         ]
 
@@ -287,7 +287,7 @@ async def get_channel(
         channel = client.get_channel(channel_id=channel_id)
 
         logger.info("Retrieved channel %s", channel_id)
-        return ChannelInfo(id=channel.id, name=channel.name, type=channel.channel_type)
+        return ChannelInfo(id=channel.channel_id, name=channel.name, type=channel.channel_type)
 
     except ValueError as e:
         if "not found" in str(e).lower():
@@ -324,14 +324,14 @@ async def get_messages(
     try:
         # Client credentials are identified by guild; retrieve client by guild.
         client = await get_client_for_user(guild_id)
-        messages = list(client.get_messages(channel_id=channel_id, max_results=limit))
+        messages = client.get_messages(channel_id=channel_id, limit=limit)
 
         message_list = [
             MessageDetail(
                 id=msg.id,
                 channel_id=msg.channel_id,
-                author_id=msg.author_id,
-                author_name=msg.author_name,
+                sender_id=msg.sender_id,
+                sender_name=msg.sender_name,
                 content=msg.content,
                 timestamp=msg.timestamp,
                 edited_timestamp=msg.edited_timestamp,
@@ -358,7 +358,7 @@ async def get_messages(
 
 @app.post(
     "/{guild_id}/channels/{channel_id}/messages",
-    response_model=MessageDetail,
+    response_model=OperationResponse,
     summary="Send message to channel",
 )
 async def send_message(
@@ -366,7 +366,7 @@ async def send_message(
     channel_id: str,
     request: SendMessageRequest,
     _auth: None = Depends(require_guild_access),
-) -> MessageDetail:
+) -> OperationResponse:
     """Send a message to a Discord channel."""
     try:
         client = await get_client_for_user(guild_id)
@@ -377,21 +377,13 @@ async def send_message(
         # positional arguments if a TypeError about unexpected keywords
         # is raised.
         try:
-            sent_message = client.send_message(channel_id=channel_id, content=request.content)
+            client.send_message(channel_id=channel_id, content=request.content)
         except TypeError:
             # Fallback to positional call for compatibility with test fakes
-            sent_message = client.send_message(channel_id, request.content)
+            client.send_message(channel_id, request.content)
 
         logger.info("Sent message to channel %s", channel_id)
-        return MessageDetail(
-            id=sent_message.id,
-            channel_id=sent_message.channel_id,
-            author_id=sent_message.author_id,
-            author_name=sent_message.author_name,
-            content=sent_message.content,
-            timestamp=sent_message.timestamp,
-            edited_timestamp=sent_message.edited_timestamp,
-        )
+        return OperationResponse(status="success", message="Message sent")
 
     except ValueError as e:
         if "not authenticated" in str(e).lower():

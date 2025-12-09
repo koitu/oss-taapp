@@ -2,11 +2,11 @@
 
 from typing import Any
 
-from chat_client_api.message import Channel, ChatMessage
+from chat_client_api.message import Channel, Message
 
 
-class DiscordMessage(ChatMessage):
-    """Discord implementation of ChatMessage."""
+class DiscordMessage(Message):
+    """Discord implementation of Message."""
 
     def __init__(self, raw_data: dict[str, Any]) -> None:
         """Initialize a Discord message from raw API data.
@@ -28,13 +28,13 @@ class DiscordMessage(ChatMessage):
         return str(self._raw_data.get("channel_id", ""))
 
     @property
-    def author_id(self) -> str:
+    def sender_id(self) -> str:
         """Return the ID of the message author."""
         author = self._raw_data.get("author", {})
         return str(author.get("id", "")) if isinstance(author, dict) else ""
 
     @property
-    def author_name(self) -> str:
+    def sender_name(self) -> str:
         """Return the display name of the message author."""
         author = self._raw_data.get("author", {})
         if isinstance(author, dict):
@@ -72,7 +72,7 @@ class DiscordChannel(Channel):
         self._raw_data = raw_data
 
     @property
-    def id(self) -> str:
+    def channel_id(self) -> str:
         """Return the unique identifier of the channel."""
         return str(self._raw_data.get("id", ""))
 
