@@ -81,8 +81,8 @@ def _make_message(id_: str) -> MagicMock:
     m.id = id_
     m.channel_id = "c1"
     m.content = "hello"
-    m.author_id = "u1"
-    m.author_name = "tester"
+    m.sender_id = "u1"
+    m.sender_name = "tester"
     m.timestamp = "2025-10-10T12:00:00Z"
     m.edited_timestamp = None
     return m
@@ -105,12 +105,14 @@ def test_get_messages_via_adapter(test_client: TestClient, mock_discord_user_cli
 
     adapter = ServiceAdapterClient(service_url=str(test_client.base_url), guild_id="g1")
     forward = _make_forward(test_client)
-    adapter._http_client.set_httpx_client(httpx.Client(base_url=str(test_client.base_url), transport=httpx.MockTransport(forward)))
+    adapter._http_client.set_httpx_client(
+        httpx.Client(base_url=str(test_client.base_url), transport=httpx.MockTransport(forward))
+    )
 
-    msgs = list(adapter.get_messages(channel_id="c1", max_results=5))
+    msgs = list(adapter.get_messages(channel_id="c1", limit=5))
     assert len(msgs) == 1
     assert msgs[0].id == "m1"
-    mock_discord_user_client.get_messages.assert_called_once_with(channel_id="c1", max_results=5)
+    mock_discord_user_client.get_messages.assert_called_once_with(channel_id="c1", limit=5)
 
 
 @pytest.mark.circleci
@@ -124,37 +126,42 @@ def test_get_message_via_adapter(test_client: TestClient, mock_discord_user_clie
 
     adapter = ServiceAdapterClient(service_url=str(test_client.base_url), guild_id="g1")
     forward = _make_forward(test_client)
-    adapter._http_client.set_httpx_client(httpx.Client(base_url=str(test_client.base_url), transport=httpx.MockTransport(forward)))
+    adapter._http_client.set_httpx_client(
+        httpx.Client(base_url=str(test_client.base_url), transport=httpx.MockTransport(forward))
+    )
 
     msg = adapter.get_message(channel_id="c1", message_id="m2")
     assert msg.id == "m2"
-    mock_discord_user_client.get_messages.assert_called_once_with(channel_id="c1", max_results=100)
+    mock_discord_user_client.get_messages.assert_called_once_with(channel_id="c1", limit=100)
 
 
 @pytest.mark.circleci
-def test_send_and_delete_via_adapter(test_client: TestClient, mock_discord_user_client: MagicMock, mock_discord_bot_client: MagicMock) -> None:
+def test_send_and_delete_via_adapter(
+    test_client: TestClient, mock_discord_user_client: MagicMock, mock_discord_bot_client: MagicMock
+) -> None:
     """Adapter should send a message via the service and allow deletion."""
     # Sending
     sent = MagicMock()
     sent.id = "s1"
     sent.channel_id = "c1"
     sent.content = "hi"
-    sent.author_id = "u1"
-    sent.author_name = "tester"
+    sent.sender_id = "u1"
+    sent.sender_name = "tester"
     sent.timestamp = "2025-10-10T12:00:00Z"
     # Ensure edited_timestamp is a valid value (pydantic will validate types)
     sent.edited_timestamp = None
-    mock_discord_user_client.send_message.return_value = sent
+    mock_discord_user_client.send_message.return_value = True
 
     # Reset call history so assertions are local to this test
     mock_discord_user_client.reset_mock()
 
     adapter = ServiceAdapterClient(service_url=str(test_client.base_url), guild_id="g1")
     forward = _make_forward(test_client)
-    adapter._http_client.set_httpx_client(httpx.Client(base_url=str(test_client.base_url), transport=httpx.MockTransport(forward)))
+    adapter._http_client.set_httpx_client(
+        httpx.Client(base_url=str(test_client.base_url), transport=httpx.MockTransport(forward))
+    )
 
-    result = adapter.send_message(channel_id="c1", content="hi")
-    assert result.id == "s1"
+    assert adapter.send_message(channel_id="c1", content="hi") is True
     mock_discord_user_client.send_message.assert_called_once_with(channel_id="c1", content="hi")
 
     # Deleting

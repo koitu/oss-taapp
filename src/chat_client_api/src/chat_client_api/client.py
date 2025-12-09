@@ -3,16 +3,16 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 
-from chat_client_api.message import Channel, ChatMessage
+from chat_client_api.message import Channel, Message
 
-__all__ = ["Client", "get_client"]
+__all__ = ["ChatInterface", "get_client"]
 
 
-class Client(ABC):
+class ChatInterface(ABC):
     """Abstract base class representing a chat client for messaging operations."""
 
     @abstractmethod
-    def get_message(self, channel_id: str, message_id: str) -> ChatMessage:
+    def get_message(self, channel_id: str, message_id: str) -> Message:
         """Retrieve a specific message from a channel.
 
         Args:
@@ -20,7 +20,7 @@ class Client(ABC):
             message_id: The ID of the message to retrieve.
 
         Returns:
-            ChatMessage: The requested message.
+            Message: The requested message.
 
         Raises:
             ValueError: If the message is not found.
@@ -29,21 +29,21 @@ class Client(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_messages(self, channel_id: str, max_results: int = 10) -> Iterator[ChatMessage]:
+    def get_messages(self, channel_id: str, limit: int = 10) -> list[Message]:
         """Retrieve recent messages from a channel.
 
         Args:
             channel_id: The ID of the channel to retrieve messages from.
-            max_results: Maximum number of messages to retrieve (default: 10).
+            limit: Maximum number of messages to retrieve (default: 10).
 
         Returns:
-            Iterator[ChatMessage]: An iterator of messages from the channel.
+            list[Message]: An iterator of messages from the channel.
 
         """
         raise NotImplementedError
 
     @abstractmethod
-    def send_message(self, channel_id: str, content: str) -> ChatMessage:
+    def send_message(self, channel_id: str, content: str) -> bool:
         """Send a message to a channel.
 
         Args:
@@ -51,10 +51,7 @@ class Client(ABC):
             content: The text content of the message.
 
         Returns:
-            ChatMessage: The sent message.
-
-        Raises:
-            ValueError: If the message could not be sent.
+            bool: True if the message was successfully sent, False otherwise.
 
         """
         raise NotImplementedError
@@ -100,15 +97,15 @@ class Client(ABC):
         raise NotImplementedError
 
 
-def get_client(user_id: str | None = None) -> Client:
-    """Return an instance of a Chat Client.
+def get_client(user_id: str | None = None) -> ChatInterface:
+    """Return an instance of a ChatInterface.
 
     Args:
         user_id: Optional user ID for multi-user authentication.
                  If None, uses a default/service account.
 
     Returns:
-        Client: An instance conforming to the Client contract.
+        ChatInterface: An instance conforming to the ChatInterface contract.
 
     Raises:
         NotImplementedError: If the function is not overridden by an implementation.

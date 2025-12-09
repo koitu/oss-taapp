@@ -63,7 +63,7 @@ def test_get_guild_channels_success() -> None:
 
     channels = list(client.get_guild_channels("g1"))
     assert len(channels) == len(mock_channels)
-    assert channels[0].id == "c1"
+    assert channels[0].channel_id == "c1"
 
 
 @respx.mock

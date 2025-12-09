@@ -1,6 +1,6 @@
-"""Discord Client Service Adapter.
+"""Discord ChatInterface Service Adapter.
 
-This package provides an adapter that implements the chat_client_api.Client
+This package provides an adapter that implements the chat_client_api.ChatInterface
 interface by delegating to the auto-generated Discord service HTTP client.
 """
 

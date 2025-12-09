@@ -6,7 +6,7 @@ import httpx
 from ... import errors
 from ...client import AuthenticatedClient, Client
 from ...models.http_validation_error import HTTPValidationError
-from ...models.message_detail import MessageDetail
+from ...models.operation_response import OperationResponse
 from ...models.send_message_request import SendMessageRequest
 from ...types import UNSET, Response, Unset
 
@@ -17,18 +17,12 @@ def _get_kwargs(
     *,
     body: SendMessageRequest,
     session_id: None | str | Unset = UNSET,
-
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
-
 
     cookies = {}
     if session_id is not UNSET:
         cookies["session_id"] = session_id
-
-
-
-    
 
     _kwargs: dict[str, Any] = {
         "method": "post",
@@ -38,26 +32,22 @@ def _get_kwargs(
 
     _kwargs["json"] = body.to_dict()
 
-
     headers["Content-Type"] = "application/json"
 
     _kwargs["headers"] = headers
     return _kwargs
 
 
-
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> HTTPValidationError | MessageDetail | None:
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> HTTPValidationError | OperationResponse | None:
     if response.status_code == 200:
-        response_200 = MessageDetail.from_dict(response.json())
-
-
+        response_200 = OperationResponse.from_dict(response.json())
 
         return response_200
 
     if response.status_code == 422:
         response_422 = HTTPValidationError.from_dict(response.json())
-
-
 
         return response_422
 
@@ -67,7 +57,9 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[HTTPValidationError | MessageDetail]:
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[HTTPValidationError | OperationResponse]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -83,9 +75,8 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
     body: SendMessageRequest,
     session_id: None | str | Unset = UNSET,
-
-) -> Response[HTTPValidationError | MessageDetail]:
-    """ Send message to channel
+) -> Response[HTTPValidationError | OperationResponse]:
+    """Send message to channel
 
      Send a message to a Discord channel.
 
@@ -100,16 +91,14 @@ def sync_detailed(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[HTTPValidationError | MessageDetail]
-     """
-
+        Response[HTTPValidationError | OperationResponse]
+    """
 
     kwargs = _get_kwargs(
         guild_id=guild_id,
-channel_id=channel_id,
-body=body,
-session_id=session_id,
-
+        channel_id=channel_id,
+        body=body,
+        session_id=session_id,
     )
 
     response = client.get_httpx_client().request(
@@ -118,6 +107,7 @@ session_id=session_id,
 
     return _build_response(client=client, response=response)
 
+
 def sync(
     guild_id: str,
     channel_id: str,
@@ -125,9 +115,8 @@ def sync(
     client: AuthenticatedClient | Client,
     body: SendMessageRequest,
     session_id: None | str | Unset = UNSET,
-
-) -> HTTPValidationError | MessageDetail | None:
-    """ Send message to channel
+) -> HTTPValidationError | OperationResponse | None:
+    """Send message to channel
 
      Send a message to a Discord channel.
 
@@ -142,18 +131,17 @@ def sync(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        HTTPValidationError | MessageDetail
-     """
-
+        HTTPValidationError | OperationResponse
+    """
 
     return sync_detailed(
         guild_id=guild_id,
-channel_id=channel_id,
-client=client,
-body=body,
-session_id=session_id,
-
+        channel_id=channel_id,
+        client=client,
+        body=body,
+        session_id=session_id,
     ).parsed
+
 
 async def asyncio_detailed(
     guild_id: str,
@@ -162,9 +150,8 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
     body: SendMessageRequest,
     session_id: None | str | Unset = UNSET,
-
-) -> Response[HTTPValidationError | MessageDetail]:
-    """ Send message to channel
+) -> Response[HTTPValidationError | OperationResponse]:
+    """Send message to channel
 
      Send a message to a Discord channel.
 
@@ -179,23 +166,20 @@ async def asyncio_detailed(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[HTTPValidationError | MessageDetail]
-     """
-
+        Response[HTTPValidationError | OperationResponse]
+    """
 
     kwargs = _get_kwargs(
         guild_id=guild_id,
-channel_id=channel_id,
-body=body,
-session_id=session_id,
-
+        channel_id=channel_id,
+        body=body,
+        session_id=session_id,
     )
 
-    response = await client.get_async_httpx_client().request(
-        **kwargs
-    )
+    response = await client.get_async_httpx_client().request(**kwargs)
 
     return _build_response(client=client, response=response)
+
 
 async def asyncio(
     guild_id: str,
@@ -204,9 +188,8 @@ async def asyncio(
     client: AuthenticatedClient | Client,
     body: SendMessageRequest,
     session_id: None | str | Unset = UNSET,
-
-) -> HTTPValidationError | MessageDetail | None:
-    """ Send message to channel
+) -> HTTPValidationError | OperationResponse | None:
+    """Send message to channel
 
      Send a message to a Discord channel.
 
@@ -221,15 +204,15 @@ async def asyncio(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        HTTPValidationError | MessageDetail
-     """
+        HTTPValidationError | OperationResponse
+    """
 
-
-    return (await asyncio_detailed(
-        guild_id=guild_id,
-channel_id=channel_id,
-client=client,
-body=body,
-session_id=session_id,
-
-    )).parsed
+    return (
+        await asyncio_detailed(
+            guild_id=guild_id,
+            channel_id=channel_id,
+            client=client,
+            body=body,
+            session_id=session_id,
+        )
+    ).parsed

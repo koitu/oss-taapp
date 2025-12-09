@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 
 
-class ChatMessage(ABC):
+class Message(ABC):
     """Abstract base class representing a chat message."""
 
     @property
@@ -20,13 +20,13 @@ class ChatMessage(ABC):
 
     @property
     @abstractmethod
-    def author_id(self) -> str:
+    def sender_id(self) -> str:
         """Return the ID of the message author."""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def author_name(self) -> str:
+    def sender_name(self) -> str:
         """Return the display name of the message author."""
         raise NotImplementedError
 
@@ -54,7 +54,7 @@ class Channel(ABC):
 
     @property
     @abstractmethod
-    def id(self) -> str:
+    def channel_id(self) -> str:
         """Return the unique identifier of the channel."""
         raise NotImplementedError
 
@@ -71,15 +71,15 @@ class Channel(ABC):
         raise NotImplementedError
 
 
-def get_message(msg_id: str, raw_data: dict[str, str]) -> ChatMessage:
-    """Return an instance of a ChatMessage.
+def get_message(msg_id: str, raw_data: dict[str, str]) -> Message:
+    """Return an instance of a Message.
 
     Args:
         msg_id: The unique identifier for the message.
         raw_data: Dictionary containing raw message data from the chat platform.
 
     Returns:
-        ChatMessage: An instance conforming to the ChatMessage contract.
+        Message: An instance conforming to the Message contract.
 
     Raises:
         NotImplementedError: If the function is not overridden by an implementation.
