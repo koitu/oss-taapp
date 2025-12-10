@@ -186,7 +186,7 @@ def test_fernet_key_generation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     data_dir = tmp_path / ".data"
     data_dir.mkdir()
 
-    original_cwd = os.getcwd()
+    original_cwd = Path.cwd()
     try:
         os.chdir(tmp_path)
 
@@ -227,7 +227,7 @@ def test_fernet_key_from_existing_file(tmp_path: Path, monkeypatch: pytest.Monke
     data_dir = tmp_path / ".data"
     data_dir.mkdir()
 
-    original_cwd = os.getcwd()
+    original_cwd = Path.cwd()
     try:
         os.chdir(tmp_path)
 
