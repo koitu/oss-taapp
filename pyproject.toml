@@ -105,12 +105,15 @@ mypy_path = [
     "src/chat_client_api/src",
     "src/discord_client_impl/src",
     "src/services/discord_client_service/src",
-    "src/discord_client_service_adapter/src",
-    "src/ai_api/src",
-    "src/openai_service_api/src",
-    "src/openai_adapter/src",
-    "src/openai_client_impl/src",
-    "src/openai_client_service/src"
+    "src/discord_client_service_adapter/src"
+]
+exclude = [
+    "src/ai_api/",
+    "src/openai_service_api/",
+    "src/openai_adapter/",
+    "src/openai_client_impl/",
+    "src/openai_client_service/",
+    "src/openai_client_service_api_client/"
 ]
 ignore_missing_imports = false
 warn_unused_ignores = false
