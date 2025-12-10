@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import os
-import tempfile
 from pathlib import Path
 
 import pytest
 
 from openai_client_impl.storage import (
-    ConversationStore,
     UserCred,
     delete_conversation,
     get_conversation_data,
@@ -28,6 +26,7 @@ def temp_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("DATABASE_URL", db_url)
     # Reimport to get the new database URL
     import importlib
+
     import openai_client_impl.storage
 
     importlib.reload(openai_client_impl.storage)
@@ -46,6 +45,7 @@ def temp_fernet_key(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("FERNET_KEY", test_key.decode())
     # Reimport to get the new key
     import importlib
+
     import openai_client_impl.storage
 
     importlib.reload(openai_client_impl.storage)
@@ -80,7 +80,7 @@ def test_get_openai_key_no_key_set(temp_db: Path, temp_fernet_key: None) -> None
     """Test getting a key for a user with no key set."""
     subject = "user_no_key"
     # Create user without setting key
-    from openai_client_impl.storage import SessionLocal, UserCred
+    from openai_client_impl.storage import SessionLocal
 
     with SessionLocal() as db:
         user = UserCred(subject=subject)
@@ -181,38 +181,36 @@ def test_delete_conversation_nonexistent(temp_db: Path) -> None:
 
 def test_fernet_key_generation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that Fernet key is generated when not set and saved to file."""
-    from cryptography.fernet import Fernet
-    
     # Set up temp directory and change to it
     key_file = tmp_path / ".fernet_key"
     data_dir = tmp_path / ".data"
     data_dir.mkdir()
-    
+
     original_cwd = os.getcwd()
     try:
         os.chdir(tmp_path)
-        
+
         # Remove FERNET_KEY from environment to trigger key generation
         monkeypatch.delenv("FERNET_KEY", raising=False)
-        
+
         # Patch the module-level FERNET_KEY
         import openai_client_impl.storage
         original_fernet_key = openai_client_impl.storage.FERNET_KEY
         openai_client_impl.storage.FERNET_KEY = None
-        
+
         # Use the _fernet function indirectly by setting/getting a key
         subject = "test_fernet_user"
         api_key = "sk-fernet-test"
-        
+
         set_openai_key(subject, api_key)
         retrieved_key = get_openai_key(subject)
-        
+
         assert retrieved_key == api_key
         assert key_file.exists(), "Fernet key file should be created"
-        
+
         # Restore
         openai_client_impl.storage.FERNET_KEY = original_fernet_key
-        
+
     finally:
         os.chdir(original_cwd)
 
@@ -220,39 +218,39 @@ def test_fernet_key_generation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
 def test_fernet_key_from_existing_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that existing Fernet key file is used when FERNET_KEY env var is not set."""
     from cryptography.fernet import Fernet
-    
+
     # Set up temp directory
     key_file = tmp_path / ".fernet_key"
     existing_key = Fernet.generate_key()
     key_file.write_bytes(existing_key)
-    
+
     data_dir = tmp_path / ".data"
     data_dir.mkdir()
-    
+
     original_cwd = os.getcwd()
     try:
         os.chdir(tmp_path)
-        
+
         # Remove FERNET_KEY from environment
         monkeypatch.delenv("FERNET_KEY", raising=False)
-        
+
         # Patch the module-level FERNET_KEY
         import openai_client_impl.storage
         original_fernet_key = openai_client_impl.storage.FERNET_KEY
         openai_client_impl.storage.FERNET_KEY = None
-        
+
         # Use the _fernet function indirectly
         subject = "test_existing_key_user"
         api_key = "sk-existing-key-test"
-        
+
         set_openai_key(subject, api_key)
         retrieved_key = get_openai_key(subject)
-        
+
         assert retrieved_key == api_key
-        
+
         # Restore
         openai_client_impl.storage.FERNET_KEY = original_fernet_key
-        
+
     finally:
         os.chdir(original_cwd)
 

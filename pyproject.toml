@@ -71,6 +71,7 @@ extend-exclude = [
   "test_real_callback.py",
   "test_callback.py",
   "src/clients/discord_client_service_client/**",
+  "src/openai_client_service_api_client/**",
 ]
 
 [tool.ruff.lint]
