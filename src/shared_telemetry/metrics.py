@@ -30,6 +30,7 @@ def get_http_request_counter() -> Counter:
     
     Returns:
         Counter: Prometheus counter for HTTP requests.
+
     """
     return _http_request_counter
 
@@ -39,6 +40,7 @@ def get_http_request_duration_histogram() -> Histogram:
     
     Returns:
         Histogram: Prometheus histogram for request duration.
+
     """
     return _http_request_duration
 
@@ -48,6 +50,7 @@ def get_http_request_errors_counter() -> Counter:
     
     Returns:
         Counter: Prometheus counter for HTTP errors.
+
     """
     return _http_request_errors
 
