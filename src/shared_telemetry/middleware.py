@@ -1,12 +1,12 @@
 """FastAPI middleware for telemetry tracking."""
 
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, Request, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
-from .metrics import (
+from shared_telemetry.metrics import (
     get_http_request_counter,
     get_http_request_duration_histogram,
     get_http_request_errors_counter,
@@ -27,11 +27,15 @@ def add_telemetry_middleware(app: FastAPI, service_name: str) -> None:
     """
 
     @app.middleware("http")
-    async def telemetry_middleware(request: Request, call_next: Callable[..., Response]) -> Response:
+    async def telemetry_middleware(
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         """Track metrics for each HTTP request."""
         # Skip metrics endpoint itself to avoid recursion
         if request.url.path == "/metrics":
-            return await call_next(Request, request)
+            response: Response = await call_next(request)
+            return response
 
         start_time = time.time()
         method = request.method
