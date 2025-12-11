@@ -23,6 +23,7 @@ def add_telemetry_middleware(app: FastAPI, service_name: str) -> None:
     Args:
         app: FastAPI application instance.
         service_name: Name of the service for metric labeling.
+
     """
 
     @app.middleware("http")
@@ -56,9 +57,10 @@ def add_telemetry_middleware(app: FastAPI, service_name: str) -> None:
                 endpoint=endpoint,
             ).observe(duration)
 
-            # Track errors (4xx and 5xx status codes)
             error_client = 400
             error_server = 500
+
+            # Track errors (4xx and 5xx status codes)
             if status >= error_client:
                 error_type = "client_error" if status < error_server else "server_error"
                 get_http_request_errors_counter().labels(
@@ -69,7 +71,6 @@ def add_telemetry_middleware(app: FastAPI, service_name: str) -> None:
                 ).inc()
 
             return response # noqa: TRY300
-
 
         except Exception as e:
             # Track exception
