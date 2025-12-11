@@ -6,7 +6,7 @@ from collections.abc import Awaitable, Callable
 from fastapi import FastAPI, Request, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
-from shared_telemetry.metrics import (
+from .metrics import (
     get_http_request_counter,
     get_http_request_duration_histogram,
     get_http_request_errors_counter,

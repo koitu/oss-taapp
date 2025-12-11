@@ -100,6 +100,7 @@ ignore = [
 strict = true
 explicit_package_bases = true # Required for src layout
 mypy_path = [
+    "src",
     "src/mail_client_service_adapter/src",
     "src/mail_client_api/src",
     "src/gmail_client_impl/src",
@@ -110,6 +111,7 @@ mypy_path = [
     "src/services/discord_client_service/src",
     "src/discord_client_service_adapter/src"
 ]
+
 exclude = [
     "src/ai_api/",
     "src/openai_service_api/",

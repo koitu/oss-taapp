@@ -15,4 +15,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["shared_telemetry"]
-
+include = [
+    "shared_telemetry/py.typed",
+]
