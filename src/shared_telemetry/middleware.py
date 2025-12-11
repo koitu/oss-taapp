@@ -27,11 +27,11 @@ def add_telemetry_middleware(app: FastAPI, service_name: str) -> None:
     """
 
     @app.middleware("http")
-    async def telemetry_middleware(request: Request, call_next: Callable) -> Response:
+    async def telemetry_middleware(request: Request, call_next: Callable[..., Response]) -> Response:
         """Track metrics for each HTTP request."""
         # Skip metrics endpoint itself to avoid recursion
         if request.url.path == "/metrics":
-            return await call_next(request)
+            return await call_next(Request, request)
 
         start_time = time.time()
         method = request.method
