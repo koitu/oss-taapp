@@ -5,12 +5,6 @@ consumers and forwards calls to the OpenAI Client Service using explicit HTTP
 calls.
 """
 
-from ._adapter import (
-    AdapterAPIError as AdapterAPIError,
-)
-from ._adapter import (
-    AIAdapter as AIAdapter,
-)
-from ._adapter import (
-    OpenAIServiceAdapter as OpenAIServiceAdapter,
-)
+from openai_adapter._adapter import AdapterAPIError as AdapterAPIError
+from openai_adapter._adapter import AIAdapter as AIAdapter
+from openai_adapter._adapter import OpenAIServiceAdapter as OpenAIServiceAdapter

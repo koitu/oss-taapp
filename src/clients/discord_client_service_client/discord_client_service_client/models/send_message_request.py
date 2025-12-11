@@ -10,35 +10,31 @@ from attrs import validators
 T = TypeVar("T", bound="SendMessageRequest")
 
 
-
 @_attrs_define
 class SendMessageRequest:
-    """ Request to send a message.
+    """Request to send a message.
 
-        Attributes:
-            content (str): Message content
-     """
+    Attributes:
+        content (str): Message content
+    """
 
-    content: str = _attrs_field(validator=[validators.instance_of(str), validators.min_len(1), validators.max_len(2000)])  # type: ignore[arg-type]
+    content: str = _attrs_field(
+        validator=[validators.instance_of(str), validators.min_len(1), validators.max_len(2000)]  # type: ignore[arg-type]
+    )
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         content = self.content
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "content": content,
-        })
+        field_dict.update(
+            {
+                "content": content,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
@@ -48,7 +44,6 @@ class SendMessageRequest:
         send_message_request = cls(
             content=content,
         )
-
 
         send_message_request.additional_properties = d
         return send_message_request

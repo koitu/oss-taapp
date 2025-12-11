@@ -217,7 +217,7 @@ def test_constructor_uses_asgi_transport_when_testserver(monkeypatch: pytest.Mon
             called["count"] += 1
 
     monkeypatch.setattr(httpx, "ASGITransport", DummyTransport)
-    import openai_adapter.src.openai_adapter._adapter as adapter_module
+    import openai_adapter._adapter as adapter_module
 
     monkeypatch.setattr(adapter_module, "_load_test_client", lambda: (None, fake_main.app))
 

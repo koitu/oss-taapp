@@ -25,4 +25,3 @@ class AIInterface(ABC):
         :return: A string (conversation) or a Dict (structured action data).
         """
         raise NotImplementedError
-

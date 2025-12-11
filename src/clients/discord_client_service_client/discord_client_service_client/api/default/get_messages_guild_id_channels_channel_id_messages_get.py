@@ -16,23 +16,16 @@ def _get_kwargs(
     *,
     limit: int | Unset = 10,
     session_id: None | str | Unset = UNSET,
-
 ) -> dict[str, Any]:
-    
-
     cookies = {}
     if session_id is not UNSET:
         cookies["session_id"] = session_id
-
-
 
     params: dict[str, Any] = {}
 
     params["limit"] = limit
 
-
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
-
 
     _kwargs: dict[str, Any] = {
         "method": "get",
@@ -41,23 +34,19 @@ def _get_kwargs(
         "cookies": cookies,
     }
 
-
     return _kwargs
 
 
-
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> HTTPValidationError | MessageListResponse | None:
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> HTTPValidationError | MessageListResponse | None:
     if response.status_code == 200:
         response_200 = MessageListResponse.from_dict(response.json())
-
-
 
         return response_200
 
     if response.status_code == 422:
         response_422 = HTTPValidationError.from_dict(response.json())
-
-
 
         return response_422
 
@@ -67,7 +56,9 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[HTTPValidationError | MessageListResponse]:
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[HTTPValidationError | MessageListResponse]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -83,9 +74,8 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
     limit: int | Unset = 10,
     session_id: None | str | Unset = UNSET,
-
 ) -> Response[HTTPValidationError | MessageListResponse]:
-    """ Get messages from channel
+    """Get messages from channel
 
      Get messages from a Discord channel.
 
@@ -101,15 +91,13 @@ def sync_detailed(
 
     Returns:
         Response[HTTPValidationError | MessageListResponse]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         guild_id=guild_id,
-channel_id=channel_id,
-limit=limit,
-session_id=session_id,
-
+        channel_id=channel_id,
+        limit=limit,
+        session_id=session_id,
     )
 
     response = client.get_httpx_client().request(
@@ -118,6 +106,7 @@ session_id=session_id,
 
     return _build_response(client=client, response=response)
 
+
 def sync(
     guild_id: str,
     channel_id: str,
@@ -125,9 +114,8 @@ def sync(
     client: AuthenticatedClient | Client,
     limit: int | Unset = 10,
     session_id: None | str | Unset = UNSET,
-
 ) -> HTTPValidationError | MessageListResponse | None:
-    """ Get messages from channel
+    """Get messages from channel
 
      Get messages from a Discord channel.
 
@@ -143,17 +131,16 @@ def sync(
 
     Returns:
         HTTPValidationError | MessageListResponse
-     """
-
+    """
 
     return sync_detailed(
         guild_id=guild_id,
-channel_id=channel_id,
-client=client,
-limit=limit,
-session_id=session_id,
-
+        channel_id=channel_id,
+        client=client,
+        limit=limit,
+        session_id=session_id,
     ).parsed
+
 
 async def asyncio_detailed(
     guild_id: str,
@@ -162,9 +149,8 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
     limit: int | Unset = 10,
     session_id: None | str | Unset = UNSET,
-
 ) -> Response[HTTPValidationError | MessageListResponse]:
-    """ Get messages from channel
+    """Get messages from channel
 
      Get messages from a Discord channel.
 
@@ -180,22 +166,19 @@ async def asyncio_detailed(
 
     Returns:
         Response[HTTPValidationError | MessageListResponse]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         guild_id=guild_id,
-channel_id=channel_id,
-limit=limit,
-session_id=session_id,
-
+        channel_id=channel_id,
+        limit=limit,
+        session_id=session_id,
     )
 
-    response = await client.get_async_httpx_client().request(
-        **kwargs
-    )
+    response = await client.get_async_httpx_client().request(**kwargs)
 
     return _build_response(client=client, response=response)
+
 
 async def asyncio(
     guild_id: str,
@@ -204,9 +187,8 @@ async def asyncio(
     client: AuthenticatedClient | Client,
     limit: int | Unset = 10,
     session_id: None | str | Unset = UNSET,
-
 ) -> HTTPValidationError | MessageListResponse | None:
-    """ Get messages from channel
+    """Get messages from channel
 
      Get messages from a Discord channel.
 
@@ -222,14 +204,14 @@ async def asyncio(
 
     Returns:
         HTTPValidationError | MessageListResponse
-     """
+    """
 
-
-    return (await asyncio_detailed(
-        guild_id=guild_id,
-channel_id=channel_id,
-client=client,
-limit=limit,
-session_id=session_id,
-
-    )).parsed
+    return (
+        await asyncio_detailed(
+            guild_id=guild_id,
+            channel_id=channel_id,
+            client=client,
+            limit=limit,
+            session_id=session_id,
+        )
+    ).parsed

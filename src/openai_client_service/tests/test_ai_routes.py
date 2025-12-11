@@ -7,14 +7,14 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from starlette import status
-
-from openai_client_service.main import app
-from openai_client_service.src.openai_client_service import ai_interface_impl
-from openai_client_service.src.openai_client_service.dependencies import (
+from openai_client_service.dependencies import (
     get_ai_client,
     get_authenticated_subject,
 )
+from openai_client_service.main import app
+from starlette import status
+
+from openai_client_service import ai_interface_impl
 
 try:
     from openai_client_impl import MissingOpenAIKeyError

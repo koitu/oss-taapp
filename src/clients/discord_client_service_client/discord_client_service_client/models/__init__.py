@@ -1,4 +1,4 @@
-""" Contains all the data models used in inputs/outputs """
+"""Contains all the data models used in inputs/outputs"""
 
 from .auth_status_auth_status_guild_id_get_response_auth_status_auth_status_guild_id_get import (
     AuthStatusAuthStatusGuildIdGetResponseAuthStatusAuthStatusGuildIdGet,

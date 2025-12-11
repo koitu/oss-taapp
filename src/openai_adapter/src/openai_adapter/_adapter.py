@@ -40,6 +40,7 @@ except ImportError:
             """Generate a response from the AI."""
             raise NotImplementedError
 
+
 HTTP_OK = 200
 HTTP_BAD = 400
 
