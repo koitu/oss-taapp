@@ -51,34 +51,40 @@ jobs:
 
   # Job 3: Unit Tests and Coverage
   unit_test:
-  docker:
-    - image: cimg/python:3.11
-  steps:
-    - attach_workspace:
-        at: .
-    - run:
-        name: "Activate Venv and Create Test Results Directory"
-        command: |
-          source .venv/bin/activate
-          mkdir -p test-results/unit
-    - run:
-        name: "Add src to PYTHONPATH"
-        command: |
-          echo 'export PYTHONPATH=$PYTHONPATH:./src' >> $BASH_ENV
-          source $BASH_ENV
-    - run:
-        name: "Execute Unit Test Suite"
-        command: |
-          source .venv/bin/activate
-          pytest src/ --cov=src --cov-report=xml --cov-report=term \
-                   --junitxml=test-results/unit/junit.xml \
-                   --cov-fail-under=85
-    - run:
-        name: "Run Static Analysis (mypy)"
-        command: |
-          source .venv/bin/activate
-          uv add types-requests
-          mypy src/ --explicit-package-bases
+    docker:
+      - image: cimg/python:3.11
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Activate Venv and Create Test Results Directory"
+          command: |
+            source .venv/bin/activate
+            mkdir -p test-results/unit
+      - run:
+          name: "Add src to PYTHONPATH"
+          command: |
+            echo 'export PYTHONPATH=$PYTHONPATH:./src' >> $BASH_ENV
+            source $BASH_ENV
+      - run:
+          name: "Execute Unit Test Suite"
+          command: |
+            source .venv/bin/activate
+            pytest src/ --cov=src --cov-report=xml --cov-report=term \
+                     --junitxml=test-results/unit/junit.xml \
+                     --cov-fail-under=85
+      - run:
+          name: "Run Static Analysis (mypy)"
+          command: |
+            source .venv/bin/activate
+            uv add types-requests
+            mypy src/ --explicit-package-bases
+      - store_test_results:
+          path: test-results/unit
+      - store_artifacts:
+          path: coverage.xml
+      - store_artifacts:
+          path: test-results/unit
 
   # Job 4: CircleCI Integration Tests (Except Local Credentials)
   circleci_test:
