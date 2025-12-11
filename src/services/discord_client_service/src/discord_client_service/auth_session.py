@@ -3,6 +3,7 @@
 This is intentionally minimal and stores state and sessions in-memory.
 For production, replace with Redis or a durable store.
 """
+
 from __future__ import annotations
 
 import time

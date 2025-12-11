@@ -1,5 +1,6 @@
 """Unit tests for DiscordClient HTTP methods with mocked responses."""
 
+import os
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -332,6 +333,7 @@ class TestErrorHandling:
 
     def test_operations_without_token(self) -> None:
         """Test that operations fail without access token."""
+        os.environ["NO_AUTH"] = ""
         client = DiscordClient(
             client_id="test_client_id",
             client_secret="test_client_secret",

@@ -26,6 +26,7 @@ require_guild_access: Callable[..., Any] | None
 try:
     # import under a temporary name to preserve the annotated name
     from discord_client_service.auth_session import require_guild_access as _require_guild_access
+
     require_guild_access = _require_guild_access
 except (ImportError, ModuleNotFoundError):
     require_guild_access = None
@@ -36,6 +37,7 @@ def client() -> Iterator[TestClient]:
     """Test client fixture with auth dependency overridden."""
     # override auth dependency if available
     if require_guild_access is not None:
+
         async def _no_auth() -> None:
             return None
 
@@ -63,6 +65,7 @@ def test_oauth_login_exception(client: TestClient, monkeypatch: MP) -> None:
 @pytest.mark.unit
 def test_oauth_callback_missing_guild(monkeypatch: MP, client: TestClient) -> None:
     """Missing guild in callback results in 400."""
+
     class C:
         def _exchange_code_for_token(self, _code: str) -> dict[str, str]:
             return {"access_token": "t"}
@@ -76,6 +79,7 @@ def test_oauth_callback_missing_guild(monkeypatch: MP, client: TestClient) -> No
 @pytest.mark.unit
 def test_oauth_callback_exchange_error(monkeypatch: MP, client: TestClient) -> None:
     """Token exchange failures return 500."""
+
     class C:
         def _exchange_code_for_token(self, _code: str) -> NoReturn:
             msg = "fail exchange"
@@ -89,11 +93,11 @@ def test_oauth_callback_exchange_error(monkeypatch: MP, client: TestClient) -> N
 @pytest.mark.unit
 def test_oauth_callback_success(monkeypatch: MP, client: TestClient) -> None:
     """Successful callback sets a session cookie."""
+
     # Successful token exchange and credential storage should set a session cookie
     class C:
         def _exchange_code_for_token(self, _code: str) -> dict[str, str]:
             return {"access_token": "t"}
-
 
     # stored will hold both string fields and a token dict; widen the value type
     stored: dict[str, Any] = {}

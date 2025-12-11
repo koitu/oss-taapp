@@ -5,34 +5,23 @@ from __future__ import annotations
 import base64
 import secrets
 from pathlib import Path
-from typing import NoReturn
+from typing import TYPE_CHECKING, NoReturn
 
 import pytest
+from fastapi.testclient import TestClient
 from openai_client_impl.response import get_conversation as build_conversation
+from openai_client_service.dependencies import (
+    create_session_for_testing,
+    destroy_session_for_testing,
+    get_ai_client,
+)
+from openai_client_service.main import app
 from starlette import status
 
 from openai_client_impl import MissingOpenAIKeyError
 
-try:
-    from fastapi.testclient import TestClient
-except ImportError:  # pragma: no cover
-    TestClient = None  # type: ignore[assignment]
-
-try:
-    from openai_client_service.src.openai_client_service.dependencies import (
-        create_session_for_testing,
-        destroy_session_for_testing,
-        get_ai_client,
-    )
-except ImportError:  # pragma: no cover
-    create_session_for_testing = None  # type: ignore[assignment]
-    destroy_session_for_testing = None  # type: ignore[assignment]
-    get_ai_client = None  # type: ignore[assignment]
-
-try:
-    from openai_client_service.main import app  # type: ignore[import-untyped]
-except ImportError:  # pragma: no cover
-    app = None  # type: ignore[assignment]
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 pytestmark = pytest.mark.integration
 
@@ -42,13 +31,13 @@ HTTP_BAD_REQUEST = status.HTTP_400_BAD_REQUEST
 HTTP_UNAUTHORIZED = status.HTTP_401_UNAUTHORIZED
 
 
-def _require_test_client() -> TestClient:
+def _require_test_client() -> type[TestClient]:
     if TestClient is None or app is None:
         pytest.skip("FastAPI TestClient is not available.")
     return TestClient
 
 
-def _require_session_helpers() -> tuple:
+def _require_session_helpers() -> tuple[Callable[[str, str], None], Callable[[str], None]]:
     if create_session_for_testing is None or destroy_session_for_testing is None:
         pytest.skip("Session helper utilities are not available.")
     return create_session_for_testing, destroy_session_for_testing

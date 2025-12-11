@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from openai_client_impl import MissingOpenAIKeyError  # type: ignore[attr-defined]
-from openai_client_service.src.openai_client_service.ai_interface_impl import EnvAIImplementation
-from openai_client_service.src.openai_client_service.dependencies import get_ai_client
+from openai_client_service.ai_interface_impl import EnvAIImplementation
+from openai_client_service.dependencies import get_ai_client
 from openai_service_api import AIClient
 
 router = APIRouter()
@@ -163,7 +163,11 @@ def delete_conversation(
         raise HTTPException(status_code=404, detail=str(e)) from e
     else:
         if success:
-            return {"ok": True, "conversation_id": conversation_id, "message": "Conversation deleted"}
+            return {
+                "ok": True,
+                "conversation_id": conversation_id,
+                "message": "Conversation deleted",
+            }
         return {"ok": False, "message": "Conversation not found"}
 
 

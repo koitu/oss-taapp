@@ -60,6 +60,7 @@ members = [
   "src/openai_client_service",
   "src/openai_client_service_api_client",
   "src/openai_adapter",
+  "src/ospsd_service",
 ]
 
 [tool.ruff]
@@ -135,11 +136,7 @@ ignore_missing_imports = true
 module = [
     "discord_client_service_client.*",
     "mail_client_service_client.*",
-    "openai_client_impl.*",
-    "openai_client_service.*",
-    "openai_adapter.*",
-    "openai_service_api.*",
-    "ai_api.*",
+    "openai_client_service_api_client.*",
 ]
 follow_imports = "skip"
 

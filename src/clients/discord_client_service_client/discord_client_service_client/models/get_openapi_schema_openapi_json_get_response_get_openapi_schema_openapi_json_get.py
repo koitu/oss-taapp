@@ -9,33 +9,22 @@ from attrs import field as _attrs_field
 T = TypeVar("T", bound="GetOpenapiSchemaOpenapiJsonGetResponseGetOpenapiSchemaOpenapiJsonGet")
 
 
-
 @_attrs_define
 class GetOpenapiSchemaOpenapiJsonGetResponseGetOpenapiSchemaOpenapiJsonGet:
-    """ 
-     """
+    """ """
 
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
-        
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
 
         return field_dict
 
-
-
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        get_openapi_schema_openapi_json_get_response_get_openapi_schema_openapi_json_get = cls(
-        )
-
+        get_openapi_schema_openapi_json_get_response_get_openapi_schema_openapi_json_get = cls()
 
         get_openapi_schema_openapi_json_get_response_get_openapi_schema_openapi_json_get.additional_properties = d
         return get_openapi_schema_openapi_json_get_response_get_openapi_schema_openapi_json_get

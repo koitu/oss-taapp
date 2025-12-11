@@ -10,7 +10,6 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
-
 from openai_client_impl.ai_client import AIClientImpl, MissingOpenAIKeyError
 
 DEFAULT_SUBJECT = "user"

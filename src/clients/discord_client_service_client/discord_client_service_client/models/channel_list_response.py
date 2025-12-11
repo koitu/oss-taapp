@@ -7,32 +7,24 @@ from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
 if TYPE_CHECKING:
-  from ..models.channel_info import ChannelInfo
-
-
-
+    from ..models.channel_info import ChannelInfo
 
 
 T = TypeVar("T", bound="ChannelListResponse")
 
 
-
 @_attrs_define
 class ChannelListResponse:
-    """ List of Discord channels.
+    """List of Discord channels.
 
-        Attributes:
-            channels (list[ChannelInfo]): List of channels
-            count (int): Number of channels returned
-     """
+    Attributes:
+        channels (list[ChannelInfo]): List of channels
+        count (int): Number of channels returned
+    """
 
     channels: list[ChannelInfo]
     count: int
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         channels = []
@@ -40,35 +32,30 @@ class ChannelListResponse:
             channels_item = channels_item_data.to_dict()
             channels.append(channels_item)
 
-
-
         count = self.count
-
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "channels": channels,
-            "count": count,
-        })
+        field_dict.update(
+            {
+                "channels": channels,
+                "count": count,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.channel_info import ChannelInfo
+
         d = dict(src_dict)
         channels = []
         _channels = d.pop("channels")
-        for channels_item_data in (_channels):
+        for channels_item_data in _channels:
             channels_item = ChannelInfo.from_dict(channels_item_data)
 
-
-
             channels.append(channels_item)
-
 
         count = d.pop("count")
 
@@ -76,7 +63,6 @@ class ChannelListResponse:
             channels=channels,
             count=count,
         )
-
 
         channel_list_response.additional_properties = d
         return channel_list_response

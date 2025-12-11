@@ -9,30 +9,18 @@ from ...models.o_auth_init_response import OAuthInitResponse
 from ...types import Response
 
 
-def _get_kwargs(
-    
-) -> dict[str, Any]:
-    
-
-    
-
-    
-
+def _get_kwargs() -> dict[str, Any]:
     _kwargs: dict[str, Any] = {
         "method": "get",
         "url": "/auth/login",
     }
 
-
     return _kwargs
-
 
 
 def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> OAuthInitResponse | None:
     if response.status_code == 200:
         response_200 = OAuthInitResponse.from_dict(response.json())
-
-
 
         return response_200
 
@@ -54,9 +42,8 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
-
 ) -> Response[OAuthInitResponse]:
-    """ Initialize OAuth2 flow
+    """Initialize OAuth2 flow
 
      Initialize OAuth2 flow.
 
@@ -66,12 +53,9 @@ def sync_detailed(
 
     Returns:
         Response[OAuthInitResponse]
-     """
+    """
 
-
-    kwargs = _get_kwargs(
-        
-    )
+    kwargs = _get_kwargs()
 
     response = client.get_httpx_client().request(
         **kwargs,
@@ -79,12 +63,12 @@ def sync_detailed(
 
     return _build_response(client=client, response=response)
 
+
 def sync(
     *,
     client: AuthenticatedClient | Client,
-
 ) -> OAuthInitResponse | None:
-    """ Initialize OAuth2 flow
+    """Initialize OAuth2 flow
 
      Initialize OAuth2 flow.
 
@@ -94,20 +78,18 @@ def sync(
 
     Returns:
         OAuthInitResponse
-     """
-
+    """
 
     return sync_detailed(
         client=client,
-
     ).parsed
+
 
 async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
-
 ) -> Response[OAuthInitResponse]:
-    """ Initialize OAuth2 flow
+    """Initialize OAuth2 flow
 
      Initialize OAuth2 flow.
 
@@ -117,25 +99,20 @@ async def asyncio_detailed(
 
     Returns:
         Response[OAuthInitResponse]
-     """
+    """
 
+    kwargs = _get_kwargs()
 
-    kwargs = _get_kwargs(
-        
-    )
-
-    response = await client.get_async_httpx_client().request(
-        **kwargs
-    )
+    response = await client.get_async_httpx_client().request(**kwargs)
 
     return _build_response(client=client, response=response)
+
 
 async def asyncio(
     *,
     client: AuthenticatedClient | Client,
-
 ) -> OAuthInitResponse | None:
-    """ Initialize OAuth2 flow
+    """Initialize OAuth2 flow
 
      Initialize OAuth2 flow.
 
@@ -145,10 +122,10 @@ async def asyncio(
 
     Returns:
         OAuthInitResponse
-     """
+    """
 
-
-    return (await asyncio_detailed(
-        client=client,
-
-    )).parsed
+    return (
+        await asyncio_detailed(
+            client=client,
+        )
+    ).parsed

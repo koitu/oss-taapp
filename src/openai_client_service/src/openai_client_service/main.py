@@ -30,6 +30,7 @@ async def startup_event() -> None:
     """Initialize database on application startup."""
     init_db()
 
+
 app.include_router(oauth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(ai.router, prefix="/ai", tags=["AI Operations"])
 

@@ -9,25 +9,20 @@ from attrs import field as _attrs_field
 T = TypeVar("T", bound="ChannelInfo")
 
 
-
 @_attrs_define
 class ChannelInfo:
-    """ Discord channel information.
+    """Discord channel information.
 
-        Attributes:
-            id (str): Channel ID
-            name (str): Channel name
-            type_ (str): Channel type
-     """
+    Attributes:
+        id (str): Channel ID
+        name (str): Channel name
+        type_ (str): Channel type
+    """
 
     id: str
     name: str
     type_: str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         id = self.id
@@ -36,18 +31,17 @@ class ChannelInfo:
 
         type_ = self.type_
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "id": id,
-            "name": name,
-            "type": type_,
-        })
+        field_dict.update(
+            {
+                "id": id,
+                "name": name,
+                "type": type_,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
@@ -63,7 +57,6 @@ class ChannelInfo:
             name=name,
             type_=type_,
         )
-
 
         channel_info.additional_properties = d
         return channel_info

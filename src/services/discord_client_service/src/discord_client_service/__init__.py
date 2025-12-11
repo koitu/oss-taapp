@@ -2,4 +2,3 @@
 
 from discord_client_service import api  # noqa: F401
 from discord_client_service.service import app as app
-

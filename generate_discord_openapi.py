@@ -25,9 +25,7 @@ def generate_openapi(output_path: Path | str | None = None) -> dict[str, Any]:
     `output_path` (defaults to the service's openapi.json file).
     """
     # Add the discord service to the path so imports resolve
-    service_path = (
-        Path(__file__).parent / "src" / "services" / "discord_client_service" / "src"
-    )
+    service_path = Path(__file__).parent / "src" / "services" / "discord_client_service" / "src"
     sys.path.insert(0, str(service_path))
 
     # Import the service module dynamically (avoid module-level import after code)
@@ -48,9 +46,7 @@ def generate_openapi(output_path: Path | str | None = None) -> dict[str, Any]:
 
     # Save to file
     if output_path is None:
-        output_path = (
-            Path(__file__).parent / "src" / "services" / "discord_client_service" / "openapi.json"
-        )
+        output_path = Path(__file__).parent / "src" / "services" / "discord_client_service" / "openapi.json"
     else:
         output_path = Path(output_path)
 

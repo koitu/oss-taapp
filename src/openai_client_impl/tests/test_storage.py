@@ -6,7 +6,6 @@ import os
 from pathlib import Path
 
 import pytest
-
 from openai_client_impl.storage import (
     UserCred,
     delete_conversation,
@@ -195,6 +194,7 @@ def test_fernet_key_generation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
 
         # Patch the module-level FERNET_KEY
         import openai_client_impl.storage
+
         original_fernet_key = openai_client_impl.storage.FERNET_KEY
         openai_client_impl.storage.FERNET_KEY = None
 
@@ -236,6 +236,7 @@ def test_fernet_key_from_existing_file(tmp_path: Path, monkeypatch: pytest.Monke
 
         # Patch the module-level FERNET_KEY
         import openai_client_impl.storage
+
         original_fernet_key = openai_client_impl.storage.FERNET_KEY
         openai_client_impl.storage.FERNET_KEY = None
 
@@ -253,4 +254,3 @@ def test_fernet_key_from_existing_file(tmp_path: Path, monkeypatch: pytest.Monke
 
     finally:
         os.chdir(original_cwd)
-

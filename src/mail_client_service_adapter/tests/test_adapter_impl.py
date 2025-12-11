@@ -20,10 +20,7 @@ def adapter() -> ServiceAdapterClient:
 def test_get_message_success(mock_get: MagicMock, adapter: ServiceAdapterClient) -> None:
     """It should convert a successful service response into a Message object."""
     mock_get.sync.return_value = MessageDetail(
-        id="123",
-        subject="Test subject",
-        from_="user@example.com",
-        body="Hello world"
+        id="123", subject="Test subject", from_="user@example.com", body="Hello world"
     )
 
     message = adapter.get_message("123")
@@ -34,7 +31,9 @@ def test_get_message_success(mock_get: MagicMock, adapter: ServiceAdapterClient)
 
 
 @patch("mail_client_service_adapter.adapter_impl.get_message_messages_message_id_get")
-def test_get_message_invalid_response_raises(mock_get: MagicMock, adapter: ServiceAdapterClient) -> None:
+def test_get_message_invalid_response_raises(
+    mock_get: MagicMock, adapter: ServiceAdapterClient
+) -> None:
     """It should raise ValueError when the response is not a valid MessageDetail."""
     mock_get.sync.return_value = None
 
@@ -62,7 +61,9 @@ def test_delete_message_failure(mock_delete: MagicMock, adapter: ServiceAdapterC
     assert result is False
 
 
-@patch("mail_client_service_adapter.adapter_impl.mark_as_read_messages_message_id_mark_as_read_post")
+@patch(
+    "mail_client_service_adapter.adapter_impl.mark_as_read_messages_message_id_mark_as_read_post"
+)
 def test_mark_as_read_success(mock_post: MagicMock, adapter: ServiceAdapterClient) -> None:
     """It should return True when mark-as-read operation succeeds."""
     mock_post.sync.return_value = OperationResponse(status="success", message="OK")
@@ -72,7 +73,9 @@ def test_mark_as_read_success(mock_post: MagicMock, adapter: ServiceAdapterClien
     assert result is True
 
 
-@patch("mail_client_service_adapter.adapter_impl.mark_as_read_messages_message_id_mark_as_read_post")
+@patch(
+    "mail_client_service_adapter.adapter_impl.mark_as_read_messages_message_id_mark_as_read_post"
+)
 def test_mark_as_read_failure(mock_post: MagicMock, adapter: ServiceAdapterClient) -> None:
     """It should return False when mark-as-read fails."""
     mock_post.sync.return_value = OperationResponse(status="failure", message="Bad request")
@@ -102,6 +105,7 @@ def test_get_messages_success(mock_get: MagicMock, adapter: ServiceAdapterClient
     assert len(messages) == 1
     assert messages[0].subject == "Hello"
     assert messages[0].from_ == "a@example.com"
+
 
 @patch("mail_client_service_adapter.adapter_impl.get_messages_messages_get")
 def test_get_messages_invalid_response(mock_get: MagicMock, adapter: ServiceAdapterClient) -> None:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from starlette import status
 
-from openai_client_service.src.openai_client_service import dependencies
+from openai_client_service import dependencies
 
 HTTP_UNAUTHORIZED = status.HTTP_401_UNAUTHORIZED
 SESSION_ID = "sid"

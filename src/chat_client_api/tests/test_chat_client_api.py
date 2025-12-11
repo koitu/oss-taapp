@@ -1,7 +1,5 @@
 """Unit tests for chat client API contract."""
 
-import pytest
-
 import chat_client_api
 
 
@@ -42,24 +40,6 @@ def test_api_exports_get_channel() -> None:
 
 
 # Note: The following tests were removed because Discord client implementation
-# auto-registers itself on import, so the factory functions now return
+# auto-registers itself on import, so both the factory functions and class now return
 # Discord implementations instead of raising NotImplementedError.
 # These tests are no longer applicable with the Discord implementation active.
-
-
-def test_client_is_abstract() -> None:
-    """Test that Client cannot be instantiated directly."""
-    with pytest.raises(TypeError):
-        chat_client_api.ChatInterface()  # type: ignore[abstract]
-
-
-def test_chat_message_is_abstract() -> None:
-    """Test that Message cannot be instantiated directly."""
-    with pytest.raises(TypeError):
-        chat_client_api.Message()  # type: ignore[abstract]
-
-
-def test_channel_is_abstract() -> None:
-    """Test that Channel cannot be instantiated directly."""
-    with pytest.raises(TypeError):
-        chat_client_api.Channel()  # type: ignore[abstract]

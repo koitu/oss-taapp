@@ -5,7 +5,9 @@ from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
 if TYPE_CHECKING:
-    from ..models.messages_response_messages_additional_property import MessagesResponseMessagesAdditionalProperty
+    from ..models.messages_response_messages_additional_property import (
+        MessagesResponseMessagesAdditionalProperty,
+    )
 
 
 T = TypeVar("T", bound="MessagesResponseMessages")
@@ -28,7 +30,9 @@ class MessagesResponseMessages:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.messages_response_messages_additional_property import MessagesResponseMessagesAdditionalProperty
+        from ..models.messages_response_messages_additional_property import (
+            MessagesResponseMessagesAdditionalProperty,
+        )
 
         d = dict(src_dict)
         messages_response_messages = cls()

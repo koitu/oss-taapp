@@ -13,7 +13,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 from openai_client_impl import set_openai_key  # type: ignore[attr-defined]
-from openai_client_service.src.openai_client_service.dependencies import (
+from openai_client_service.dependencies import (
     _create_session,
     _destroy_session,
     get_authenticated_subject,
@@ -99,13 +99,19 @@ def oauth_callback(
         )
 
     if token_resp.status_code >= HTTP_BAD_REQUEST:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Token exchange failed: {token_resp.text}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Token exchange failed: {token_resp.text}",
+        )
 
     token_json = token_resp.json()
 
     subject = _extract_subject(token_json, cfg)
     if not subject:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to determine subject from tokens")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to determine subject from tokens",
+        )
 
     session_id = base64.urlsafe_b64encode(secrets.token_bytes(24)).decode().rstrip("=")
     _create_session(session_id, subject)

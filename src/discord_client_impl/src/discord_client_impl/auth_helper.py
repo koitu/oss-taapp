@@ -87,9 +87,7 @@ async def get_client_for_user(guild_id: str) -> DiscordClient:
 
                     expires_at_val = new_token_data.get("expires_at")
                     expires_in_val = new_token_data.get("expires_in")
-                    expires_val = (
-                        expires_at_val if expires_at_val is not None else expires_in_val
-                    )
+                    expires_val = expires_at_val if expires_at_val is not None else expires_in_val
                     scope_val = new_token_data.get("scope", credentials.get("scope"))
 
                     # Persist refreshed tokens in credential store
@@ -144,9 +142,7 @@ async def get_bot_client_for_guild(guild_id: str) -> DiscordClient:
             access_token=credentials.get("access_token"), token_type=BOT_TOKEN_TYPE
         )
 
-    msg = (
-        "No bot token available for guild. Set DISCORD_BOT_TOKEN or install the bot to the guild."
-    )
+    msg = "No bot token available for guild. Set DISCORD_BOT_TOKEN or install the bot to the guild."
     raise ValueError(msg)
 
 

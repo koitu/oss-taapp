@@ -7,14 +7,14 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from starlette import status
-
-from openai_client_service.main import app
-from openai_client_service.src.openai_client_service import ai_interface_impl
-from openai_client_service.src.openai_client_service.dependencies import (
+from openai_client_service.dependencies import (
     get_ai_client,
     get_authenticated_subject,
 )
+from openai_client_service.main import app
+from starlette import status
+
+from openai_client_service import ai_interface_impl
 
 try:
     from openai_client_impl import MissingOpenAIKeyError
@@ -75,7 +75,11 @@ class FakeAIClient:
             error_message = "server down"
             raise RuntimeError(error_message)
         self.saved_args.append(("generate", {"messages": messages, "conversation_id": conversation_id}))
-        return FakeResponse(content="hi", tokens_used=TOKENS_USED, conversation_id=conversation_id or DEFAULT_CONVERSATION_ID)
+        return FakeResponse(
+            content="hi",
+            tokens_used=TOKENS_USED,
+            conversation_id=conversation_id or DEFAULT_CONVERSATION_ID,
+        )
 
     def create_conversation(self) -> str:
         """Simulate creating a conversation."""

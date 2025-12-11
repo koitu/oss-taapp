@@ -9,39 +9,27 @@ from attrs import field as _attrs_field
 T = TypeVar("T", bound="AuthStatusAuthStatusGuildIdGetResponseAuthStatusAuthStatusGuildIdGet")
 
 
-
 @_attrs_define
 class AuthStatusAuthStatusGuildIdGetResponseAuthStatusAuthStatusGuildIdGet:
-    """ 
-     """
+    """ """
 
     additional_properties: dict[str, bool | str] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
-        
         field_dict: dict[str, Any] = {}
         for prop_name, prop in self.additional_properties.items():
-            
             field_dict[prop_name] = prop
 
-
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        auth_status_auth_status_guild_id_get_response_auth_status_auth_status_guild_id_get = cls(
-        )
-
+        auth_status_auth_status_guild_id_get_response_auth_status_auth_status_guild_id_get = cls()
 
         additional_properties = {}
         for prop_name, prop_dict in d.items():
+
             def _parse_additional_property(data: object) -> bool | str:
                 return cast(bool | str, data)
 
@@ -49,7 +37,9 @@ class AuthStatusAuthStatusGuildIdGetResponseAuthStatusAuthStatusGuildIdGet:
 
             additional_properties[prop_name] = additional_property
 
-        auth_status_auth_status_guild_id_get_response_auth_status_auth_status_guild_id_get.additional_properties = additional_properties
+        auth_status_auth_status_guild_id_get_response_auth_status_auth_status_guild_id_get.additional_properties = (
+            additional_properties
+        )
         return auth_status_auth_status_guild_id_get_response_auth_status_auth_status_guild_id_get
 
     @property
