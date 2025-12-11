@@ -27,7 +27,7 @@ _http_request_errors = Counter(
 
 def get_http_request_counter() -> Counter:
     """Get the HTTP request counter metric.
-    
+
     Returns:
         Counter: Prometheus counter for HTTP requests.
 
@@ -37,7 +37,7 @@ def get_http_request_counter() -> Counter:
 
 def get_http_request_duration_histogram() -> Histogram:
     """Get the HTTP request duration histogram metric.
-    
+
     Returns:
         Histogram: Prometheus histogram for request duration.
 
@@ -47,7 +47,7 @@ def get_http_request_duration_histogram() -> Histogram:
 
 def get_http_request_errors_counter() -> Counter:
     """Get the HTTP request errors counter metric.
-    
+
     Returns:
         Counter: Prometheus counter for HTTP errors.
 

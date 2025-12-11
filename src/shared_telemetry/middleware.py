@@ -15,16 +15,14 @@ from .metrics import (
 
 def add_telemetry_middleware(app: FastAPI, service_name: str) -> None:
     """Add telemetry middleware to a FastAPI application.
-    
+
     This middleware tracks:
     - Request count by method, endpoint, and status code
     - Request duration (latency) by method and endpoint
     - Error count by method, endpoint, and error type
-    
     Args:
         app: FastAPI application instance.
         service_name: Name of the service for metric labeling.
-
     """
 
     @app.middleware("http")
@@ -59,8 +57,10 @@ def add_telemetry_middleware(app: FastAPI, service_name: str) -> None:
             ).observe(duration)
 
             # Track errors (4xx and 5xx status codes)
-            if status >= 400:
-                error_type = "client_error" if status < 500 else "server_error"
+            error_client = 400
+            error_server = 500
+            if status >= error_client:
+                error_type = "client_error" if status < error_server else "server_error"
                 get_http_request_errors_counter().labels(
                     service=service_name,
                     method=method,
@@ -68,7 +68,8 @@ def add_telemetry_middleware(app: FastAPI, service_name: str) -> None:
                     error_type=error_type,
                 ).inc()
 
-            return response
+            return response # noqa: TRY300
+
 
         except Exception as e:
             # Track exception
@@ -87,7 +88,7 @@ def add_telemetry_middleware(app: FastAPI, service_name: str) -> None:
     @app.get("/metrics")
     async def metrics() -> Response:
         """Expose Prometheus metrics endpoint.
-        
+
         Returns:
             Response: Prometheus metrics in text format.
 
