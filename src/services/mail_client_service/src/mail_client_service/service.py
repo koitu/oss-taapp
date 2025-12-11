@@ -4,14 +4,25 @@ This module provides a centralized client instance that can be used by both Fast
 """
 
 import logging
+import sys
 import typing
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, status
 from fastmcp import FastMCP
 
 import gmail_client_impl  # noqa: F401 - Register implementation
 import mail_client_api
+
+# Add shared_telemetry to path if not already available
+try:
+    from shared_telemetry import add_telemetry_middleware
+except ImportError:
+    # Add src directory to path for local development
+    src_path = Path(__file__).parent.parent.parent.parent.parent
+    sys.path.insert(0, str(src_path))
+    from shared_telemetry import add_telemetry_middleware
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -80,4 +91,9 @@ app = FastAPI(
     version="0.1.0",
     lifespan=combined_lifespan,
 )
+
+# Add telemetry middleware
+add_telemetry_middleware(app, service_name="mail-service")
+logger.info("Telemetry middleware added to Mail service")
+
 app.mount("/mcp/", mcp_app)

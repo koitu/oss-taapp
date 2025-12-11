@@ -1,11 +1,21 @@
 """FastAPI application for OpenAI Client Service."""
 
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
 from openai_client_impl import init_db  # type: ignore[attr-defined]
+
+# Add shared_telemetry to path if not already available
+try:
+    from shared_telemetry import add_telemetry_middleware
+except ImportError:
+    # Add src directory to path for local development
+    src_path = Path(__file__).parent.parent.parent.parent
+    sys.path.insert(0, str(src_path))
+    from shared_telemetry import add_telemetry_middleware
 
 from .routes import ai, oauth
 
@@ -23,6 +33,9 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+# Add telemetry middleware
+add_telemetry_middleware(app, service_name="openai-service")
 
 
 @app.on_event("startup")  # type: ignore[misc]

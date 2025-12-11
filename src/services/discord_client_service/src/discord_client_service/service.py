@@ -7,6 +7,7 @@ the OAuth2 flow for user authentication.
 
 import logging
 import os
+import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -18,6 +19,15 @@ from typing import Any
 # Previously this module initialized the database on startup; that
 # initialization is no longer needed.
 from fastapi import FastAPI
+
+# Add shared_telemetry to path if not already available
+try:
+    from shared_telemetry import add_telemetry_middleware
+except ImportError:
+    # Add src directory to path for local development
+    src_path = Path(__file__).parent.parent.parent.parent.parent
+    sys.path.insert(0, str(src_path))
+    from shared_telemetry import add_telemetry_middleware
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +82,10 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# Add telemetry middleware
+add_telemetry_middleware(app, service_name="discord-service")
+logger.info("Telemetry middleware added to Discord service")
 
 
 @app.get("/health")

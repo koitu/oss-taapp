@@ -21,6 +21,8 @@ dependencies = [
     "itsdangerous",
     "pydantic>=2",
     "uvicorn",
+    "prometheus-client>=0.23.1",
+    "prometheus-fastapi-instrumentator>=7.1.0",
 ]
 
 [project.optional-dependencies]
@@ -60,6 +62,7 @@ members = [
   "src/openai_client_service",
   "src/openai_client_service_api_client",
   "src/openai_adapter",
+  "src/shared_telemetry",
 ]
 
 [tool.ruff]

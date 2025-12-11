@@ -9,6 +9,7 @@ dependencies = [
     "uvicorn>=0.34.0",
     "discord-client-impl",
     "chat-client-api",
+    "shared-telemetry",
 ]
 
 [project.optional-dependencies]
@@ -57,3 +58,4 @@ per-file-ignores = { "**/api.py" = ["SLF001"], "**/tests/**" = ["INP001"] }
 [tool.uv.sources]
 discord-client-impl = { workspace = true }
 chat-client-api = { workspace = true }
+shared-telemetry = { workspace = true }

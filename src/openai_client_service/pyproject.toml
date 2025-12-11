@@ -16,11 +16,13 @@ dependencies = [
   "openai-client-impl",
   "openai>=1.40.0",
   "ai-api",
+  "shared-telemetry",
 ]
 
 [tool.uv.sources]
 openai-client-impl = { workspace = true }
 ai-api = { workspace = true }
+shared-telemetry = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/openai_client_service"]

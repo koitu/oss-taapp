@@ -9,6 +9,7 @@ dependencies = [
     "gmail-client-impl",
     "mail-client-api",
     "uvicorn>=0.34.0",
+    "shared-telemetry",
 ]
 
 [project.optional-dependencies]
@@ -48,3 +49,4 @@ build-backend = "hatchling.build"
 [tool.uv.sources]
 mail-client-api = { workspace = true }
 gmail-client-impl = { workspace = true }
+shared-telemetry = { workspace = true }
