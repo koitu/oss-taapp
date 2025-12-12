@@ -107,7 +107,6 @@ mypy_path = [
     "src/services/mail_client_service/src",
     "src/clients",
     "src/chat_client_api/src",
-    "src/discord_client_impl/src",
     "src/services/discord_client_service/src",
     "src/discord_client_service_adapter/src"
 ]
@@ -120,7 +119,8 @@ exclude = [
     "src/openai_client_service_api_client/",
     "src/claude_client_impl/",
     "src/claude_client_service/",
-    "src/ospsd_service/"
+    "src/ospsd_service/",
+    "src/discord_client_impl/"
 ]
 ignore_missing_imports = false
 warn_unused_ignores = false
