@@ -163,7 +163,11 @@ def delete_conversation(
         raise HTTPException(status_code=404, detail=str(e)) from e
     else:
         if success:
-            return {"ok": True, "conversation_id": conversation_id, "message": "Conversation deleted"}
+            return {
+                "ok": True,
+                "conversation_id": conversation_id,
+                "message": "Conversation deleted",
+            }
         return {"ok": False, "message": "Conversation not found"}
 
 

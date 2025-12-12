@@ -8,6 +8,8 @@ dependencies = [
     "httpx>=0.27.0",
     "authlib>=1.3.0",
     "chat-client-api",
+    "websocket-client",
+    "aiohttp",
 ]
 
 [project.optional-dependencies]

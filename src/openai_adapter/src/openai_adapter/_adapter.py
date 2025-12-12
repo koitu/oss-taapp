@@ -179,7 +179,10 @@ class OpenAIServiceAdapter:
 
         Raises AdapterAPIError on non-2xx responses.
         """
-        payload: dict[str, object | None] = {"messages": messages, "conversation_id": conversation_id}
+        payload: dict[str, object | None] = {
+            "messages": messages,
+            "conversation_id": conversation_id,
+        }
         try:
             r = self._http.post("/ai/compose-response", json=payload)
         except httpx.HTTPError as exc:

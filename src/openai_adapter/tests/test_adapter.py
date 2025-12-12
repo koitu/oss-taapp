@@ -18,7 +18,12 @@ from openai_adapter import AdapterAPIError, OpenAIServiceAdapter  # type: ignore
 class DummyResp:
     """A minimal fake response object used by DummyHTTP."""
 
-    def __init__(self, status_code: int = 200, json_data: dict[str, object] | None = None, content: bytes | str = b"") -> None:
+    def __init__(
+        self,
+        status_code: int = 200,
+        json_data: dict[str, object] | None = None,
+        content: bytes | str = b"",
+    ) -> None:
         """Initialize the fake response with status, json payload and content."""
         self.status_code = status_code
         self._json = json_data or {}

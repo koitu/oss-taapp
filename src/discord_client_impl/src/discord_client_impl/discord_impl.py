@@ -2,11 +2,16 @@
 
 import logging
 import os
-from collections.abc import Iterator
+from collections.abc import Iterator, Callable
 from enum import IntEnum
-from typing import Any
+from typing import Any, Optional
 
 import httpx
+import asyncio
+import websockets
+import json
+import aiohttp
+import threading
 from authlib.integrations.httpx_client import OAuth2Client
 from chat_client_api.client import ChatInterface
 from chat_client_api.exceptions import (
@@ -27,6 +32,211 @@ class HTTPStatus(IntEnum):
     """HTTP status codes used in Discord API responses."""
 
     NOT_FOUND = 404
+
+
+class DiscordGateway:
+    DISCORD_GATEWAY_URL = "https://discord.com/api/v10/gateway/bot"
+
+    def __init__(self, token: str | None = None) -> None:
+        """
+        Initialize gateway.
+        """
+        self.token: str = token or os.environ.get("DISCORD_BOT_TOKEN")
+        self.ws: Optional[websockets.WebSocketClientProtocol] = None
+        self.sequence: Optional[int] = None
+        self.session_id: Optional[str] = None
+        self.subscribers: dict[str, list[Callable[[dict[str, Any]], Any]]] = {}
+        self.heartbeat_interval: Optional[int] = None
+        self._heartbeat_task: Optional[asyncio.Task] = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._thread: Optional[threading.Thread] = None
+        self.running: bool = False
+
+    def subscribe(self, event_name: str, callback: Callable[[dict[str, Any]], Any]) -> None:
+        """
+        Subscribe a function to a Discord event.
+        Callback can be sync or async.
+
+        Args:
+            event_name: Discord event type (e.g., 'MESSAGE_CREATE', 'READY')
+            callback: Function to call when event occurs
+        """
+        if event_name not in self.subscribers:
+            self.subscribers[event_name] = []
+        self.subscribers[event_name].append(callback)
+
+    def unsubscribe(self, event_name: str, callback: Callable[[dict[str, Any]], Any]) -> None:
+        """Remove a callback from an event"""
+        if event_name in self.subscribers:
+            self.subscribers[event_name].remove(callback)
+
+    async def _emit(self, event_name: str, data: dict[str, Any]) -> None:
+        """Notify all subscribers of an event"""
+        if event_name in self.subscribers:
+            for callback in self.subscribers[event_name]:
+                try:
+                    if asyncio.iscoroutinefunction(callback):
+                        await callback(data)
+                    else:
+                        # Run sync callbacks in executor to avoid blocking
+                        await self._loop.run_in_executor(None, callback, data)
+                except Exception as e:
+                    print(f"Error in {event_name} callback: {e}")
+
+    async def _heartbeat(self) -> None:
+        """
+        Send periodic heartbeat to Discord to keep connection alive.
+        Discord will close the connection if heartbeat stops.
+        """
+        try:
+            while self.running:
+                await asyncio.sleep(self.heartbeat_interval / 1000)
+                if self.ws and not self.ws.closed:
+                    heartbeat = {"op": 1, "d": self.sequence}
+                    await self.ws.send(json.dumps(heartbeat))
+        except asyncio.CancelledError:
+            pass
+
+    async def _identify(self) -> None:
+        """
+        Tells Discord who you are (your bot token) and what events you want to receive (intents).
+        1. Who you are (token authentication)
+        2. What permissions/events you want (intents)
+        3. Basic client info (for Discord's analytics/debugging)
+
+        Intents control which events Discord will send:
+        - GUILDS (1): Server join/leave, channel create/delete
+        - GUILD_MESSAGES (512): Messages in servers
+        """
+        identify_payload = {
+            "op": 2,  # Opcode 2 = Identify
+            "d": {
+                "token": self.token,
+                "intents": 513,  # 1 (GUILDS) + 512 (GUILD_MESSAGES)
+                "properties": {"os": "linux", "browser": "custom_bot", "device": "custom_bot"},
+            },
+        }
+        await self.ws.send(json.dumps(identify_payload))
+
+    async def _handle_message(self, message: str) -> None:
+        """Process incoming WebSocket messages from Discord"""
+        data: dict[str, Any] = json.loads(message)
+        op: int = data["op"]  # Opcode determines message type
+
+        # Track sequence for heartbeat and resuming
+        if data.get("s"):
+            self.sequence = data["s"]
+
+        if op == 10:  # Hello - Discord sends this first
+            # Discord tells us how often to heartbeat
+            self.heartbeat_interval = data["d"]["heartbeat_interval"]
+            self._heartbeat_task = asyncio.create_task(self._heartbeat())
+
+            # Now we identify ourselves
+            await self._identify()
+
+        elif op == 11:  # Heartbeat ACK
+            # Discord acknowledges our heartbeat (connection healthy)
+            pass
+
+        elif op == 0:  # Dispatch - Actual events we care about
+            event_name = data["t"]
+            event_data = data["d"]
+
+            # Store session ID for reconnection
+            if event_name == "READY":
+                self.session_id = event_data["session_id"]
+                print(
+                    f"Connected as {event_data['user']['username']}#{event_data['user']['discriminator']}"
+                )
+
+            # Notify subscribers
+            await self._emit(event_name, event_data)
+
+        elif op == 9:  # Invalid Session
+            print("Invalid session, reconnecting...")
+            await asyncio.sleep(5)
+            await self._identify()
+
+    async def _connect_and_listen(self) -> None:
+        """Main WebSocket connection loop"""
+        print(f"Token length: {len(self.token)}")
+        print(f"Token: {self.token}...")
+
+        # Get the Gateway URL from Discord API
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                self.DISCORD_GATEWAY_URL, headers={"Authorization": f"Bot {self.token}"}
+            ) as response:
+                if response.status != 200:
+                    print(f"Response status: {response.status}")
+                    raise Exception(f"Failed to get gateway: {response.status}")
+                gateway_data = await response.json()
+                gateway_url = gateway_data["url"]
+
+        # Connect to the WebSocket
+        try:
+            async with websockets.connect(
+                f"{gateway_url}?v=10&encoding=json",
+                max_size=None,  # Remove message size limit
+            ) as ws:
+                self.ws = ws
+                print(f"Connected to Discord Gateway: {gateway_url}")
+
+                # Listen for messages until connection closes
+                async for message in ws:
+                    await self._handle_message(message)
+
+        except websockets.exceptions.ConnectionClosed as e:
+            print(f"WebSocket closed: {e}")
+        except Exception as e:
+            print(f"WebSocket error: {e}")
+        finally:
+            # Cleanup
+            if self._heartbeat_task:
+                self._heartbeat_task.cancel()
+                try:
+                    await self._heartbeat_task
+                except asyncio.CancelledError:
+                    pass
+
+    async def _run_forever(self) -> None:
+        """Keep reconnecting if connection drops"""
+        while self.running:
+            try:
+                await self._connect_and_listen()
+            except Exception as e:
+                print(f"Connection error: {e}")
+
+            if self.running:
+                print("Reconnecting in 5 seconds...")
+                await asyncio.sleep(5)
+
+    def _run_event_loop(self) -> None:
+        """Run the asyncio event loop in a thread"""
+        self._loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self._loop)
+        self._loop.run_until_complete(self._run_forever())
+
+    def start(self) -> None:
+        """Start the gateway connection in a background thread."""
+        if self.running:
+            return
+
+        self.running = True
+        self._thread = threading.Thread(target=self._run_event_loop, daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        """Stop the gateway connection"""
+        self.running = False
+
+        if self._loop and self.ws:
+            # Schedule close on the event loop
+            asyncio.run_coroutine_threadsafe(self.ws.close(), self._loop)
+
+        if self._thread:
+            self._thread.join(timeout=5)
 
 
 class DiscordClient(ChatInterface):
@@ -62,7 +272,8 @@ class DiscordClient(ChatInterface):
         self.redirect_uri = redirect_uri or os.environ.get(
             "DISCORD_REDIRECT_URI", "http://localhost:8001/auth/callback"
         )
-        self.access_token = access_token
+        # TODO: this removes OAUTH from discord since DISCORD_BOT_TOKEN was the goal
+        self.access_token = access_token or os.environ.get("DISCORD_BOT_TOKEN")
         # Create HTTP client
         # Token type controls the Authorization header verb (Bearer vs Bot)
         # If not provided, default to Bot for backwards compatibility with previous changes.

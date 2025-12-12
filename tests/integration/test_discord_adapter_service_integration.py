@@ -92,7 +92,12 @@ def _make_forward(test_client: TestClient) -> Callable[[httpx.Request], httpx.Re
     def _forward(request: httpx.Request) -> httpx.Response:
         url = str(request.url)
         resp = test_client.request(request.method, url, headers=dict(request.headers), content=request.content)
-        return httpx.Response(status_code=resp.status_code, headers=resp.headers, content=resp.content, request=request)
+        return httpx.Response(
+            status_code=resp.status_code,
+            headers=resp.headers,
+            content=resp.content,
+            request=request,
+        )
 
     return _forward
 

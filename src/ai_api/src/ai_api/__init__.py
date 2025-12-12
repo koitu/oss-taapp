@@ -1,5 +1,5 @@
 """Abstract interfaces for AI APIs."""
 
-from .ai_interface import AIInterface
+from ai_api.ai_interface import AIInterface
 
 __all__ = ["AIInterface"]

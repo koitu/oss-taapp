@@ -8,7 +8,9 @@ from .channel_list_response import ChannelListResponse
 from .get_openapi_schema_openapi_json_get_response_get_openapi_schema_openapi_json_get import (
     GetOpenapiSchemaOpenapiJsonGetResponseGetOpenapiSchemaOpenapiJsonGet,
 )
-from .health_check_health_get_response_health_check_health_get import HealthCheckHealthGetResponseHealthCheckHealthGet
+from .health_check_health_get_response_health_check_health_get import (
+    HealthCheckHealthGetResponseHealthCheckHealthGet,
+)
 from .http_validation_error import HTTPValidationError
 from .message_detail import MessageDetail
 from .message_list_response import MessageListResponse

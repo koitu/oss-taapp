@@ -75,7 +75,11 @@ class FakeAIClient:
             error_message = "server down"
             raise RuntimeError(error_message)
         self.saved_args.append(("generate", {"messages": messages, "conversation_id": conversation_id}))
-        return FakeResponse(content="hi", tokens_used=TOKENS_USED, conversation_id=conversation_id or DEFAULT_CONVERSATION_ID)
+        return FakeResponse(
+            content="hi",
+            tokens_used=TOKENS_USED,
+            conversation_id=conversation_id or DEFAULT_CONVERSATION_ID,
+        )
 
     def create_conversation(self) -> str:
         """Simulate creating a conversation."""
