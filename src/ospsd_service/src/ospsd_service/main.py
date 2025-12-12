@@ -6,22 +6,45 @@ import sys
 import time
 from typing import Any
 
-import ai_api
-import chat_client_api
-import discord_client_impl  # noqa: F401
-import openai_client_service  # noqa: F401
+from ai_api import AIInterface
+from chat_client_api import ChatInterface, Message
 from discord_client_impl.discord_impl import DiscordGateway
+from dotenv import load_dotenv
+
+
+# Would be great if this could be moved to a get_..._client method in the API
+def get_discord_client() -> ChatInterface:
+    """Get the Discord client and return it in a generic interface."""
+    from discord_client_impl import DiscordClient  # noqa: PLC0415
+
+    return DiscordClient()
+
+
+def get_openai_client() -> AIInterface:
+    """Get the OpenAI client and return it in a generic interface."""
+    from openai_client_service import EnvAIImplementation  # noqa: PLC0415
+
+    return EnvAIImplementation()
+
+
+def get_claude_client() -> AIInterface:
+    """Get the Claude client and return it in a generic interface."""
+    from claude_client_service import EnvAIImplementation  # noqa: PLC0415
+
+    return EnvAIImplementation()
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
+load_dotenv()
 required_env_vars = [
     "DISCORD_BOT_TOKEN",
     "DISCORD_CLIENT_ID",
     "DISCORD_CLIENT_SECRET",
     "DISCORD_PUBLIC_KEY",
     "OPENAI_API_KEY",
+    "CLAUDE_API_KEY",
 ]
 if all(v not in os.environ for v in required_env_vars):
     sys.exit("Required environment variables are not set.")
@@ -32,11 +55,8 @@ for var in required_env_vars:
 
 gateway_client: DiscordGateway = DiscordGateway()
 
-# TODO(Andrew): add get_ai_client and get_chat_client to the API # noqa: TD003, FIX002
-ai_client: ai_api.AIInterface = ai_api.AIInterface()  # type: ignore[abstract]
-chat_client: chat_client_api.ChatInterface = (
-    chat_client_api.ChatInterface()  # type: ignore[abstract]
-)
+chat_client: ChatInterface = get_discord_client()
+ai_client: AIInterface = get_claude_client()  # change this between claude/openai!
 
 SYS_PROMPT = (
     "Please respond to the last message sent using the context provided.\n"
@@ -64,7 +84,7 @@ def handle_message(data: dict[str, Any]) -> None:
     if author_id == bot_id:
         return
 
-    msgs = chat_client.get_messages(channel_id, limit=10)
+    msgs: list[Message] = chat_client.get_messages(channel_id, limit=10)
     chat_log = ""
     for msg in reversed(msgs):
         if msg.sender_id == author_id:

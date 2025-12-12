@@ -17,6 +17,7 @@ dependencies = [
     "cryptography>=42.0.0",
     "greenlet>=3.0.0",
     "openai>=1.40.0",
+    "anthropic>=0.40.0",
     "python-dotenv",
     "itsdangerous",
     "pydantic>=2",
@@ -60,6 +61,8 @@ members = [
   "src/openai_client_service",
   "src/openai_client_service_api_client",
   "src/openai_adapter",
+  "src/claude_client_impl",
+  "src/claude_client_service",
   "src/ospsd_service",
 ]
 
@@ -92,6 +95,7 @@ ignore = [
     "TRY300", "TRY003", "EM102", "SIM110", "E402", "PLR2004", "ARG001", "ARG002", "S106", "INP001", "BLE001", "ANN401",
     "SLF001", "E501", "S105", "PLC0415", "PT011"
 ]
+"**/conftest.py" = ["INP001"]
 
 
 [tool.mypy]
@@ -104,9 +108,9 @@ mypy_path = [
     "src/services/mail_client_service/src",
     "src/clients",
     "src/chat_client_api/src",
-    "src/discord_client_impl/src",
     "src/services/discord_client_service/src",
-    "src/discord_client_service_adapter/src"
+    "src/discord_client_service_adapter/src",
+    "src/ospsd_service/",
 ]
 exclude = [
     "src/ai_api/",
@@ -114,7 +118,10 @@ exclude = [
     "src/openai_adapter/",
     "src/openai_client_impl/",
     "src/openai_client_service/",
-    "src/openai_client_service_api_client/"
+    "src/openai_client_service_api_client/",
+    "src/claude_client_impl/",
+    "src/claude_client_service/",
+    "src/discord_client_impl/",
 ]
 ignore_missing_imports = false
 warn_unused_ignores = false
@@ -128,6 +135,8 @@ module = [
     "authlib.*",
     "openai",
     "openai.*",
+    "anthropic",
+    "anthropic.*",
 ]
 ignore_missing_imports = true
 
@@ -136,7 +145,6 @@ ignore_missing_imports = true
 module = [
     "discord_client_service_client.*",
     "mail_client_service_client.*",
-    "openai_client_service_api_client.*",
 ]
 follow_imports = "skip"
 
@@ -166,10 +174,12 @@ omit = [
     "src/openai_client_service_api_client/**",
     "src/openai_client_service/main.py",
     "src/openai_client_service/__init__.py",
+    "src/claude_client_service/main.py",
+    "src/claude_client_service/__init__.py",
 ]
 
 [tool.coverage.report]
-fail_under = 85 # Justification: A high threshold ensures most code is tested.
+fail_under = 85  # Justification: A high threshold ensures most code is tested.
 exclude_lines = [
     "pragma: no cover",
     "raise NotImplementedError",

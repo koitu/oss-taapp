@@ -5,49 +5,15 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-import pytest
+import pytest  # noqa: TC002
 from openai_client_impl.storage import (
     UserCred,
     delete_conversation,
     get_conversation_data,
     get_openai_key,
-    init_db,
     save_conversation,
     set_openai_key,
 )
-
-
-@pytest.fixture
-def temp_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Create a temporary database for testing."""
-    db_path = tmp_path / "test.db"
-    db_url = f"sqlite:///{db_path}"
-    monkeypatch.setenv("DATABASE_URL", db_url)
-    # Reimport to get the new database URL
-    import importlib
-
-    import openai_client_impl.storage
-
-    importlib.reload(openai_client_impl.storage)
-    init_db()
-    return db_path
-
-
-@pytest.fixture
-def temp_fernet_key(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Set up a temporary Fernet key for testing."""
-    key_file = tmp_path / ".fernet_key"
-    from cryptography.fernet import Fernet
-
-    test_key = Fernet.generate_key()
-    key_file.write_bytes(test_key)
-    monkeypatch.setenv("FERNET_KEY", test_key.decode())
-    # Reimport to get the new key
-    import importlib
-
-    import openai_client_impl.storage
-
-    importlib.reload(openai_client_impl.storage)
 
 
 def test_init_db_creates_directory(temp_db: Path) -> None:

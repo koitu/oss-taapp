@@ -19,20 +19,27 @@ def create_mock_message(message_id: str, content: str, sender_id: str) -> MagicM
     return mock_message
 
 
-@pytest.fixture
-def ai_service() -> AIInterface:
+@pytest.fixture(params=["openai", "claude"])
+def ai_service(request: pytest.FixtureRequest) -> AIInterface:
     """Fixture for your AI service implementation."""
-    from openai_client_service.ai_interface_impl import EnvAIImplementation
+    if request.param == "openai":
+        from openai_client_service.ai_interface_impl import EnvAIImplementation as OpenAIClient
 
-    required_env_vars = [
-        "OPENAI_API_KEY",
-    ]
+        if "OPENAI_API_KEY" not in os.environ:
+            pytest.skip("Missing CLAUDE_API_KEY")
 
-    # If no useful env vars found, skip
-    if all(v not in os.environ for v in required_env_vars):
-        pytest.skip(f"No Discord credentials found in environment: {required_env_vars}")
+        return OpenAIClient()
 
-    return EnvAIImplementation()
+    if request.param == "claude":
+        from claude_client_service.ai_interface_impl import EnvAIImplementation as ClaudeClient
+
+        if "CLAUDE_API_KEY" not in os.environ:
+            pytest.skip("Missing CLAUDE_API_KEY")
+
+        return ClaudeClient()
+
+    pytest.skip(f"Invalid Parameter {request.param}")
+    return AIInterface()
 
 
 @pytest.fixture
@@ -64,6 +71,7 @@ def test_channel_id() -> str:
     return "test_channel_001"
 
 
+@pytest.mark.circleci
 def test_ai_responds_to_mocked_chat_message(ai_service: AIInterface, mock_chat_service: MagicMock, test_channel_id: str) -> None:
     """Test AI service responding to a mocked chat message."""
     # Setup mock message
@@ -98,6 +106,7 @@ def test_ai_responds_to_mocked_chat_message(ai_service: AIInterface, mock_chat_s
     mock_chat_service.send_message.assert_called_once_with(channel_id=test_channel_id, content=ai_response)
 
 
+@pytest.mark.circleci
 def test_ai_structured_response_with_mocked_chat(
     ai_service: AIInterface, mock_chat_service: MagicMock, test_channel_id: str
 ) -> None:
@@ -119,7 +128,7 @@ def test_ai_structured_response_with_mocked_chat(
 
     ai_response: str | dict[str, Any] = ai_service.generate_response(
         user_input=messages[0].content,
-        system_prompt="Extract booking information from user requests.",
+        system_prompt="Extract booking information from user requests and return the result in raw json (WITHOUT json```...```).",
         response_schema=booking_schema,
     )
 

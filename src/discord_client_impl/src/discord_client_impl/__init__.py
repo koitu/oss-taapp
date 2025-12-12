@@ -18,7 +18,7 @@ Usage:
 
 import chat_client_api
 
-from discord_client_impl.discord_impl import DiscordClient
+from discord_client_impl.discord_impl import DiscordClient as DiscordClient
 from discord_client_impl.discord_impl import DiscordGateway as DiscordGateway
 from discord_client_impl.message_impl import DiscordChannel, DiscordMessage
 
@@ -80,9 +80,6 @@ def register() -> None:
     chat_client_api.get_client = get_client_impl
     chat_client_api.get_message = get_message_impl
     chat_client_api.get_channel = get_channel_impl
-
-    chat_client_api.ChatInterface = DiscordClient  # type: ignore[misc]
-    chat_client_api.Message = DiscordMessage  # type: ignore[misc, assignment]
 
 
 # Auto-register on import (side-effect import pattern)
