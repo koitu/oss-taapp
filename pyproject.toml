@@ -119,7 +119,8 @@ exclude = [
     "src/openai_client_service/",
     "src/openai_client_service_api_client/",
     "src/claude_client_impl/",
-    "src/claude_client_service/"
+    "src/claude_client_service/",
+    "src/ospsd_service/"
 ]
 ignore_missing_imports = false
 warn_unused_ignores = false
