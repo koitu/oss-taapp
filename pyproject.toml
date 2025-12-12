@@ -95,6 +95,7 @@ ignore = [
     "TRY300", "TRY003", "EM102", "SIM110", "E402", "PLR2004", "ARG001", "ARG002", "S106", "INP001", "BLE001", "ANN401",
     "SLF001", "E501", "S105", "PLC0415", "PT011"
 ]
+"**/conftest.py" = ["INP001"]
 
 
 [tool.mypy]
