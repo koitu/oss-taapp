@@ -18,24 +18,31 @@ from claude_client_impl.storage import (
 @pytest.fixture
 def temp_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Create a temporary database for testing."""
-    data_dir = tmp_path / ".data"
-    data_dir.mkdir()
-    db_path = data_dir / "claude_credentials.db"
+    # Change working directory to temp path so relative paths work
+    original_cwd = Path.cwd()
+    os.chdir(tmp_path)
 
-    # Point storage to temp directory
-    monkeypatch.setattr("claude_client_impl.storage.data_dir", data_dir)
-    monkeypatch.setattr("claude_client_impl.storage.db_path", db_path)
+    try:
+        # Reload module to initialize with new working directory
+        import importlib
 
-    # Recreate engine with new path
-    from sqlalchemy import create_engine
-    engine = create_engine(f"sqlite:///{db_path}")
-    monkeypatch.setattr("claude_client_impl.storage.engine", engine)
+        import claude_client_impl.storage
+        importlib.reload(claude_client_impl.storage)
 
-    # Initialize tables
-    from claude_client_impl.storage import Base
-    Base.metadata.create_all(engine)
+        # Initialize the database
+        from claude_client_impl.storage import init_db
+        init_db()
 
-    return db_path
+        db_path = tmp_path / ".data" / "claude_credentials.db"
+        yield db_path
+    finally:
+        # Restore original directory
+        os.chdir(original_cwd)
+        # Reload module to restore original state
+        import importlib
+
+        import claude_client_impl.storage
+        importlib.reload(claude_client_impl.storage)
 
 
 @pytest.fixture
