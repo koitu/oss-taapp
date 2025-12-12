@@ -17,6 +17,7 @@ dependencies = [
     "cryptography>=42.0.0",
     "greenlet>=3.0.0",
     "openai>=1.40.0",
+    "anthropic>=0.40.0",
     "python-dotenv",
     "itsdangerous",
     "pydantic>=2",
@@ -60,6 +61,8 @@ members = [
   "src/openai_client_service",
   "src/openai_client_service_api_client",
   "src/openai_adapter",
+  "src/claude_client_impl",
+  "src/claude_client_service",
   "src/ospsd_service",
 ]
 
@@ -114,7 +117,9 @@ exclude = [
     "src/openai_adapter/",
     "src/openai_client_impl/",
     "src/openai_client_service/",
-    "src/openai_client_service_api_client/"
+    "src/openai_client_service_api_client/",
+    "src/claude_client_impl/",
+    "src/claude_client_service/"
 ]
 ignore_missing_imports = false
 warn_unused_ignores = false
@@ -128,6 +133,8 @@ module = [
     "authlib.*",
     "openai",
     "openai.*",
+    "anthropic",
+    "anthropic.*",
 ]
 ignore_missing_imports = true
 
@@ -166,6 +173,8 @@ omit = [
     "src/openai_client_service_api_client/**",
     "src/openai_client_service/main.py",
     "src/openai_client_service/__init__.py",
+    "src/claude_client_service/main.py",
+    "src/claude_client_service/__init__.py",
 ]
 
 [tool.coverage.report]
