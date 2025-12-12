@@ -18,7 +18,8 @@ Usage:
 
 import chat_client_api
 
-from discord_client_impl.discord_impl import DiscordGateway, DiscordClient
+from discord_client_impl.discord_impl import DiscordClient
+from discord_client_impl.discord_impl import DiscordGateway as DiscordGateway
 from discord_client_impl.message_impl import DiscordChannel, DiscordMessage
 
 

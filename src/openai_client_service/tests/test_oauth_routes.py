@@ -10,8 +10,9 @@ from typing import TYPE_CHECKING, Any, Self
 import pytest
 from fastapi.testclient import TestClient
 from openai_client_service.main import app
-from openai_client_service.routes import oauth
 from starlette import status
+
+from openai_client_service.routes import oauth
 
 if TYPE_CHECKING:
     from types import TracebackType
