@@ -16,7 +16,7 @@ from claude_client_impl.storage import (
 
 
 @pytest.fixture
-def temp_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+def temp_db(tmp_path: Path) -> Path:
     """Create a temporary database for testing."""
     # Change working directory to temp path so relative paths work
     original_cwd = Path.cwd()
