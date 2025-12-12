@@ -44,9 +44,11 @@ def temp_fernet_key(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from cryptography.fernet import Fernet
 
     test_key = Fernet.generate_key()
+    key_file = tmp_path / ".fernet_key"
+    key_file.write_text(test_key.decode(), encoding="utf-8")
     monkeypatch.setenv("FERNET_KEY", test_key.decode())
 
-    # Reload the module to pick up the new key
+    # Reload the module to pick up the new key and recreate fernet object
     import importlib
 
     import claude_client_impl.storage
