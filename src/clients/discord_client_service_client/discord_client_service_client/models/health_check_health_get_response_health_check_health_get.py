@@ -9,33 +9,22 @@ from attrs import field as _attrs_field
 T = TypeVar("T", bound="HealthCheckHealthGetResponseHealthCheckHealthGet")
 
 
-
 @_attrs_define
 class HealthCheckHealthGetResponseHealthCheckHealthGet:
-    """ 
-     """
+    """ """
 
     additional_properties: dict[str, str] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
-        
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
 
         return field_dict
 
-
-
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        health_check_health_get_response_health_check_health_get = cls(
-        )
-
+        health_check_health_get_response_health_check_health_get = cls()
 
         health_check_health_get_response_health_check_health_get.additional_properties = d
         return health_check_health_get_response_health_check_health_get

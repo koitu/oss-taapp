@@ -1,3 +1,7 @@
+# databases
+.data/
+.fernet_key
+
 # Python caches
 __pycache__/
 *.py[oc]

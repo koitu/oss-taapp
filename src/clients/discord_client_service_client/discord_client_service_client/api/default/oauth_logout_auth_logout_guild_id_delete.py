@@ -14,17 +14,10 @@ def _get_kwargs(
     guild_id: str,
     *,
     session_id: None | str | Unset = UNSET,
-
 ) -> dict[str, Any]:
-    
-
     cookies = {}
     if session_id is not UNSET:
         cookies["session_id"] = session_id
-
-
-
-    
 
     _kwargs: dict[str, Any] = {
         "method": "delete",
@@ -32,23 +25,19 @@ def _get_kwargs(
         "cookies": cookies,
     }
 
-
     return _kwargs
 
 
-
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> HTTPValidationError | OperationResponse | None:
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> HTTPValidationError | OperationResponse | None:
     if response.status_code == 200:
         response_200 = OperationResponse.from_dict(response.json())
-
-
 
         return response_200
 
     if response.status_code == 422:
         response_422 = HTTPValidationError.from_dict(response.json())
-
-
 
         return response_422
 
@@ -58,7 +47,9 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[HTTPValidationError | OperationResponse]:
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[HTTPValidationError | OperationResponse]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -72,9 +63,8 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     session_id: None | str | Unset = UNSET,
-
 ) -> Response[HTTPValidationError | OperationResponse]:
-    """ Logout guild
+    """Logout guild
 
      Logout guild by deleting stored credentials.
 
@@ -88,13 +78,11 @@ def sync_detailed(
 
     Returns:
         Response[HTTPValidationError | OperationResponse]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         guild_id=guild_id,
-session_id=session_id,
-
+        session_id=session_id,
     )
 
     response = client.get_httpx_client().request(
@@ -103,14 +91,14 @@ session_id=session_id,
 
     return _build_response(client=client, response=response)
 
+
 def sync(
     guild_id: str,
     *,
     client: AuthenticatedClient | Client,
     session_id: None | str | Unset = UNSET,
-
 ) -> HTTPValidationError | OperationResponse | None:
-    """ Logout guild
+    """Logout guild
 
      Logout guild by deleting stored credentials.
 
@@ -124,24 +112,22 @@ def sync(
 
     Returns:
         HTTPValidationError | OperationResponse
-     """
-
+    """
 
     return sync_detailed(
         guild_id=guild_id,
-client=client,
-session_id=session_id,
-
+        client=client,
+        session_id=session_id,
     ).parsed
+
 
 async def asyncio_detailed(
     guild_id: str,
     *,
     client: AuthenticatedClient | Client,
     session_id: None | str | Unset = UNSET,
-
 ) -> Response[HTTPValidationError | OperationResponse]:
-    """ Logout guild
+    """Logout guild
 
      Logout guild by deleting stored credentials.
 
@@ -155,29 +141,25 @@ async def asyncio_detailed(
 
     Returns:
         Response[HTTPValidationError | OperationResponse]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         guild_id=guild_id,
-session_id=session_id,
-
+        session_id=session_id,
     )
 
-    response = await client.get_async_httpx_client().request(
-        **kwargs
-    )
+    response = await client.get_async_httpx_client().request(**kwargs)
 
     return _build_response(client=client, response=response)
+
 
 async def asyncio(
     guild_id: str,
     *,
     client: AuthenticatedClient | Client,
     session_id: None | str | Unset = UNSET,
-
 ) -> HTTPValidationError | OperationResponse | None:
-    """ Logout guild
+    """Logout guild
 
      Logout guild by deleting stored credentials.
 
@@ -191,12 +173,12 @@ async def asyncio(
 
     Returns:
         HTTPValidationError | OperationResponse
-     """
+    """
 
-
-    return (await asyncio_detailed(
-        guild_id=guild_id,
-client=client,
-session_id=session_id,
-
-    )).parsed
+    return (
+        await asyncio_detailed(
+            guild_id=guild_id,
+            client=client,
+            session_id=session_id,
+        )
+    ).parsed

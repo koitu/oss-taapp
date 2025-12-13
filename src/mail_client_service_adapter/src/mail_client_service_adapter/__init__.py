@@ -16,4 +16,3 @@ from mail_client_service_adapter.adapter_impl import (
 from mail_client_service_adapter.adapter_impl import (
     register as register,
 )
-

@@ -294,15 +294,15 @@ See `docs/circleci-setup.md` for detailed CI/CD setup instructions.
 6. **Run backend services**:
      - **Gmail backend (local FastAPI service)** — runs the Gmail-focused service (default port 8000):
 
-         ```powershell
-         uv run python run_service.py
+         ```bash
+         uv run python run_mail_service.py
          ```
 
          Then open `http://localhost:8000/docs` to view the Gmail service API docs.
 
      - **Discord backend (local FastAPI service)** — runs the Discord-focused service (default port 8001):
 
-         ```powershell
+         ```bash
          uv run python run_discord_service.py
          ```
 

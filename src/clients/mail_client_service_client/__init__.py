@@ -2,4 +2,3 @@
 
 from .client import AuthenticatedClient as AuthenticatedClient
 from .client import Client as Client
-

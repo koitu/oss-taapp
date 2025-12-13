@@ -9,35 +9,29 @@ from attrs import field as _attrs_field
 T = TypeVar("T", bound="OAuthInitResponse")
 
 
-
 @_attrs_define
 class OAuthInitResponse:
-    """ OAuth2 initialization response.
+    """OAuth2 initialization response.
 
-        Attributes:
-            authorization_url (str): URL to redirect user for OAuth
-     """
+    Attributes:
+        authorization_url (str): URL to redirect user for OAuth
+    """
 
     authorization_url: str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
-
-
-
-
     def to_dict(self) -> dict[str, Any]:
         authorization_url = self.authorization_url
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "authorization_url": authorization_url,
-        })
+        field_dict.update(
+            {
+                "authorization_url": authorization_url,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
@@ -47,7 +41,6 @@ class OAuthInitResponse:
         o_auth_init_response = cls(
             authorization_url=authorization_url,
         )
-
 
         o_auth_init_response.additional_properties = d
         return o_auth_init_response

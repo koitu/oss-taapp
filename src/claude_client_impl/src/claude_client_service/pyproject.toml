@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "claude-client-service"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi",
+  "uvicorn",
+  "authlib",
+  "httpx",
+  "pydantic>=2",
+  "python-dotenv",
+  "claude-client-impl",
+  "anthropic>=0.40.0",
+  "ai-api",
+]
+
+[tool.uv.sources]
+claude-client-impl = { workspace = true }
+ai-api = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/claude_client_service"]
