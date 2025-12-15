@@ -64,6 +64,8 @@ members = [
   "src/claude_client_impl",
   "src/claude_client_service",
   "src/ospsd_service",
+  "src/trello_ticket_impl",
+  "src/tickets_api",
 ]
 
 [tool.ruff]
@@ -111,6 +113,8 @@ mypy_path = [
     "src/services/discord_client_service/src",
     "src/discord_client_service_adapter/src",
     "src/ospsd_service/",
+    "src/kanban_client_api/src",
+    "src/trello_client_impl/src",
 ]
 exclude = [
     "src/ai_api/",

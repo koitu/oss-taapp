@@ -28,6 +28,8 @@ members = [
     "openai-client-service-api-client",
     "ospsd-service",
     "ta-assignment",
+    "tickets-api",
+    "trello-ticket-impl",
 ]
 
 [[package]]
@@ -2308,6 +2310,8 @@ dependencies = [
     { name = "discord-client-impl" },
     { name = "fastapi" },
     { name = "openai-client-impl" },
+    { name = "tickets-api" },
+    { name = "trello-ticket-impl" },
     { name = "uvicorn" },
 ]
 
@@ -2328,6 +2332,8 @@ requires-dist = [
     { name = "openai-client-impl", editable = "src/openai_client_impl" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=7.0.0" },
     { name = "pytest-mock", marker = "extra == 'test'", specifier = ">=3.10.0" },
+    { name = "tickets-api", editable = "src/tickets_api" },
+    { name = "trello-ticket-impl", editable = "src/trello_ticket_impl" },
     { name = "uvicorn", specifier = ">=0.34.0" },
 ]
 provides-extras = ["test"]
@@ -3475,6 +3481,11 @@ dev = [
 ]
 
 [[package]]
+name = "tickets-api"
+version = "0.1.0"
+source = { editable = "src/tickets_api" }
+
+[[package]]
 name = "tomli"
 version = "2.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3524,6 +3535,35 @@ sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl", hash = "sha256:26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2", size = 78540, upload-time = "2024-11-24T20:12:19.698Z" },
 ]
+
+[[package]]
+name = "trello-ticket-impl"
+version = "1.0.0"
+source = { editable = "src/trello_ticket_impl" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "tickets-api" },
+]
+
+[package.optional-dependencies]
+test = [
+    { name = "httpx" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiohttp", specifier = ">=3.11.18" },
+    { name = "httpx", marker = "extra == 'test'", specifier = ">=0.25.0" },
+    { name = "pytest", marker = "extra == 'test'", specifier = ">=7.4.0" },
+    { name = "pytest-asyncio", marker = "extra == 'test'", specifier = ">=0.21.0" },
+    { name = "tickets-api", editable = "src/tickets_api" },
+]
+provides-extras = ["test"]
+
+[package.metadata.requires-dev]
+dev = []
 
 [[package]]
 name = "typer"

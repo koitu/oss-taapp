@@ -11,6 +11,8 @@ dependencies = [
     "chat-client-api",
     "openai-client-impl",
     "ai-service-api",
+    "tickets-api",
+    "trello-ticket-impl",
 ]
 
 [project.optional-dependencies]
@@ -51,3 +53,5 @@ discord-client-impl = { workspace = true }
 chat-client-api = { workspace = true }
 openai-client-impl = { workspace = true }
 ai-service-api = { workspace = true }
+trello-ticket-impl = { workspace = true }
+tickets-api = { workspace = true }
