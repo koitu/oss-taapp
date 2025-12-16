@@ -1,0 +1,155 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "ospsd-main",
+    "title": "OSPSD Service Metrics",
+    "tags": ["ospsd", "monitoring"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 0,
+    "refresh": "10s",
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "type": "graph",
+        "title": "Request Latency by Operation",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(ospsd_request_duration_ms_bucket[5m]))",
+            "legendFormat": "{{operation}} - p50",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(ospsd_request_duration_ms_bucket[5m]))",
+            "legendFormat": "{{operation}} - p95",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(ospsd_request_duration_ms_bucket[5m]))",
+            "legendFormat": "{{operation}} - p99",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          {"format": "ms", "label": "Latency"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 2,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "type": "graph",
+        "title": "Request Rate by Operation",
+        "targets": [
+          {
+            "expr": "rate(ospsd_requests_total[5m])",
+            "legendFormat": "{{operation}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "reqps", "label": "Requests/sec"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 3,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "type": "graph",
+        "title": "Success Rate %",
+        "targets": [
+          {
+            "expr": "100 * rate(ospsd_requests_success_total[5m]) / rate(ospsd_requests_total[5m])",
+            "legendFormat": "{{operation}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "percent", "label": "Success %", "min": 0, "max": 100},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 4,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "type": "graph",
+        "title": "Failure Rate",
+        "targets": [
+          {
+            "expr": "rate(ospsd_requests_failure_total[5m])",
+            "legendFormat": "{{operation}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "reqps", "label": "Failures/sec"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 5,
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 16},
+        "type": "singlestat",
+        "title": "Total Requests (5m)",
+        "targets": [
+          {
+            "expr": "sum(increase(ospsd_requests_total[5m]))",
+            "refId": "A"
+          }
+        ],
+        "format": "short",
+        "valueName": "current"
+      },
+      {
+        "id": 6,
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 16},
+        "type": "singlestat",
+        "title": "Success Rate (5m)",
+        "targets": [
+          {
+            "expr": "100 * sum(increase(ospsd_requests_success_total[5m])) / sum(increase(ospsd_requests_total[5m]))",
+            "refId": "A"
+          }
+        ],
+        "format": "percent",
+        "valueName": "current",
+        "colors": ["#d44a3a", "#e0b400", "#299c46"],
+        "thresholds": "80,95"
+      },
+      {
+        "id": 7,
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 16},
+        "type": "singlestat",
+        "title": "Avg Latency (5m)",
+        "targets": [
+          {
+            "expr": "avg(rate(ospsd_request_duration_ms_sum[5m]) / rate(ospsd_request_duration_ms_count[5m]))",
+            "refId": "A"
+          }
+        ],
+        "format": "ms",
+        "valueName": "current",
+        "colors": ["#299c46", "#e0b400", "#d44a3a"],
+        "thresholds": "500,1000"
+      },
+      {
+        "id": 8,
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 16},
+        "type": "singlestat",
+        "title": "Total Failures (5m)",
+        "targets": [
+          {
+            "expr": "sum(increase(ospsd_requests_failure_total[5m]))",
+            "refId": "A"
+          }
+        ],
+        "format": "short",
+        "valueName": "current",
+        "colors": ["#299c46", "#e0b400", "#d44a3a"],
+        "thresholds": "1,10"
+      }
+    ]
+  },
+  "overwrite": true
+}

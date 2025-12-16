@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  ospsd-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ospsd-service
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Override any environment variables here if needed
+      - PYTHONUNBUFFERED=1
+      - TELEMETRY_EXPORT_PATH=/app/telemetry/metrics.json
+    volumes:
+      # Mount telemetry directory to persist metrics
+      - ./telemetry:/app/telemetry
+      # Mount database files to persist data
+      - ./discord_credentials.db:/app/discord_credentials.db
+      - ./discord_auth.db:/app/discord_auth.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - ospsd-network
+
+networks:
+  ospsd-network:
+    driver: bridge

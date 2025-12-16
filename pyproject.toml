@@ -66,6 +66,8 @@ members = [
   "src/ospsd_service",
   "src/trello_ticket_impl",
   "src/tickets_api",
+  "src/telemetry_api",
+  "src/telemetry_impl",
 ]
 
 [tool.ruff]

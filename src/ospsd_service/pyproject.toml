@@ -13,6 +13,9 @@ dependencies = [
     "ai-service-api",
     "tickets-api",
     "trello-ticket-impl",
+    "telemetry-api",
+    "telemetry-impl",
+    "prometheus-client>=0.19.0",
 ]
 
 [project.optional-dependencies]
@@ -55,3 +58,5 @@ openai-client-impl = { workspace = true }
 ai-service-api = { workspace = true }
 trello-ticket-impl = { workspace = true }
 tickets-api = { workspace = true }
+telemetry-api = { workspace = true }
+telemetry-impl = { workspace = true }
