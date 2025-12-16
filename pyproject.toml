@@ -64,8 +64,8 @@ members = [
   "src/claude_client_impl",
   "src/claude_client_service",
   "src/ospsd_service",
-  "src/kanban_client_api",
-  "src/trello_client_impl",
+  "src/trello_ticket_impl",
+  "src/tickets_api",
 ]
 
 [tool.ruff]

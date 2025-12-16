@@ -36,12 +36,8 @@ TICKET_TOOLS_SCHEMA = {
 }
 
 
-def get_system_prompt_with_tools(board_id: str, list_id: str) -> str:
+def get_system_prompt_with_tools() -> str:
     """Generate system prompt that explains available ticket operations.
-
-    Args:
-        board_id: Default board ID for ticket operations
-        list_id: Default list ID for creating tickets
 
     Returns:
         System prompt with tool instructions
@@ -76,10 +72,6 @@ You have access to the following ticket operations:
 6. **chat_response**: Just respond conversationally (no ticket action)
    - Use this for greetings, questions, or general chat
    - Example: "Hello!" or "How are you?"
-
-IMPORTANT CONTEXT:
-- Default board_id: {board_id}
-- Default list_id: {list_id}
 
 When a user sends a message, analyze their intent and respond with:
 - action: The operation to perform
