@@ -36,12 +36,12 @@ async def handle_create_ticket(
             name=title,
             description=description,
         )
-        msg = f"✅ Created ticket: **{card.name}**"
+        # Format for Discord markdown
+        msg = "✅ **Created Ticket**\n\n"
+        msg += f"**{card.name}**\n"
         if description:
-            msg += f"\n📝 Description: {description}"
-            msg += f"\n🆔 ID: `{card.id}`"
-        else:
-            msg += f"\n🆔 ID: `{card.id}`"
+            msg += f"> {description}\n\n"
+        msg += f"🆔 ID: `{card.id}`"
         return msg  # noqa: TRY300
     except KanbanAuthenticationError:
         return "❌ Authentication failed. Please check Trello credentials."
@@ -90,17 +90,17 @@ async def handle_list_tickets(
         if not recent_cards:
             return "📋 No open tickets found."
 
+        # Format for Discord markdown with better readability
         msg = f"📋 **Recent Tickets** (showing {len(recent_cards)}):\n\n"
         desc_preview_length = 50
         for i, card in enumerate(recent_cards, 1):
-            msg += f"{i}. **{card.name}**\n"
-            msg += f"   🆔 ID: `{card.id}`\n"
+            msg += f"**{i}. {card.name}**\n"
             if card.description:
                 desc_preview = card.description[:desc_preview_length]
                 if len(card.description) > desc_preview_length:
                     desc_preview += "..."
-                msg += f"   📝 {desc_preview}\n"
-            msg += "\n"
+                msg += f"> {desc_preview}\n"
+            msg += f"*ID:* `{card.id}`\n\n"
 
         return msg.strip()
     except KanbanAuthenticationError:
@@ -128,13 +128,13 @@ async def handle_get_ticket(
     try:
         card = await client.get_card(ticket_id)
 
-        msg = "🎫 **Ticket Details**\n\n"
-        msg += f"**Title:** {card.name}\n"
-        msg += f"🆔 **ID:** `{card.id}`\n"
+        # Format for Discord markdown
+        msg = f"🎫 **Ticket Details**\n\n**{card.name}**\n\n"
 
         if card.description:
-            msg += f"\n📝 **Description:**\n{card.description}\n"
-            return msg
+            msg += f"> {card.description}\n\n"
+
+        msg += f"*ID:* `{card.id}`"
         return msg  # noqa: TRY300
     except KanbanAuthenticationError:
         return "❌ Authentication failed. Please check Trello credentials."

@@ -138,8 +138,17 @@ def handle_message(data: dict[str, Any]) -> None:
     if author_id == bot_id:
         return
 
-    # Get the last message from the user
-    user_message = data.get("content", "")
+    # Get the actual message content from chat history
+    # The data.get("content") is unreliable, so we fetch from chat_client
+    try:
+        messages = chat_client.get_messages(channel_id, limit=1)
+        if not messages:
+            logger.debug("No messages found in channel")
+            return
+        user_message = messages[0].content
+    except Exception:
+        logger.exception("Failed to get messages")
+        return
 
     # Ignore empty messages
     if not user_message or not user_message.strip():
