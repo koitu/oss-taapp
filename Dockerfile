@@ -19,5 +19,5 @@ ENV PYTHONPATH=/app/src:/app/clients/python
 # Expose FastAPI port
 EXPOSE 8000
 
-# Default command runs the FastAPI service
-CMD ["sh", "-c", "uv run uvicorn discord_client_service.api:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Default command runs the ospsd service
+CMD ["sh", "-c", "uv run python -m ospsd_service.main"]
