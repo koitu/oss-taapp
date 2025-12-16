@@ -141,6 +141,11 @@ def handle_message(data: dict[str, Any]) -> None:
     # Get the last message from the user
     user_message = data.get("content", "")
 
+    # Ignore empty messages
+    if not user_message or not user_message.strip():
+        logger.debug("Ignoring empty message")
+        return
+
     # Generate system prompt with ticket tool definitions
     system_prompt = get_system_prompt_with_tools(DEFAULT_BOARD_ID, DEFAULT_LIST_ID)
 
