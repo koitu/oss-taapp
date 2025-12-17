@@ -35,6 +35,7 @@ class TrelloTicketClientImpl(TicketInterface):
         token: str | None = None,
         api_key: str | None = None,
         board_id: str | None = None,
+        oauth_handler: Any | None = None,
     ) -> None:
         """Initialize Trello Ticket client implementation.
 
@@ -44,12 +45,16 @@ class TrelloTicketClientImpl(TicketInterface):
             board_id: Trello board ID to use for tickets. If not provided, a new board will be created.
 
         """
-        self.token = token or os.environ.get("TRELLO_API_SECRET")
-        self.api_key = api_key or os.environ.get("TRELLO_API_KEY")
+        # Treat explicit empty string as an explicit provided value; only
+        # fall back to environment variables when None was passed.
+        self.token = token if token is not None else os.environ.get("TRELLO_API_SECRET")
+        self.api_key = api_key if api_key is not None else os.environ.get("TRELLO_API_KEY")
+        # Optional handler kept for backward compatibility with tests
+        self.oauth_handler = oauth_handler
         self.base_url = "https://api.trello.com/1"
 
         # Internal configuration - these are NOT exposed in the public API
-        self._board_id: str | None = board_id or os.environ.get("TRELLO_BOARD_ID", None)
+        self._board_id: str | None = board_id if board_id is not None else os.environ.get("TRELLO_BOARD_ID", None)
         self._todo_list_id: str | None = None  # Lazily initialized
         self._in_progress_list_id: str | None = None  # Lazily initialized
         self._done_list_id: str | None = None  # Lazily initialized
