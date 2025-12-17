@@ -25,8 +25,11 @@ TICKET_TOOLS_SCHEMA = {
                 "title": {"type": "string", "description": "Ticket title/name"},
                 "description": {"type": "string", "description": "Ticket description"},
                 "ticket_id": {"type": "string", "description": "ID of the ticket"},
-                "list_id": {"type": "string", "description": "ID of the list/column"},
-                "board_id": {"type": "string", "description": "ID of the board"},
+                "status": {
+                    "type": "string",
+                    "enum": ["open", "in_progress", "closed"],
+                    "description": "Ticket status: 'open', 'in_progress', or 'closed'",
+                },
                 "limit": {"type": "integer", "description": "Number of tickets to return"},
                 "message": {"type": "string", "description": "Chat response message"},
             },
@@ -43,7 +46,7 @@ def get_system_prompt_with_tools() -> str:
         System prompt with tool instructions
 
     """
-    return f"""You are a helpful assistant that manages work tickets via natural language.
+    return """You are a helpful assistant that manages work tickets via natural language.
 
 You have access to the following ticket operations:
 
@@ -52,9 +55,9 @@ You have access to the following ticket operations:
    - Optional: description
    - Example: "Create a ticket for fixing the login bug"
 
-2. **list_tickets**: List recent open tickets
-   - Optional: limit (default 3)
-   - Example: "Show me my recent tickets" or "List 5 open tickets"
+2. **list_tickets**: List recent tickets
+   - Optional: limit (default shows all), status ('open', 'in_progress', 'closed')
+   - Example: "Show me my recent tickets" or "List open tickets" or "Show closed tickets"
 
 3. **get_ticket**: Get details of a specific ticket
    - Required: ticket_id
@@ -64,10 +67,13 @@ You have access to the following ticket operations:
    - Required: ticket_id
    - Example: "Close ticket ABC123"
 
-5. **update_ticket**: Update a ticket's title or description
+5. **update_ticket**: Update a ticket's title, description, or status
    - Required: ticket_id
-   - Optional: title, description
+   - Optional: title, description, status
+   - Status must be one of: 'open', 'in_progress', 'closed'
    - Example: "Update ticket ABC123 with title 'New Title'"
+   - Example: "Move ticket ABC123 to in progress"
+   - Example: "Mark ticket ABC123 as closed"
 
 6. **chat_response**: Just respond conversationally (no ticket action)
    - Use this for greetings, questions, or general chat
@@ -82,6 +88,12 @@ Examples:
   → {{"action": "create_ticket", "parameters": {{"title": "Fix login bug"}}}}
 - "Show my 3 recent tickets"
   → {{"action": "list_tickets", "parameters": {{"limit": 3}}}}
+- "List open tickets"
+  → {{"action": "list_tickets", "parameters": {{"status": "open"}}}}
+- "Show me closed tickets"
+  → {{"action": "list_tickets", "parameters": {{"status": "closed"}}}}
+- "Move ticket abc123 to in progress"
+  → {{"action": "update_ticket", "parameters": {{"ticket_id": "abc123", "status": "in_progress"}}}}
 - "Close ticket abc123"
   → {{"action": "close_ticket", "parameters": {{"ticket_id": "abc123"}}}}
 - "Hello!"
@@ -124,8 +136,8 @@ def validate_tool_call(  # noqa: C901, PLR0911
     elif action == "update_ticket":
         if "ticket_id" not in params:
             return False, "update_ticket requires 'ticket_id' parameter"
-        if "title" not in params and "description" not in params:
-            return False, "update_ticket requires at least 'title' or 'description'"
+        if "title" not in params and "description" not in params and "status" not in params:
+            return False, "update_ticket requires at least 'title', 'description', or 'status'"
 
     elif action == "chat_response":
         if "message" not in params:

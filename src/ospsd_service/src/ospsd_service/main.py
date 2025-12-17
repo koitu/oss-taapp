@@ -175,15 +175,25 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
     elif ai_response["action"] == "list_tickets":
         ticket_start = time.time()
         try:
-            tickets = ticket_client.search_tickets()
+            # Extract and normalize status if provided
+            status_param = ai_response["parameters"].get("status")
+            status_enum = None
+            if status_param:
+                # Normalize status string (replace spaces with underscores and lowercase)
+                normalized_status = status_param.lower().replace(" ", "_")
+                status_enum = TicketStatus(normalized_status)
+
+            tickets = ticket_client.search_tickets(status=status_enum)
             ticket_duration = (time.time() - ticket_start) * 1000
             telemetry.record_latency(OperationType.TICKET_LIST, ticket_duration, success=True)
 
             if not tickets:
-                chat_client.send_message(channel_id, "📋 No open tickets found.")
+                status_msg = f" {status_enum.value}" if status_enum else ""
+                chat_client.send_message(channel_id, f"📋 No{status_msg} tickets found.")
             else:
                 # Format for Discord markdown with better readability
-                msg = f"📋 **Recent Tickets** (showing {len(tickets)}):\n\n"
+                status_filter = f" ({status_enum.value})" if status_enum else ""
+                msg = f"📋 **Recent Tickets{status_filter}** (showing {len(tickets)}):\n\n"
                 for i, ticket in enumerate(tickets, 1):
                     msg += f"**{i}. {ticket.title}**\n"
                     if ticket.description:
@@ -234,7 +244,11 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
         try:
             # Convert status string to TicketStatus enum if provided
             status_param = ai_response["parameters"].get("status")
-            status_enum = TicketStatus(status_param) if status_param else None
+            status_enum = None
+            if status_param:
+                # Normalize status string (replace spaces with underscores and lowercase)
+                normalized_status = status_param.lower().replace(" ", "_")
+                status_enum = TicketStatus(normalized_status)
 
             ticket = ticket_client.update_ticket(
                 ai_response["parameters"]["ticket_id"],
