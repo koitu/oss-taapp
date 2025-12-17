@@ -108,8 +108,8 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
     if author_id == bot_id:
         return
 
-    # TODO(Steven): change the prompt to look at previous messages  # noqa: TD003, FIX002
-    msgs: list[Message] = chat_client.get_messages(channel_id, limit=1)
+    # Get recent conversation history (last 10 messages)
+    msgs: list[Message] = chat_client.get_messages(channel_id, limit=10)
     chat_log = ""
     for msg in reversed(msgs):
         if msg.sender_id == author_id:

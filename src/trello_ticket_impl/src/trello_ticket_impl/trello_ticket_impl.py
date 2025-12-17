@@ -1,12 +1,14 @@
 """Concrete implementation of the Ticket API for Trello backend."""
 
-import os
 import asyncio
 import contextlib
+import os
 from http import HTTPStatus
 from typing import Any
 
 import aiohttp
+from dotenv import load_dotenv
+from tickets_api import Ticket, TicketInterface, TicketStatus
 
 from trello_ticket_impl.exceptions import (
     TrelloAPIError,
@@ -15,8 +17,6 @@ from trello_ticket_impl.exceptions import (
 )
 from trello_ticket_impl.models import TrelloTicket
 
-from tickets_api import TicketStatus, Ticket, TicketInterface
-from dotenv import load_dotenv
 with contextlib.suppress(FileNotFoundError):
     load_dotenv()
 
@@ -40,6 +40,7 @@ class TrelloTicketClientImpl(TicketInterface):
 
         Args:
             token: Trello API token
+            api_key: Trello API key
             board_id: Trello board ID to use for tickets. If not provided, a new board will be created.
 
         """
@@ -293,7 +294,7 @@ class TrelloTicketClientImpl(TicketInterface):
         )
 
     def delete_ticket(self, ticket_id: str) -> bool:
-        """Delete a ticket.
+        """Delete a ticket by moving it to Done list.
 
         Args:
             ticket_id: The ID of the ticket to delete
@@ -307,7 +308,18 @@ class TrelloTicketClientImpl(TicketInterface):
             TicketAuthenticationError: If authentication fails
 
         """
-        _ = self._make_request("DELETE", f"/cards/{ticket_id}")
+        return asyncio.run(self._delete_ticket_async(ticket_id))
+
+    async def _delete_ticket_async(self, ticket_id: str) -> bool:
+        """Async implementation of delete_ticket - moves card to Done list."""
+        await self._ensure_lists_initialized()
+
+        # Move card to Done list instead of deleting it
+        params: dict[str, str] = {
+            "idList": self._done_list_id or "",
+        }
+
+        await self._make_request("PUT", f"/cards/{ticket_id}", params=params)
         return True
 
     def get_ticket(self, ticket_id: str) -> Ticket:
