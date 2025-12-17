@@ -32,3 +32,15 @@ variable "telemetry_export_path" {
   type        = string
   default     = "/app/telemetry/metrics.json"
 }
+
+variable "no_auth" {
+  description = "Disable authentication"
+  type        = string
+  default     = "true"
+}
+
+variable "trello_board_id" {
+  description = "Optional Trello board ID"
+  type        = string
+  default     = ""
+}

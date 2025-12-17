@@ -357,3 +357,22 @@ gateway_thread.start()
 
 # Run FastAPI server in the main thread
 run_fastapi_server()
+
+
+# from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+# from fastapi import FastAPI, Response
+#
+# app = FastAPI()
+#
+# # Metrics
+# REQUEST_COUNT = Counter('app_requests_total', 'Total request count')
+# REQUEST_DURATION = Histogram('app_request_duration_seconds', 'Request duration')
+#
+# @app.get("/metrics")
+# async def metrics():
+#     REQUEST_COUNT.inc()
+#     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+#
+# @app.get("/health")
+# async def health():
+#     return {"status": "healthy"}
