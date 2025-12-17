@@ -4,7 +4,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from tickets_api.src.tickets_api import Ticket, TicketStatus
+from tickets_api import Ticket, TicketStatus
 from trello_client_impl.oauth import TrelloOAuthHandler
 
 from trello_ticket_impl.exceptions import (
