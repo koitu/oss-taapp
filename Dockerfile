@@ -7,12 +7,12 @@ RUN pip install --no-cache-dir uv
 # Set working directory
 WORKDIR /app
 
-# Copy dependency files first for better caching
+# Copy all project files (needed for workspace resolution)
 COPY pyproject.toml uv.lock ./
-COPY src/*/pyproject.toml src/*/
+COPY src/ ./src/
 
-# Install dependencies (sync workspace)
-RUN uv sync --frozen --no-dev
+# Install dependencies (sync entire workspace)
+RUN uv sync --frozen --no-dev --all-packages
 
 # Final stage
 FROM python:3.11-slim
@@ -27,9 +27,9 @@ COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 # Copy installed dependencies from builder
 COPY --from=builder /app/.venv /app/.venv
 
-# Copy all source code
-COPY src/ /app/src/
-COPY pyproject.toml uv.lock /app/
+# Copy source code and config from builder
+COPY --from=builder /app/src /app/src
+COPY --from=builder /app/pyproject.toml /app/uv.lock /app/
 
 # Create directory for telemetry
 RUN mkdir -p /app/telemetry
