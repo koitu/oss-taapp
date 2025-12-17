@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Simulate telemetry data to demonstrate the metrics system."""
 
+import logging
 import sys
 import time
 from pathlib import Path
@@ -9,13 +10,21 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src" / "telemetry_api" / "src"))
 sys.path.insert(0, str(Path(__file__).parent / "src" / "telemetry_impl" / "src"))
 
-from telemetry_api import OperationType  # noqa: E402
-from telemetry_impl import InMemoryTelemetry  # noqa: E402
+from telemetry_api import OperationType
+from telemetry_impl import InMemoryTelemetry
 
+# Constants
+AI_FAST_THRESHOLD_MS = 1000
 
-def simulate_workflow():
+# Configure logging for CLI-friendly output
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+# Use a module logger instead of calling the root logger directly
+logger = logging.getLogger(__name__)
+
+def simulate_workflow() -> None:
     """Simulate realistic OSPSD service usage."""
-    print("🚀 Simulating OSPSD service telemetry...\n")
+    logger.info("🚀 Simulating OSPSD service telemetry...\n")
 
     telemetry = InMemoryTelemetry(export_path="telemetry/metrics.json")
 
@@ -33,10 +42,10 @@ def simulate_workflow():
     ]
 
     for i, (description, success, ai_latency, create_latency, list_latency) in enumerate(scenarios, 1):
-        print(f"[{i}/10] {description}")
+        logger.info(f"[{i}/10] {description}")
 
         # Simulate AI generation
-        if success and ai_latency < 1000:
+        if success and ai_latency < AI_FAST_THRESHOLD_MS:
             telemetry.record_latency(OperationType.AI_GENERATE, ai_latency, success=True)
         elif not success:
             telemetry.record_latency(
@@ -71,9 +80,9 @@ def simulate_workflow():
 
         time.sleep(0.1)
 
-    print("\n✅ Simulation complete!")
-    print(f"📊 Metrics exported to telemetry/metrics.json\n")
-    print("Run: python3 view_telemetry.py")
+    logger.info("\n✅ Simulation complete!")
+    logger.info("📊 Metrics exported to telemetry/metrics.json\n")
+    logger.info("Run: python3 view_telemetry.py")
 
 
 if __name__ == "__main__":

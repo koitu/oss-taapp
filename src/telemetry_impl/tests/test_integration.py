@@ -6,17 +6,15 @@ import tempfile
 import time
 from pathlib import Path
 
-import pytest
-
 # Add telemetry modules to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "telemetry_api" / "src"))
 
-from telemetry_api import OperationType  # noqa: E402
-from telemetry_impl import InMemoryTelemetry  # noqa: E402
+from telemetry_api import OperationType
+from telemetry_impl import InMemoryTelemetry
 
 
-def test_end_to_end_workflow():
+def test_end_to_end_workflow() -> None:
     """Test a complete workflow simulating real OSPSD service usage."""
     with tempfile.TemporaryDirectory() as tmpdir:
         export_path = Path(tmpdir) / "metrics.json"
@@ -48,7 +46,7 @@ def test_end_to_end_workflow():
         # Verify metrics
         assert export_path.exists()
 
-        with open(export_path) as f:
+        with export_path.open() as f:
             metrics = json.load(f)
 
         assert metrics["summary"]["total_events"] == 4
@@ -62,7 +60,7 @@ def test_end_to_end_workflow():
         assert OperationType.CHAT_MESSAGE.value in metrics["by_operation"]
 
 
-def test_mixed_success_and_failure():
+def test_mixed_success_and_failure() -> None:
     """Test tracking both successful and failed operations."""
     telemetry = InMemoryTelemetry()
 
@@ -93,7 +91,7 @@ def test_mixed_success_and_failure():
     assert ai_avg_latency == 150.0  # (100 + 200) / 2
 
 
-def test_high_volume_operations():
+def test_high_volume_operations() -> None:
     """Test telemetry with high volume of operations."""
     telemetry = InMemoryTelemetry()
 
@@ -126,7 +124,7 @@ def test_high_volume_operations():
     assert len(metrics["recent_events"]) == 100
 
 
-def test_json_export_structure():
+def test_json_export_structure() -> None:
     """Test that exported JSON has correct structure."""
     with tempfile.TemporaryDirectory() as tmpdir:
         export_path = Path(tmpdir) / "test_metrics.json"
@@ -137,7 +135,7 @@ def test_json_export_structure():
         telemetry.record_latency(OperationType.TICKET_CREATE, 50.0, success=True)
         telemetry.record_failure(OperationType.TICKET_DELETE, "Permission denied")
 
-        with open(export_path) as f:
+        with export_path.open() as f:
             data = json.load(f)
 
         # Verify structure

@@ -57,4 +57,6 @@ def get_metrics() -> bytes:
         Metrics in Prometheus text format
 
     """
-    return generate_latest()
+    metrics: bytes = generate_latest()
+    return metrics
+

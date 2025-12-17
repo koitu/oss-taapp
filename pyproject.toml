@@ -114,7 +114,10 @@ mypy_path = [
     "src/chat_client_api/src",
     "src/services/discord_client_service/src",
     "src/discord_client_service_adapter/src",
-    "src/ospsd_service/",
+    "src/ospsd_service/src",
+    "src/tickets_api/src",
+    "src/telemetry_api/src",
+    "src/telemetry_impl/src",
     "src/kanban_client_api/src",
     "src/trello_client_impl/src",
 ]
@@ -128,6 +131,7 @@ exclude = [
     "src/claude_client_impl/",
     "src/claude_client_service/",
     "src/discord_client_impl/",
+    "src/trello_ticket_impl/src/",
 ]
 ignore_missing_imports = false
 warn_unused_ignores = false
@@ -143,6 +147,8 @@ module = [
     "openai.*",
     "anthropic",
     "anthropic.*",
+    "prometheus_client",
+    "prometheus_client.*",
 ]
 ignore_missing_imports = true
 

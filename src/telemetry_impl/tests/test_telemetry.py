@@ -11,11 +11,11 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "telemetry_api" / "src"))
 
-from telemetry_api import MetricType, OperationType, TelemetryEvent  # noqa: E402
-from telemetry_impl import InMemoryTelemetry  # noqa: E402
+from telemetry_api import MetricType, OperationType
+from telemetry_impl import InMemoryTelemetry
 
 
-def test_record_latency_success():
+def test_record_latency_success() -> None:
     """Test recording successful latency."""
     telemetry = InMemoryTelemetry()
 
@@ -30,7 +30,7 @@ def test_record_latency_success():
     assert events[0].error_message is None
 
 
-def test_record_latency_failure():
+def test_record_latency_failure() -> None:
     """Test recording failed latency."""
     telemetry = InMemoryTelemetry()
 
@@ -47,7 +47,7 @@ def test_record_latency_failure():
     assert events[0].error_message == "Connection timeout"
 
 
-def test_record_success():
+def test_record_success() -> None:
     """Test recording successful operation."""
     telemetry = InMemoryTelemetry()
 
@@ -59,7 +59,7 @@ def test_record_success():
     assert events[0].success is True
 
 
-def test_record_failure():
+def test_record_failure() -> None:
     """Test recording failed operation."""
     telemetry = InMemoryTelemetry()
 
@@ -72,7 +72,7 @@ def test_record_failure():
     assert events[0].error_message == "Not found"
 
 
-def test_get_success_rate():
+def test_get_success_rate() -> None:
     """Test calculating success rate."""
     telemetry = InMemoryTelemetry()
 
@@ -86,7 +86,7 @@ def test_get_success_rate():
     assert success_rate == 70.0
 
 
-def test_get_failure_rate():
+def test_get_failure_rate() -> None:
     """Test calculating failure rate."""
     telemetry = InMemoryTelemetry()
 
@@ -100,7 +100,7 @@ def test_get_failure_rate():
     assert failure_rate == 20.0
 
 
-def test_get_average_latency():
+def test_get_average_latency() -> None:
     """Test calculating average latency."""
     telemetry = InMemoryTelemetry()
 
@@ -113,7 +113,7 @@ def test_get_average_latency():
     assert avg_latency == 200.0
 
 
-def test_get_average_latency_empty():
+def test_get_average_latency_empty() -> None:
     """Test average latency with no events."""
     telemetry = InMemoryTelemetry()
 
@@ -121,7 +121,7 @@ def test_get_average_latency_empty():
     assert avg_latency == 0.0
 
 
-def test_export_metrics():
+def test_export_metrics() -> None:
     """Test exporting metrics."""
     telemetry = InMemoryTelemetry()
 
@@ -140,7 +140,7 @@ def test_export_metrics():
     assert OperationType.AI_GENERATE.value in metrics["by_operation"]
 
 
-def test_json_export_to_file():
+def test_json_export_to_file() -> None:
     """Test exporting metrics to JSON file."""
     with tempfile.TemporaryDirectory() as tmpdir:
         export_path = Path(tmpdir) / "metrics.json"
@@ -154,14 +154,14 @@ def test_json_export_to_file():
         assert export_path.exists()
 
         # Verify JSON content
-        with open(export_path) as f:
+        with export_path.open() as f:
             data = json.load(f)
 
         assert data["summary"]["total_events"] == 2
         assert len(data["recent_events"]) == 2
 
 
-def test_metadata_tracking():
+def test_metadata_tracking() -> None:
     """Test tracking metadata with events."""
     telemetry = InMemoryTelemetry()
 
@@ -177,7 +177,7 @@ def test_metadata_tracking():
     assert events[0].metadata == metadata
 
 
-def test_multiple_operations():
+def test_multiple_operations() -> None:
     """Test tracking multiple different operations."""
     telemetry = InMemoryTelemetry()
 
@@ -194,7 +194,7 @@ def test_multiple_operations():
     assert ai_avg == 100.0
 
 
-def test_success_rate_no_events():
+def test_success_rate_no_events() -> None:
     """Test success rate with no events returns 0."""
     telemetry = InMemoryTelemetry()
 
