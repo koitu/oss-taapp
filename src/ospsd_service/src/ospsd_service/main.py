@@ -4,13 +4,16 @@ import contextlib
 import logging
 import os
 import sys
+import threading
 import time
 from typing import Any
 
+import uvicorn
 from ai_api import AIInterface
 from chat_client_api import ChatInterface, Message
 from discord_client_impl.discord_impl import DiscordGateway
 from dotenv import load_dotenv
+from fastapi import FastAPI
 from telemetry_api import OperationType, TelemetryInterface
 from tickets_api import TicketInterface, TicketStatus
 
@@ -18,6 +21,9 @@ from ospsd_service.ticket_tools import (
     TICKET_TOOLS_SCHEMA,
     get_system_prompt_with_tools,
 )
+
+# Create FastAPI app for health checks
+app = FastAPI(title="OSPSD Service")
 
 
 # Would be great if this could be moved to a get_..._client method in the API
@@ -297,8 +303,35 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
     telemetry.record_latency(OperationType.CHAT_MESSAGE, total_duration, success=True)
 
 
-gateway_client.subscribe("MESSAGE_CREATE", handle_message)
-gateway_client.start()
+@app.get("/health")
+async def health_check() -> dict[str, str]:
+    """Health check endpoint for container orchestration."""
+    return {"status": "healthy", "service": "ospsd"}
 
-while True:
-    time.sleep(1)
+
+@app.get("/")
+async def root() -> dict[str, str]:
+    """Root endpoint."""
+    return {"message": "OSPSD Service is running", "status": "ok"}
+
+
+def run_discord_gateway() -> None:
+    """Run the Discord gateway in a separate thread."""
+    gateway_client.subscribe("MESSAGE_CREATE", handle_message)
+    gateway_client.start()
+
+    while True:
+        time.sleep(1)
+
+
+def run_fastapi_server() -> None:
+    """Run the FastAPI server for health checks."""
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")  # noqa: S104
+
+
+# Start Discord gateway in a separate thread
+gateway_thread = threading.Thread(target=run_discord_gateway, daemon=True)
+gateway_thread.start()
+
+# Run FastAPI server in the main thread
+run_fastapi_server()
