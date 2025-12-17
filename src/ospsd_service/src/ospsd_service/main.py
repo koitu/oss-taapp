@@ -12,7 +12,7 @@ from chat_client_api import ChatInterface, Message
 from discord_client_impl.discord_impl import DiscordGateway
 from dotenv import load_dotenv
 from telemetry_api import OperationType, TelemetryInterface
-from tickets_api import TicketInterface
+from tickets_api import TicketInterface, TicketStatus
 
 from ospsd_service.ticket_tools import (
     TICKET_TOOLS_SCHEMA,
@@ -192,7 +192,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                         if len(ticket.description) > DESC_PREVIEW_LENGTH:
                             desc_preview += "..."
                         msg += f"> {desc_preview}\n"
-                    msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status}\n\n"
+                    msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status.value}\n\n"
                 chat_client.send_message(channel_id, msg.strip())
         except Exception as e:
             ticket_duration = (time.time() - ticket_start) * 1000
@@ -217,7 +217,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 msg = f"🎫 **Ticket Details**\n\n**{ticket.title}**\n\n"
                 if ticket.description:
                     msg += f"> {ticket.description}\n\n"
-                msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status}"
+                msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status.value}"
                 if ticket.assignee:
                     msg += f" | *Assignee:* {ticket.assignee}"
                 chat_client.send_message(channel_id, msg)
@@ -232,16 +232,20 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
     elif ai_response["action"] == "update_ticket":
         ticket_start = time.time()
         try:
+            # Convert status string to TicketStatus enum if provided
+            status_param = ai_response["parameters"].get("status")
+            status_enum = TicketStatus(status_param) if status_param else None
+
             ticket = ticket_client.update_ticket(
                 ai_response["parameters"]["ticket_id"],
-                status=ai_response["parameters"].get("status"),
+                status=status_enum,
                 title=ai_response["parameters"].get("title"),
             )
             ticket_duration = (time.time() - ticket_start) * 1000
             telemetry.record_latency(OperationType.TICKET_UPDATE, ticket_duration, success=True)
 
             msg = f"✅ **Updated Ticket**\n\n**{ticket.title}**\n"
-            msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status}"
+            msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status.value}"
             chat_client.send_message(channel_id, msg)
         except Exception as e:
             ticket_duration = (time.time() - ticket_start) * 1000
