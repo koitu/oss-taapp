@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
+from typing import Any
 
 
 class MetricType(StrEnum):
@@ -48,6 +49,7 @@ class TelemetryInterface(ABC):
         self,
         operation: OperationType,
         duration_ms: float,
+        *,
         success: bool = True,
         error_message: str | None = None,
         metadata: dict[str, str] | None = None,
@@ -146,7 +148,7 @@ class TelemetryInterface(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def export_metrics(self) -> dict[str, any]:
+    def export_metrics(self) -> dict[str, Any]:
         """Export all metrics in a structured format.
 
         Returns:

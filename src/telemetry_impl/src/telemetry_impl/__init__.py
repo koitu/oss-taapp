@@ -1,7 +1,7 @@
 """In-memory telemetry implementation with JSON export."""
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -30,13 +30,14 @@ class InMemoryTelemetry(TelemetryInterface):
         self,
         operation: OperationType,
         duration_ms: float,
+        *,
         success: bool = True,
         error_message: str | None = None,
         metadata: dict[str, str] | None = None,
     ) -> None:
         """Record latency for an operation."""
         event = TelemetryEvent(
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=UTC),
             operation=operation,
             metric_type=MetricType.LATENCY,
             value=duration_ms,
@@ -57,7 +58,7 @@ class InMemoryTelemetry(TelemetryInterface):
     ) -> None:
         """Record a successful operation."""
         event = TelemetryEvent(
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=UTC),
             operation=operation,
             metric_type=MetricType.SUCCESS,
             value=1.0,
@@ -77,7 +78,7 @@ class InMemoryTelemetry(TelemetryInterface):
     ) -> None:
         """Record a failed operation."""
         event = TelemetryEvent(
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=UTC),
             operation=operation,
             metric_type=MetricType.FAILURE,
             value=1.0,
@@ -92,10 +93,7 @@ class InMemoryTelemetry(TelemetryInterface):
 
     def get_success_rate(self, operation: OperationType | None = None) -> float:
         """Get success rate for operations."""
-        if operation:
-            events = [e for e in self.events if e.operation == operation]
-        else:
-            events = self.events
+        events = [e for e in self.events if e.operation == operation] if operation else self.events
 
         if not events:
             return 0.0
@@ -141,7 +139,7 @@ class InMemoryTelemetry(TelemetryInterface):
         }
 
         # Calculate per-operation metrics
-        operations = set(e.operation for e in self.events)
+        operations = {e.operation for e in self.events}
         for op in operations:
             metrics["by_operation"][op.value] = {
                 "success_rate": self.get_success_rate(op),

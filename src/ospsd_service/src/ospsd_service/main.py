@@ -1,5 +1,7 @@
 """OSPSD Service."""
 
+# ruff: noqa: ERA001
+
 import contextlib
 import logging
 import os
