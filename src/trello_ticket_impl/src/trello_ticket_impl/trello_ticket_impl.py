@@ -35,7 +35,7 @@ class TrelloTicketClientImpl(TicketInterface):
         token: str | None = None,
         api_key: str | None = None,
         board_id: str | None = None,
-        oauth_handler: Any | None = None,
+        oauth_handler: object | None = None,
     ) -> None:
         """Initialize Trello Ticket client implementation.
 
@@ -43,6 +43,9 @@ class TrelloTicketClientImpl(TicketInterface):
             token: Trello API token
             api_key: Trello API key
             board_id: Trello board ID to use for tickets. If not provided, a new board will be created.
+            oauth_handler: Optional compatibility handler used by tests or legacy
+                code. Treated opaquely by this implementation and kept only for
+                backwards compatibility. Pass `None` when not used.
 
         """
         # Treat explicit empty string as an explicit provided value; only

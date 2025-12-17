@@ -153,14 +153,14 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
     # Get recent conversation history (last 10 messages)
     msgs: list[Message] = chat_client.get_messages(channel_id, limit=10)
     chat_log = ""
-    for msg in reversed(msgs):
-        if msg.sender_id == author_id:
+    for m in reversed(msgs):
+        if m.sender_id == author_id:
             chat_log += author
-        elif msg.sender_id == bot_id:
+        elif m.sender_id == bot_id:
             chat_log += "Bot"
         else:
-            chat_log += msg.sender_id
-        chat_log += ": " + msg.content + "\n"
+            chat_log += m.sender_id
+        chat_log += ": " + m.content + "\n"
     logger.debug(chat_log)
 
     # Generate system prompt with ticket tool definitions
@@ -169,7 +169,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
     # Track AI generation latency
     ai_start = time.time()
     try:
-        ai_response = ai_client.generate_response(
+        ai_response: Any = ai_client.generate_response(
             chat_log,
             system_prompt,
             response_schema=TICKET_TOOLS_SCHEMA,
@@ -188,7 +188,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
     elif ai_response["action"] == "create_ticket":
         ticket_start = time.time()
         try:
-            ticket = ticket_client.create_ticket(
+            created_ticket = ticket_client.create_ticket(
                 ai_response["parameters"]["title"],
                 ai_response["parameters"]["description"],
                 ai_response["parameters"].get("assignee", None),
@@ -198,10 +198,10 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
 
             # Format for Discord markdown
             msg = "✅ **Created Ticket**\n\n"
-            msg += f"**{ticket.title}**\n"
-            if ticket.description:
-                msg += f"> {ticket.description}\n\n"
-            msg += f"🆔 ID: `{ticket.id}`"
+            msg += f"**{created_ticket.title}**\n"
+            if created_ticket.description:
+                msg += f"> {created_ticket.description}\n\n"
+            msg += f"🆔 ID: `{created_ticket.id}`"
             chat_client.send_message(channel_id, msg)
         except Exception as e:
             ticket_duration = (time.time() - ticket_start) * 1000
@@ -230,15 +230,15 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 # Format for Discord markdown with better readability
                 status_filter = f" ({status_enum.value})" if status_enum else ""
                 msg = f"📋 **Recent Tickets{status_filter}** (showing {len(tickets)}):\n\n"
-                for i, ticket in enumerate(tickets, 1):
-                    msg += f"**{i}. {ticket.title}**\n"
-                    if ticket.description:
+                for i, t in enumerate(tickets, 1):
+                    msg += f"**{i}. {t.title}**\n"
+                    if t.description:
                         # Show preview of description
-                        desc_preview = ticket.description[:DESC_PREVIEW_LENGTH]
-                        if len(ticket.description) > DESC_PREVIEW_LENGTH:
+                        desc_preview = t.description[:DESC_PREVIEW_LENGTH]
+                        if len(t.description) > DESC_PREVIEW_LENGTH:
                             desc_preview += "..."
                         msg += f"> {desc_preview}\n"
-                    msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status.value}\n\n"
+                    msg += f"*ID:* `{t.id}` | *Status:* {t.status.value}\n\n"
                 chat_client.send_message(channel_id, msg.strip())
         except Exception as e:
             ticket_duration = (time.time() - ticket_start) * 1000

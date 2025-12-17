@@ -128,7 +128,7 @@ class InMemoryTelemetry(TelemetryInterface):
 
     def export_metrics(self) -> dict[str, Any]:
         """Export all metrics in a structured format."""
-        metrics = {
+        metrics: dict[str, Any] = {
             "summary": {
                 "total_events": len(self.events),
                 "success_rate": self.get_success_rate(),

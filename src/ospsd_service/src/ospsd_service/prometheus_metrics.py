@@ -1,5 +1,7 @@
 """Prometheus metrics for OSPSD service."""
 
+from typing import cast
+
 from prometheus_client import Counter, Histogram, generate_latest
 
 # Request latency histogram (in milliseconds)
@@ -57,4 +59,4 @@ def get_metrics() -> bytes:
         Metrics in Prometheus text format
 
     """
-    return generate_latest()
+    return cast("bytes", generate_latest())
