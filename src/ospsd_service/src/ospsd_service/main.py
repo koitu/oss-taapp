@@ -11,6 +11,7 @@ from ai_api import AIInterface
 from chat_client_api import ChatInterface, Message
 from discord_client_impl.discord_impl import DiscordGateway
 from dotenv import load_dotenv
+from telemetry_api import OperationType, TelemetryInterface
 from tickets_api import TicketInterface
 
 from ospsd_service.ticket_tools import (
@@ -48,6 +49,15 @@ def get_trello_client() -> TicketInterface:
     return TrelloTicketClientImpl()
 
 
+def get_telemetry_client() -> TelemetryInterface:
+    """Get the telemetry client and return it in a generic interface."""
+    from telemetry_impl import InMemoryTelemetry  # noqa: PLC0415
+
+    # Export metrics to a JSON file for observability
+    export_path = os.getenv("TELEMETRY_EXPORT_PATH", "telemetry/metrics.json")
+    return InMemoryTelemetry(export_path=export_path)
+
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -72,6 +82,7 @@ gateway_client: DiscordGateway = DiscordGateway()
 chat_client: ChatInterface = get_discord_client()
 ai_client: AIInterface = get_claude_client()  # change this between claude/openai!
 ticket_client: TicketInterface = get_trello_client()
+telemetry: TelemetryInterface = get_telemetry_client()
 
 bot_id = os.getenv("DISCORD_CLIENT_ID")
 
@@ -87,6 +98,8 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
         data (dict[str, Any]): The data received from the server
 
     """
+    start_time = time.time()
+
     author: str = data["author"]["username"]
     author_id: str = data["author"]["id"]
     channel_id: str = data["channel_id"]
@@ -110,84 +123,160 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
 
     # Generate system prompt with ticket tool definitions
     system_prompt = get_system_prompt_with_tools()
-    ai_response = ai_client.generate_response(
-        chat_log,
-        system_prompt,
-        response_schema=TICKET_TOOLS_SCHEMA,
-    )
-    logger.info(ai_response)
+
+    # Track AI generation latency
+    ai_start = time.time()
+    try:
+        ai_response = ai_client.generate_response(
+            chat_log,
+            system_prompt,
+            response_schema=TICKET_TOOLS_SCHEMA,
+        )
+        ai_duration = (time.time() - ai_start) * 1000
+        telemetry.record_latency(OperationType.AI_GENERATE, ai_duration, success=True)
+        logger.info(ai_response)
+    except Exception as e:
+        ai_duration = (time.time() - ai_start) * 1000
+        telemetry.record_latency(
+            OperationType.AI_GENERATE, ai_duration, success=False, error_message=str(e)
+        )
+        telemetry.record_failure(OperationType.AI_GENERATE, str(e))
+        raise
 
     if ai_response["action"] == "chat_response":
         chat_client.send_message(channel_id, ai_response["parameters"]["message"])
 
     elif ai_response["action"] == "create_ticket":
-        ticket = ticket_client.create_ticket(
-            ai_response["parameters"]["title"],
-            ai_response["parameters"]["description"],
-            ai_response["parameters"].get("assignee", None),
-        )
-        # Format for Discord markdown
-        msg = "✅ **Created Ticket**\n\n"
-        msg += f"**{ticket.title}**\n"
-        if ticket.description:
-            msg += f"> {ticket.description}\n\n"
-        msg += f"🆔 ID: `{ticket.id}`"
-        chat_client.send_message(channel_id, msg)
+        ticket_start = time.time()
+        try:
+            ticket = ticket_client.create_ticket(
+                ai_response["parameters"]["title"],
+                ai_response["parameters"]["description"],
+                ai_response["parameters"].get("assignee", None),
+            )
+            ticket_duration = (time.time() - ticket_start) * 1000
+            telemetry.record_latency(OperationType.TICKET_CREATE, ticket_duration, success=True)
 
-    elif ai_response["action"] == "list_tickets":
-        tickets = ticket_client.search_tickets()
-
-        if not tickets:
-            chat_client.send_message(channel_id, "📋 No open tickets found.")
-        else:
-            # Format for Discord markdown with better readability
-            msg = f"📋 **Recent Tickets** (showing {len(tickets)}):\n\n"
-            for i, ticket in enumerate(tickets, 1):
-                msg += f"**{i}. {ticket.title}**\n"
-                if ticket.description:
-                    # Show preview of description
-                    desc_preview = ticket.description[:DESC_PREVIEW_LENGTH]
-                    if len(ticket.description) > DESC_PREVIEW_LENGTH:
-                        desc_preview += "..."
-                    msg += f"> {desc_preview}\n"
-                msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status}\n\n"
-            chat_client.send_message(channel_id, msg.strip())
-
-    elif ai_response["action"] == "get_ticket":
-        ticket_id = ai_response["parameters"]["ticket_id"]
-        ticket = ticket_client.get_ticket(ticket_id)
-        if ticket is None:
-            chat_client.send_message(channel_id, f"❌ Ticket not found: `{ticket_id}`")
-        else:
             # Format for Discord markdown
-            msg = f"🎫 **Ticket Details**\n\n**{ticket.title}**\n\n"
+            msg = "✅ **Created Ticket**\n\n"
+            msg += f"**{ticket.title}**\n"
             if ticket.description:
                 msg += f"> {ticket.description}\n\n"
-            msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status}"
-            if ticket.assignee:
-                msg += f" | *Assignee:* {ticket.assignee}"
+            msg += f"🆔 ID: `{ticket.id}`"
             chat_client.send_message(channel_id, msg)
+        except Exception as e:
+            ticket_duration = (time.time() - ticket_start) * 1000
+            telemetry.record_latency(
+                OperationType.TICKET_CREATE, ticket_duration, success=False, error_message=str(e)
+            )
+            telemetry.record_failure(OperationType.TICKET_CREATE, str(e))
+            raise
+
+    elif ai_response["action"] == "list_tickets":
+        ticket_start = time.time()
+        try:
+            tickets = ticket_client.search_tickets()
+            ticket_duration = (time.time() - ticket_start) * 1000
+            telemetry.record_latency(OperationType.TICKET_LIST, ticket_duration, success=True)
+
+            if not tickets:
+                chat_client.send_message(channel_id, "📋 No open tickets found.")
+            else:
+                # Format for Discord markdown with better readability
+                msg = f"📋 **Recent Tickets** (showing {len(tickets)}):\n\n"
+                for i, ticket in enumerate(tickets, 1):
+                    msg += f"**{i}. {ticket.title}**\n"
+                    if ticket.description:
+                        # Show preview of description
+                        desc_preview = ticket.description[:DESC_PREVIEW_LENGTH]
+                        if len(ticket.description) > DESC_PREVIEW_LENGTH:
+                            desc_preview += "..."
+                        msg += f"> {desc_preview}\n"
+                    msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status}\n\n"
+                chat_client.send_message(channel_id, msg.strip())
+        except Exception as e:
+            ticket_duration = (time.time() - ticket_start) * 1000
+            telemetry.record_latency(
+                OperationType.TICKET_LIST, ticket_duration, success=False, error_message=str(e)
+            )
+            telemetry.record_failure(OperationType.TICKET_LIST, str(e))
+            raise
+
+    elif ai_response["action"] == "get_ticket":
+        ticket_start = time.time()
+        try:
+            ticket_id = ai_response["parameters"]["ticket_id"]
+            ticket = ticket_client.get_ticket(ticket_id)
+            ticket_duration = (time.time() - ticket_start) * 1000
+            telemetry.record_latency(OperationType.TICKET_GET, ticket_duration, success=True)
+
+            if ticket is None:
+                chat_client.send_message(channel_id, f"❌ Ticket not found: `{ticket_id}`")
+            else:
+                # Format for Discord markdown
+                msg = f"🎫 **Ticket Details**\n\n**{ticket.title}**\n\n"
+                if ticket.description:
+                    msg += f"> {ticket.description}\n\n"
+                msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status}"
+                if ticket.assignee:
+                    msg += f" | *Assignee:* {ticket.assignee}"
+                chat_client.send_message(channel_id, msg)
+        except Exception as e:
+            ticket_duration = (time.time() - ticket_start) * 1000
+            telemetry.record_latency(
+                OperationType.TICKET_GET, ticket_duration, success=False, error_message=str(e)
+            )
+            telemetry.record_failure(OperationType.TICKET_GET, str(e))
+            raise
 
     elif ai_response["action"] == "update_ticket":
-        ticket = ticket_client.update_ticket(
-            ai_response["parameters"]["ticket_id"],
-            status=ai_response["parameters"].get("status"),
-            title=ai_response["parameters"].get("title"),
-        )
-        msg = f"✅ **Updated Ticket**\n\n**{ticket.title}**\n"
-        msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status}"
-        chat_client.send_message(channel_id, msg)
+        ticket_start = time.time()
+        try:
+            ticket = ticket_client.update_ticket(
+                ai_response["parameters"]["ticket_id"],
+                status=ai_response["parameters"].get("status"),
+                title=ai_response["parameters"].get("title"),
+            )
+            ticket_duration = (time.time() - ticket_start) * 1000
+            telemetry.record_latency(OperationType.TICKET_UPDATE, ticket_duration, success=True)
+
+            msg = f"✅ **Updated Ticket**\n\n**{ticket.title}**\n"
+            msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status}"
+            chat_client.send_message(channel_id, msg)
+        except Exception as e:
+            ticket_duration = (time.time() - ticket_start) * 1000
+            telemetry.record_latency(
+                OperationType.TICKET_UPDATE, ticket_duration, success=False, error_message=str(e)
+            )
+            telemetry.record_failure(OperationType.TICKET_UPDATE, str(e))
+            raise
 
     elif ai_response["action"] == "close_ticket":
-        ticket_id = ai_response["parameters"]["ticket_id"]
-        success = ticket_client.delete_ticket(ticket_id)
-        if success:
-            chat_client.send_message(channel_id, f"✅ Closed ticket: `{ticket_id}`")
-        else:
-            chat_client.send_message(channel_id, f"❌ Failed to close ticket: `{ticket_id}`")
+        ticket_start = time.time()
+        try:
+            ticket_id = ai_response["parameters"]["ticket_id"]
+            success = ticket_client.delete_ticket(ticket_id)
+            ticket_duration = (time.time() - ticket_start) * 1000
+            telemetry.record_latency(OperationType.TICKET_DELETE, ticket_duration, success=True)
+
+            if success:
+                chat_client.send_message(channel_id, f"✅ Closed ticket: `{ticket_id}`")
+            else:
+                chat_client.send_message(channel_id, f"❌ Failed to close ticket: `{ticket_id}`")
+        except Exception as e:
+            ticket_duration = (time.time() - ticket_start) * 1000
+            telemetry.record_latency(
+                OperationType.TICKET_DELETE, ticket_duration, success=False, error_message=str(e)
+            )
+            telemetry.record_failure(OperationType.TICKET_DELETE, str(e))
+            raise
 
     else:
         logger.warning(f"Unknown action: {ai_response.get('action')}")
+
+    # Track overall message handling latency
+    total_duration = (time.time() - start_time) * 1000
+    telemetry.record_latency(OperationType.CHAT_MESSAGE, total_duration, success=True)
 
 
 gateway_client.subscribe("MESSAGE_CREATE", handle_message)
