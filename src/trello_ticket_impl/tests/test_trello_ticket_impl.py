@@ -5,7 +5,6 @@ from unittest.mock import MagicMock
 
 import pytest
 from tickets_api import Ticket, TicketStatus
-from trello_client_impl.oauth import TrelloOAuthHandler
 
 from trello_ticket_impl.exceptions import (
     TrelloAPIError,
@@ -16,22 +15,6 @@ from trello_ticket_impl.trello_ticket_impl import TrelloTicketClientImpl
 
 class TestTrelloTicketClientImpl:
     """Test cases for TrelloTicketClientImpl."""
-
-    @pytest.fixture
-    def mock_oauth_handler(self) -> MagicMock:
-        """Create mock OAuth handler."""
-        handler = MagicMock(spec=TrelloOAuthHandler)
-        handler.api_key = "test_key"
-        return handler
-
-    @pytest.fixture
-    def client(self, mock_oauth_handler: TrelloOAuthHandler) -> TrelloTicketClientImpl:
-        """Create test client."""
-        return TrelloTicketClientImpl(
-            token="test_token",
-            oauth_handler=mock_oauth_handler,
-            board_id="test_board_123",
-        )
 
     def test_client_initialization(self, client: TrelloTicketClientImpl) -> None:
         """Test client initializes correctly."""
