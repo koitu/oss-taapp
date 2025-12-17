@@ -13,10 +13,11 @@ from ai_api import AIInterface
 from chat_client_api import ChatInterface, Message
 from discord_client_impl.discord_impl import DiscordGateway
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from telemetry_api import OperationType, TelemetryInterface
 from tickets_api import TicketInterface, TicketStatus
 
+from ospsd_service import prometheus_metrics
 from ospsd_service.ticket_tools import (
     TICKET_TOOLS_SCHEMA,
     get_system_prompt_with_tools,
@@ -96,6 +97,39 @@ bot_id = os.getenv("DISCORD_CLIENT_ID")
 DESC_PREVIEW_LENGTH = 50
 
 
+def record_metrics(
+    operation: str, duration_ms: float, *, success: bool = True, error: str | None = None
+) -> None:
+    """Record metrics to both telemetry and Prometheus.
+
+    Args:
+        operation: Operation name (e.g., 'ai_generate', 'ticket_create')
+        duration_ms: Duration in milliseconds
+        success: Whether the operation succeeded
+        error: Error message if failed
+
+    """
+    # Map operation names to OperationType enum
+    operation_map = {
+        "ai_generate": OperationType.AI_GENERATE,
+        "ticket_create": OperationType.TICKET_CREATE,
+        "ticket_list": OperationType.TICKET_LIST,
+        "ticket_get": OperationType.TICKET_GET,
+        "ticket_update": OperationType.TICKET_UPDATE,
+        "ticket_delete": OperationType.TICKET_DELETE,
+        "chat_message": OperationType.CHAT_MESSAGE,
+    }
+
+    # Record to telemetry
+    telemetry_op = operation_map.get(operation, OperationType.CHAT_MESSAGE)
+    telemetry.record_latency(telemetry_op, duration_ms, success=success, error_message=error)
+    if not success and error:
+        telemetry.record_failure(telemetry_op, error)
+
+    # Record to Prometheus
+    prometheus_metrics.record_latency(operation, duration_ms, success=success)
+
+
 # TODO(Andrew): add tests  # noqa: TD003, FIX002
 def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR0915
     """Call this function when a message is sent in the server.
@@ -139,14 +173,11 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
             response_schema=TICKET_TOOLS_SCHEMA,
         )
         ai_duration = (time.time() - ai_start) * 1000
-        telemetry.record_latency(OperationType.AI_GENERATE, ai_duration, success=True)
+        record_metrics("ai_generate", ai_duration, success=True)
         logger.info(ai_response)
     except Exception as e:
         ai_duration = (time.time() - ai_start) * 1000
-        telemetry.record_latency(
-            OperationType.AI_GENERATE, ai_duration, success=False, error_message=str(e)
-        )
-        telemetry.record_failure(OperationType.AI_GENERATE, str(e))
+        record_metrics("ai_generate", ai_duration, success=False, error=str(e))
         raise
 
     if ai_response["action"] == "chat_response":
@@ -161,7 +192,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 ai_response["parameters"].get("assignee", None),
             )
             ticket_duration = (time.time() - ticket_start) * 1000
-            telemetry.record_latency(OperationType.TICKET_CREATE, ticket_duration, success=True)
+            record_metrics("ticket_create", ticket_duration, success=True)
 
             # Format for Discord markdown
             msg = "✅ **Created Ticket**\n\n"
@@ -172,10 +203,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
             chat_client.send_message(channel_id, msg)
         except Exception as e:
             ticket_duration = (time.time() - ticket_start) * 1000
-            telemetry.record_latency(
-                OperationType.TICKET_CREATE, ticket_duration, success=False, error_message=str(e)
-            )
-            telemetry.record_failure(OperationType.TICKET_CREATE, str(e))
+            record_metrics("ticket_create", ticket_duration, success=False, error=str(e))
             raise
 
     elif ai_response["action"] == "list_tickets":
@@ -191,7 +219,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
 
             tickets = ticket_client.search_tickets(status=status_enum)
             ticket_duration = (time.time() - ticket_start) * 1000
-            telemetry.record_latency(OperationType.TICKET_LIST, ticket_duration, success=True)
+            record_metrics("ticket_list", ticket_duration, success=True)
 
             if not tickets:
                 status_msg = f" {status_enum.value}" if status_enum else ""
@@ -212,10 +240,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 chat_client.send_message(channel_id, msg.strip())
         except Exception as e:
             ticket_duration = (time.time() - ticket_start) * 1000
-            telemetry.record_latency(
-                OperationType.TICKET_LIST, ticket_duration, success=False, error_message=str(e)
-            )
-            telemetry.record_failure(OperationType.TICKET_LIST, str(e))
+            record_metrics("ticket_list", ticket_duration, success=False, error=str(e))
             raise
 
     elif ai_response["action"] == "get_ticket":
@@ -224,7 +249,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
             ticket_id = ai_response["parameters"]["ticket_id"]
             ticket = ticket_client.get_ticket(ticket_id)
             ticket_duration = (time.time() - ticket_start) * 1000
-            telemetry.record_latency(OperationType.TICKET_GET, ticket_duration, success=True)
+            record_metrics("ticket_get", ticket_duration, success=True)
 
             if ticket is None:
                 chat_client.send_message(channel_id, f"❌ Ticket not found: `{ticket_id}`")
@@ -239,10 +264,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 chat_client.send_message(channel_id, msg)
         except Exception as e:
             ticket_duration = (time.time() - ticket_start) * 1000
-            telemetry.record_latency(
-                OperationType.TICKET_GET, ticket_duration, success=False, error_message=str(e)
-            )
-            telemetry.record_failure(OperationType.TICKET_GET, str(e))
+            record_metrics("ticket_get", ticket_duration, success=False, error=str(e))
             raise
 
     elif ai_response["action"] == "update_ticket":
@@ -262,17 +284,14 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 title=ai_response["parameters"].get("title"),
             )
             ticket_duration = (time.time() - ticket_start) * 1000
-            telemetry.record_latency(OperationType.TICKET_UPDATE, ticket_duration, success=True)
+            record_metrics("ticket_update", ticket_duration, success=True)
 
             msg = f"✅ **Updated Ticket**\n\n**{ticket.title}**\n"
             msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status.value}"
             chat_client.send_message(channel_id, msg)
         except Exception as e:
             ticket_duration = (time.time() - ticket_start) * 1000
-            telemetry.record_latency(
-                OperationType.TICKET_UPDATE, ticket_duration, success=False, error_message=str(e)
-            )
-            telemetry.record_failure(OperationType.TICKET_UPDATE, str(e))
+            record_metrics("ticket_update", ticket_duration, success=False, error=str(e))
             raise
 
     elif ai_response["action"] == "close_ticket":
@@ -281,7 +300,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
             ticket_id = ai_response["parameters"]["ticket_id"]
             success = ticket_client.delete_ticket(ticket_id)
             ticket_duration = (time.time() - ticket_start) * 1000
-            telemetry.record_latency(OperationType.TICKET_DELETE, ticket_duration, success=True)
+            record_metrics("ticket_delete", ticket_duration, success=True)
 
             if success:
                 chat_client.send_message(channel_id, f"✅ Closed ticket: `{ticket_id}`")
@@ -289,10 +308,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 chat_client.send_message(channel_id, f"❌ Failed to close ticket: `{ticket_id}`")
         except Exception as e:
             ticket_duration = (time.time() - ticket_start) * 1000
-            telemetry.record_latency(
-                OperationType.TICKET_DELETE, ticket_duration, success=False, error_message=str(e)
-            )
-            telemetry.record_failure(OperationType.TICKET_DELETE, str(e))
+            record_metrics("ticket_delete", ticket_duration, success=False, error=str(e))
             raise
 
     else:
@@ -300,7 +316,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
 
     # Track overall message handling latency
     total_duration = (time.time() - start_time) * 1000
-    telemetry.record_latency(OperationType.CHAT_MESSAGE, total_duration, success=True)
+    record_metrics("chat_message", total_duration, success=True)
 
 
 @app.get("/health")
@@ -313,6 +329,12 @@ async def health_check() -> dict[str, str]:
 async def root() -> dict[str, str]:
     """Root endpoint."""
     return {"message": "OSPSD Service is running", "status": "ok"}
+
+
+@app.get("/metrics")
+async def metrics() -> Response:
+    """Prometheus metrics endpoint."""
+    return Response(content=prometheus_metrics.get_metrics(), media_type="text/plain")
 
 
 def run_discord_gateway() -> None:
