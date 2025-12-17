@@ -1,8 +1,6 @@
 """OSPSD Service."""
 
-import asyncio
 import contextlib
-import json
 import logging
 import os
 import sys
@@ -11,12 +9,14 @@ from typing import Any
 
 from ai_api import AIInterface
 from chat_client_api import ChatInterface, Message
-from tickets_api import TicketInterface, Ticket
 from discord_client_impl.discord_impl import DiscordGateway
 from dotenv import load_dotenv
+from tickets_api import TicketInterface
 
-# from ospsd_service.ticket_handlers import execute_tool_call
-from ospsd_service.ticket_tools import TICKET_TOOLS_SCHEMA, get_system_prompt_with_tools, validate_tool_call
+from ospsd_service.ticket_tools import (
+    TICKET_TOOLS_SCHEMA,
+    get_system_prompt_with_tools,
+)
 
 
 # Would be great if this could be moved to a get_..._client method in the API
@@ -43,7 +43,7 @@ def get_claude_client() -> AIInterface:
 
 def get_trello_client() -> TicketInterface:
     """Get the Trello client and return it in a generic interface."""
-    from trello_ticket_impl import TrelloTicketClientImpl # noqa: PLC0415
+    from trello_ticket_impl import TrelloTicketClientImpl  # noqa: PLC0415
 
     return TrelloTicketClientImpl()
 
@@ -75,9 +75,12 @@ ticket_client: TicketInterface = get_trello_client()
 
 bot_id = os.getenv("DISCORD_CLIENT_ID")
 
+# Description preview length for list_tickets
+DESC_PREVIEW_LENGTH = 50
+
 
 # TODO(Andrew): add tests  # noqa: TD003, FIX002
-def handle_message(data: dict[str, Any]) -> None:
+def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR0915
     """Call this function when a message is sent in the server.
 
     Args:
@@ -92,7 +95,7 @@ def handle_message(data: dict[str, Any]) -> None:
     if author_id == bot_id:
         return
 
-    # TODO: change the prompt so that it can also look at the previous messages (but bias towards last message)
+    # TODO(Steven): change the prompt to look at previous messages  # noqa: TD003, FIX002
     msgs: list[Message] = chat_client.get_messages(channel_id, limit=1)
     chat_log = ""
     for msg in reversed(msgs):
@@ -114,78 +117,78 @@ def handle_message(data: dict[str, Any]) -> None:
     )
     logger.info(ai_response)
 
-    if ai_response['action'] == 'chat_response':
-        chat_client.send_message(channel_id, ai_response['parameters']['message'])
-    elif ai_response['action'] == 'create_ticket':
+    if ai_response["action"] == "chat_response":
+        chat_client.send_message(channel_id, ai_response["parameters"]["message"])
+
+    elif ai_response["action"] == "create_ticket":
         ticket = ticket_client.create_ticket(
-            ai_response['parameters']['title'],
-            ai_response['parameters']['description'],
-            ai_response['parameters'].get('assignee', None),
+            ai_response["parameters"]["title"],
+            ai_response["parameters"]["description"],
+            ai_response["parameters"].get("assignee", None),
         )
-        chat_client.send_message(channel_id, "ticket created: " + ticket.title)
+        # Format for Discord markdown
+        msg = "✅ **Created Ticket**\n\n"
+        msg += f"**{ticket.title}**\n"
+        if ticket.description:
+            msg += f"> {ticket.description}\n\n"
+        msg += f"🆔 ID: `{ticket.id}`"
+        chat_client.send_message(channel_id, msg)
 
-    elif ai_response['action'] == 'list_tickets':
+    elif ai_response["action"] == "list_tickets":
         tickets = ticket_client.search_tickets()
-        res = ""
-        for ticket in reversed(tickets):
-            res += ticket.title + ": " + ticket.description + "\n"
-        chat_client.send_message(channel_id, res)
+
+        if not tickets:
+            chat_client.send_message(channel_id, "📋 No open tickets found.")
+        else:
+            # Format for Discord markdown with better readability
+            msg = f"📋 **Recent Tickets** (showing {len(tickets)}):\n\n"
+            for i, ticket in enumerate(tickets, 1):
+                msg += f"**{i}. {ticket.title}**\n"
+                if ticket.description:
+                    # Show preview of description
+                    desc_preview = ticket.description[:DESC_PREVIEW_LENGTH]
+                    if len(ticket.description) > DESC_PREVIEW_LENGTH:
+                        desc_preview += "..."
+                    msg += f"> {desc_preview}\n"
+                msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status}\n\n"
+            chat_client.send_message(channel_id, msg.strip())
+
+    elif ai_response["action"] == "get_ticket":
+        ticket_id = ai_response["parameters"]["ticket_id"]
+        ticket = ticket_client.get_ticket(ticket_id)
+        if ticket is None:
+            chat_client.send_message(channel_id, f"❌ Ticket not found: `{ticket_id}`")
+        else:
+            # Format for Discord markdown
+            msg = f"🎫 **Ticket Details**\n\n**{ticket.title}**\n\n"
+            if ticket.description:
+                msg += f"> {ticket.description}\n\n"
+            msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status}"
+            if ticket.assignee:
+                msg += f" | *Assignee:* {ticket.assignee}"
+            chat_client.send_message(channel_id, msg)
+
+    elif ai_response["action"] == "update_ticket":
+        ticket = ticket_client.update_ticket(
+            ai_response["parameters"]["ticket_id"],
+            status=ai_response["parameters"].get("status"),
+            title=ai_response["parameters"].get("title"),
+        )
+        msg = f"✅ **Updated Ticket**\n\n**{ticket.title}**\n"
+        msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status}"
+        chat_client.send_message(channel_id, msg)
+
+    elif ai_response["action"] == "close_ticket":
+        ticket_id = ai_response["parameters"]["ticket_id"]
+        success = ticket_client.delete_ticket(ticket_id)
+        if success:
+            chat_client.send_message(channel_id, f"✅ Closed ticket: `{ticket_id}`")
+        else:
+            chat_client.send_message(channel_id, f"❌ Failed to close ticket: `{ticket_id}`")
+
     else:
-        logger.info("???")
+        logger.warning(f"Unknown action: {ai_response.get('action')}")
 
-
-    # try:
-    #     # Get AI response with structured output using response_schema
-    #     ai_response = ai_client.generate_response(
-    #         user_message,
-    #         system_prompt,
-    #         response_schema=TICKET_TOOLS_SCHEMA,
-    #     )
-    #
-    #     # Parse the structured response
-    #     if isinstance(ai_response, str):
-    #         # If AI returned a string, try to parse it as JSON
-    #         try:
-    #             tool_call = json.loads(ai_response)
-    #         except json.JSONDecodeError:
-    #             logger.exception(f"Failed to parse AI response as JSON: {ai_response}")
-    #             chat_client.send_message(
-    #                 channel_id,
-    #                 "❌ Sorry, I couldn't understand that request. Please try again.",
-    #             )
-    #             return
-    #     else:
-    #         tool_call = ai_response
-    #
-    #     # Validate the tool call
-    #     is_valid, error_msg = validate_tool_call(tool_call)
-    #     if not is_valid:
-    #         logger.error(f"Invalid tool call: {error_msg}")
-    #         chat_client.send_message(
-    #             channel_id,
-    #             f"❌ Invalid request: {error_msg}",
-    #         )
-    #         return
-    #
-    #     # Execute the tool call asynchronously
-    #     result_message = asyncio.run(
-    #         execute_tool_call(
-    #             tool_call,
-    #             trello_client,
-    #             DEFAULT_BOARD_ID,
-    #             DEFAULT_LIST_ID,
-    #         )
-    #     )
-    #
-    #     # Send the result back to Discord
-    #     chat_client.send_message(channel_id, result_message)
-    #
-    # except Exception as e:
-    #     logger.exception("Error handling message")
-    #     chat_client.send_message(
-    #         channel_id,
-    #         f"❌ An error occurred: {e}",
-    #     )
 
 gateway_client.subscribe("MESSAGE_CREATE", handle_message)
 gateway_client.start()
