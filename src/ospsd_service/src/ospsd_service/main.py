@@ -348,8 +348,7 @@ def run_discord_gateway() -> None:
 
 def run_fastapi_server() -> None:
     """Run the FastAPI server for health checks."""
-    port = int(os.getenv("PORT", "8080"))
-    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")  # noqa: S104
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")  # noqa: S104
 
 
 # Start Discord gateway in a separate thread
