@@ -288,19 +288,20 @@ jobs:
       - run:
           name: "Configure GCP Credentials for Terraform"
           command: |
-            echo "Configuring GCP credentials for Terraform..."
-            if [ -z "$GOOGLE_SERVICE_KEY" ]; then
-              echo "ERROR: GOOGLE_SERVICE_KEY is not set"
-              exit 1
-            fi
-            # Write service account JSON to a file and point Terraform/SDK at it
+            set -e
+
+            echo "Writing GCP service account key..."
             echo "$GOOGLE_SERVICE_KEY" > $HOME/gcloud-key.json
-            # Persist environment variables across CircleCI steps by appending
-            # them to $BASH_ENV (CircleCI injects this into later shells).
+
+            export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud-key.json
+            export GOOGLE_PROJECT=$GOOGLE_PROJECT_ID
+
+            # Persist for next steps
             echo "export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud-key.json" >> $BASH_ENV
-            echo "export GOOGLE_CREDENTIALS='$(cat $HOME/gcloud-key.json)'" >> $BASH_ENV
             echo "export GOOGLE_PROJECT=$GOOGLE_PROJECT_ID" >> $BASH_ENV
-            echo "Wrote credentials; using project: $GOOGLE_PROJECT"
+
+            echo "Credentials configured for project: $GOOGLE_PROJECT_ID"
+
       - run:
           name: "Terraform Init"
           command: |
@@ -310,12 +311,12 @@ jobs:
           name: "Terraform Plan"
           command: |
             cd terraform
-            terraform plan -out=tfplan -input=false
+            terraform plan -var="credentials_file=$HOME/gcloud-key.json" -out=tfplan -input=false
       - run:
           name: "Terraform Apply"
           command: |
             cd terraform
-            terraform apply -input=false -auto-approve tfplan
+            terraform apply -var="credentials_file=$HOME/gcloud-key.json"-input=false -auto-approve tfplan
 
 # Workflows
 workflows:

@@ -38,3 +38,8 @@ variable "trello_board_id" {
   type        = string
   default     = ""
 }
+
+variable "credentials_file" {
+  description = "Path to the GCP service account key file"
+  type        = string
+}
