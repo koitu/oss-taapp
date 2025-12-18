@@ -373,6 +373,9 @@ workflows:
   terraform:
     jobs:
       - build
+      - report_summary:
+          requires:
+            - build
       - terraform_apply:
           requires:
             - report_summary
