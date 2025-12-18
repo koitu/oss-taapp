@@ -62,8 +62,8 @@ members = [
     "src/oss-api/tickets_api",
 
     "src/hw3/claude_client_service",
-    "src/hw3/discord_chat_impl",
     "src/hw3/openai_client_service",
+    "src/hw3/discord_chat_impl",
     "src/hw3/ospsd_service",
     "src/hw3/telemetry_api",
     "src/hw3/telemetry_impl",
@@ -123,8 +123,8 @@ mypy_path = [
     "src/trello_client_impl/src",
 
     "src/hw3/claude_client_service/src",
-    "src/hw3/discord_chat_impl/src",
     "src/hw3/openai_client_service/src",
+    "src/hw3/discord_chat_impl/src",
     "src/hw3/ospsd_service/src",
     "src/hw3/telemetry_impl/src",
 ]
@@ -186,6 +186,7 @@ omit = [
     "*/__main__.py",
     "src/hw1/mail_client_service_client/**",
     "src/hw2/discord_client_service_client/**",
+    "src/hw2/discord_client_impl/src/discord_client_impl/auth_helper.py",
 ]
 
 [tool.coverage.report]
