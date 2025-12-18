@@ -6,10 +6,9 @@ the client can authenticate and make real API calls to Gmail.
 
 import logging
 
-import pytest
-
 import gmail_client_impl  # Import to trigger dependency injection
 import mail_client_api
+import pytest
 
 # Mark all tests in this file as integration tests
 pytestmark = pytest.mark.integration

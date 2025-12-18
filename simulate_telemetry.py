@@ -22,6 +22,7 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 # Use a module logger instead of calling the root logger directly
 logger = logging.getLogger(__name__)
 
+
 def simulate_workflow() -> None:
     """Simulate realistic OSPSD service usage."""
     logger.info("🚀 Simulating OSPSD service telemetry...\n")
@@ -48,12 +49,7 @@ def simulate_workflow() -> None:
         if success and ai_latency < AI_FAST_THRESHOLD_MS:
             telemetry.record_latency(OperationType.AI_GENERATE, ai_latency, success=True)
         elif not success:
-            telemetry.record_latency(
-                OperationType.AI_GENERATE,
-                ai_latency,
-                success=False,
-                error_message="API timeout"
-            )
+            telemetry.record_latency(OperationType.AI_GENERATE, ai_latency, success=False, error_message="API timeout")
             telemetry.record_failure(OperationType.AI_GENERATE, "API timeout")
             continue
         else:
