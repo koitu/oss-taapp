@@ -12,8 +12,8 @@ from unittest.mock import patch
 
 import pytest
 
-import mail_client_api
 import gmail_client_impl
+import mail_client_api
 
 # Mark all tests in this file as e2e tests
 pytestmark = pytest.mark.e2e
