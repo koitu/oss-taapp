@@ -163,7 +163,11 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
         )
         return
 
-    # Build chat log from message history
+    # Only respond to messages that start with /bot
+    if not message_content.startswith("/bot"):
+        return
+
+    # Build chat log from message history, stripping /bot prefix from user messages
     chat_log = ""
     for m in reversed(msgs):
         if m.sender_id == author_id:
@@ -172,7 +176,15 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
             chat_log += "Bot"
         else:
             chat_log += m.sender_id
-        chat_log += ": " + m.content + "\n"
+
+        # Strip /bot prefix from message content if present
+        content = m.content
+        if content.startswith("/bot "):
+            content = content[5:]  # Remove "/bot " (5 characters including space)
+        elif content.startswith("/bot"):
+            content = content[4:].strip()  # Remove "/bot" and any whitespace
+
+        chat_log += ": " + content + "\n"
     logger.debug(chat_log)
 
     # Generate system prompt with ticket tool definitions

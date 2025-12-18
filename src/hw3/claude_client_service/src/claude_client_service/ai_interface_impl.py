@@ -116,6 +116,13 @@ class EnvAIImplementation(AIInterface):
                 _raise_empty_response()
 
             assert content is not None
+
+            # Log the raw content for debugging
+            if response_schema and content.strip() and not content.strip().startswith("{"):
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Claude returned non-JSON content: {content[:200]}")
+
             return self._parse_response(content, response_schema)
 
         except RuntimeError:
