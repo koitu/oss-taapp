@@ -27,12 +27,6 @@ variable "image" {
   default     = ""
 }
 
-variable "telemetry_export_path" {
-  description = "Path used by the app for telemetry output inside container"
-  type        = string
-  default     = "/app/telemetry/metrics.json"
-}
-
 variable "no_auth" {
   description = "Disable authentication"
   type        = string

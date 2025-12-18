@@ -31,32 +31,20 @@ resource "google_vpc_access_connector" "serverless_connector" {
   name          = "ospsd-connector"
   region        = var.region
   project       = var.project
-  network       = "default"
+  network       = google_compute_network.vpc.name
   ip_cidr_range = "10.8.0.0/28"
-}
 
-# # Firewall rules for Prometheus scraping
-# resource "google_compute_firewall" "allow_prometheus" {
-#   name    = "allow-prometheus-scraping"
-#   network = google_compute_network.vpc.name
-#
-#   allow {
-#     protocol = "tcp"
-#     ports    = ["9090", "3000", "8000"]  # Prometheus, Grafana, App
-#   }
-#
-#   source_ranges = ["10.0.0.0/24"]
-#   target_tags   = ["monitoring"]
-# }
+  depends_on = [google_compute_network.vpc]
+}
 
 # Artifact Registry
 resource "google_artifact_registry_repository" "repo" {
-  provider    = google
-  project     = var.project
-  location    = var.region
+  provider      = google
+  project       = var.project
+  location      = var.region
   repository_id = var.artifact_repo
-  description = "Docker repository for ospsd-service"
-  format      = "DOCKER"
+  description   = "Docker repository for ospsd-service"
+  format        = "DOCKER"
 
   depends_on = [google_project_service.required_apis]
 }
@@ -114,6 +102,14 @@ resource "google_cloud_run_v2_service" "service" {
     service_account = google_service_account.cloudrun.email
     timeout = "300s"
 
+    scaling {
+      min_instance_count = 1
+      max_instance_count = 1
+    }
+
+    # always force pull
+    revision = "${var.service_name}-${formatdate("YYYYMMDDhhmmss", timestamp())}"
+
     vpc_access {
       network_interfaces {
         network = google_compute_network.vpc.id
@@ -130,36 +126,32 @@ resource "google_cloud_run_v2_service" "service" {
         container_port = 8000
       }
 
-      # # Expose metrics endpoint for Prometheus
-      # startup_probe {
-      #   http_get {
-      #     path = "/health"
-      #     port = 8000
-      #   }
-      #   initial_delay_seconds = 0
-      #   timeout_seconds       = 1
-      #   period_seconds        = 3
-      #   failure_threshold     = 1
-      # }
-      #
-      # liveness_probe {
-      #   http_get {
-      #     path = "/health"
-      #     port = 8000
-      #   }
-      #   initial_delay_seconds = 30
-      #   timeout_seconds       = 1
-      #   period_seconds        = 10
-      #   failure_threshold     = 3
-      # }
+      # Expose metrics endpoint for Prometheus
+      startup_probe {
+        http_get {
+          path = "/health"
+          port = 8000
+        }
+        initial_delay_seconds = 30
+        timeout_seconds       = 5
+        period_seconds        = 10  # check every 10 seconds
+        failure_threshold     = 30  # 30 * 10s = 5 minutes before container is killed
+      }
+
+      liveness_probe {
+        http_get {
+          path = "/health"
+          port = 8000
+        }
+        initial_delay_seconds = 300
+        timeout_seconds       = 5
+        period_seconds        = 10
+        failure_threshold     = 6  # 60s of failure allowed
+      }
 
       env {
         name  = "PYTHONUNBUFFERED"
         value = "1"
-      }
-      env {
-        name  = "TELEMETRY_EXPORT_PATH"
-        value = var.telemetry_export_path
       }
       env {
         name  = "NO_AUTH"
@@ -200,108 +192,3 @@ resource "google_cloud_run_v2_service_iam_member" "public_access" {
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
-
-
-# # GCE Instance for Prometheus
-# resource "google_compute_instance" "prometheus" {
-#   name         = "prometheus-server"
-#   machine_type = "e2-small"
-#   zone         = "${var.region}-a"
-#
-#   tags = ["monitoring", "prometheus"]
-#
-#   boot_disk {
-#     initialize_params {
-#       image = "debian-cloud/debian-11"
-#       size  = 20
-#     }
-#   }
-#
-#   network_interface {
-#     network    = google_compute_network.vpc.id
-#     subnetwork = google_compute_subnetwork.subnet.id
-#
-#     access_config {
-#       # Ephemeral public IP for SSH access
-#     }
-#   }
-#
-#   metadata_startup_script = <<-EOF
-#     #!/bin/bash
-#     apt-get update
-#     apt-get install -y wget
-#
-#     # Install Prometheus
-#     wget https://github.com/prometheus/prometheus/releases/download/v2.45.0/prometheus-2.45.0.linux-amd64.tar.gz
-#     tar xvfz prometheus-*.tar.gz
-#     cd prometheus-*
-#
-#     # Create prometheus config
-#     cat > prometheus.yml <<EOL
-#     global:
-#       scrape_interval: 15s
-#
-#     scrape_configs:
-#       - job_name: 'ospsd-service'
-#         static_configs:
-#           - targets: ['${google_cloud_run_v2_service.service.uri}']
-#         metrics_path: '/metrics'
-#         scheme: 'https'
-#     EOL
-#
-#     # Start Prometheus
-#     nohup ./prometheus --config.file=prometheus.yml &
-#   EOF
-#
-#   service_account {
-#     email  = google_service_account.cloudrun.email
-#     scopes = ["cloud-platform"]
-#   }
-# }
-#
-# # GCE Instance for Grafana
-# resource "google_compute_instance" "grafana" {
-#   name         = "grafana-server"
-#   machine_type = "e2-small"
-#   zone         = "${var.region}-a"
-#
-#   tags = ["monitoring", "grafana"]
-#
-#   boot_disk {
-#     initialize_params {
-#       image = "debian-cloud/debian-11"
-#       size  = 20
-#     }
-#   }
-#
-#   network_interface {
-#     network    = google_compute_network.vpc.id
-#     subnetwork = google_compute_subnetwork.subnet.id
-#
-#     access_config {
-#       # Ephemeral public IP
-#     }
-#   }
-#
-#   metadata_startup_script = <<-EOF
-#     #!/bin/bash
-#     apt-get update
-#     apt-get install -y apt-transport-https software-properties-common wget
-#
-#     # Install Grafana
-#     wget -q -O - https://packages.grafana.com/gpg.key | apt-key add -
-#     echo "deb https://packages.grafana.com/oss/deb stable main" | tee /etc/apt/sources.list.d/grafana.list
-#     apt-get update
-#     apt-get install -y grafana
-#
-#     # Start Grafana
-#     systemctl daemon-reload
-#     systemctl start grafana-server
-#     systemctl enable grafana-server
-#   EOF
-#
-#   service_account {
-#     email  = google_service_account.cloudrun.email
-#     scopes = ["cloud-platform"]
-#   }
-# }

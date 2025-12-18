@@ -2,6 +2,9 @@
 
 from typing import Any
 
+# Description preview length for list_tickets
+TICKET_DESC_PREVIEW_LEN = 50
+
 # Tool/Function definitions for AI to understand ticket operations
 TICKET_TOOLS_SCHEMA = {
     "type": "object",
@@ -22,31 +25,26 @@ TICKET_TOOLS_SCHEMA = {
             "type": "object",
             "description": "Parameters for the action",
             "properties": {
-                "title": {"type": "string", "description": "Ticket title/name"},
-                "description": {"type": "string", "description": "Ticket description"},
-                "ticket_id": {"type": "string", "description": "ID of the ticket"},
+                "title": {"type": ["string", "null"], "description": "Ticket title/name"},
+                "description": {"type": ["string", "null"], "description": "Ticket description"},
+                "ticket_id": {"type": ["string", "null"], "description": "ID of the ticket"},
                 "status": {
-                    "type": "string",
-                    "enum": ["open", "in_progress", "closed"],
+                    "type": ["string", "null"],
+                    "enum": ["open", "in_progress", "closed", None],
                     "description": "Ticket status: 'open', 'in_progress', or 'closed'",
                 },
-                "limit": {"type": "integer", "description": "Number of tickets to return"},
-                "message": {"type": "string", "description": "Chat response message"},
+                "message": {"type": ["string", "null"], "description": "Chat response message"},
             },
+            "required": ["title", "description", "ticket_id", "status", "message"],
+            "additionalProperties": False,
         },
     },
-    "required": ["action"],
+    "required": ["action", "parameters"],
+    "additionalProperties": False,
 }
 
 
-def get_system_prompt_with_tools() -> str:
-    """Generate system prompt that explains available ticket operations.
-
-    Returns:
-        System prompt with tool instructions
-
-    """
-    return """You are a helpful assistant that manages work tickets via natural language.
+TICKET_SYS_PROMPT = """You are a helpful assistant that manages work tickets via natural language.
 
 You have access to the following ticket operations:
 
@@ -56,7 +54,7 @@ You have access to the following ticket operations:
    - Example: "Create a ticket for fixing the login bug"
 
 2. **list_tickets**: List recent tickets
-   - Optional: limit (default shows all), status ('open', 'in_progress', 'closed')
+   - Optional: status ('open', 'in_progress', 'closed')
    - Example: "Show me my recent tickets" or "List open tickets" or "Show closed tickets"
 
 3. **get_ticket**: Get details of a specific ticket
@@ -86,8 +84,6 @@ When a user sends a message, analyze their intent and respond with:
 Examples:
 - "Create a ticket for fixing login"
   → {{"action": "create_ticket", "parameters": {{"title": "Fix login bug"}}}}
-- "Show my 3 recent tickets"
-  → {{"action": "list_tickets", "parameters": {{"limit": 3}}}}
 - "List open tickets"
   → {{"action": "list_tickets", "parameters": {{"status": "open"}}}}
 - "Show me closed tickets"
@@ -120,9 +116,9 @@ def validate_tool_call(  # noqa: C901, PLR0911
     action = tool_call["action"]
     params = tool_call.get("parameters", {})
 
-    # Validate required parameters for each action
+    # Validate required parameters for each action (null values are treated as missing)
     if action == "create_ticket":
-        if "title" not in params:
+        if not params.get("title"):
             return False, "create_ticket requires 'title' parameter"
 
     elif action == "list_tickets":
@@ -130,17 +126,17 @@ def validate_tool_call(  # noqa: C901, PLR0911
         pass
 
     elif action in ["get_ticket", "close_ticket"]:
-        if "ticket_id" not in params:
+        if not params.get("ticket_id"):
             return False, f"{action} requires 'ticket_id' parameter"
 
     elif action == "update_ticket":
-        if "ticket_id" not in params:
+        if not params.get("ticket_id"):
             return False, "update_ticket requires 'ticket_id' parameter"
-        if "title" not in params and "description" not in params and "status" not in params:
+        if not params.get("title") and not params.get("description") and not params.get("status"):
             return False, "update_ticket requires at least 'title', 'description', or 'status'"
 
     elif action == "chat_response":
-        if "message" not in params:
+        if not params.get("message"):
             return False, "chat_response requires 'message' parameter"
 
     else:

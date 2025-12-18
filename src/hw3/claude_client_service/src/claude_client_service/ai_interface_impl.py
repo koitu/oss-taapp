@@ -1,6 +1,7 @@
 """Implementation of AIInterface that reads Claude API key from environment variables."""
 
 import json
+import logging
 import os
 from typing import Any
 
@@ -8,6 +9,7 @@ from ai_api import AIInterface  # type: ignore[attr-defined]
 from anthropic import Anthropic
 
 DEFAULT_MODEL = "claude-3-7-sonnet-20250219"
+logger = logging.getLogger(__name__)
 
 
 class EnvAIImplementation(AIInterface):
@@ -55,7 +57,20 @@ class EnvAIImplementation(AIInterface):
         """
         if response_schema is not None:
             try:
-                parsed_raw = json.loads(content)
+                # Strip markdown code blocks if present (```json ... ```)
+                stripped_content = content.strip()
+                if stripped_content.startswith("```json"):
+                    # Remove ```json from start and ``` from end
+                    stripped_content = stripped_content[7:]  # Remove ```json
+                    stripped_content = stripped_content.removesuffix("```")  # Remove ```
+                    stripped_content = stripped_content.strip()
+                elif stripped_content.startswith("```"):
+                    # Remove ``` from start and end
+                    stripped_content = stripped_content[3:]
+                    stripped_content = stripped_content.removesuffix("```")
+                    stripped_content = stripped_content.strip()
+
+                parsed_raw = json.loads(stripped_content)
                 if not isinstance(parsed_raw, dict):
                     error_msg = "Structured response must be a dictionary"
                     raise TypeError(error_msg)
@@ -116,6 +131,11 @@ class EnvAIImplementation(AIInterface):
                 _raise_empty_response()
 
             assert content is not None
+
+            # Log the raw content for debugging
+            if response_schema and content.strip() and not content.strip().startswith("{"):
+                logger.warning(f"Claude returned non-JSON content: {content[:200]}")
+
             return self._parse_response(content, response_schema)
 
         except RuntimeError:

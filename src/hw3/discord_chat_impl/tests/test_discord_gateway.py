@@ -370,27 +370,6 @@ class TestDiscordGatewayHeartbeat:
             payload: dict[str, Any] = json.loads(call_args)
             assert payload["d"] is None
 
-    @pytest.mark.asyncio
-    async def test_heartbeat_skips_if_ws_closed(self, gateway: DiscordGateway) -> None:
-        """Test that heartbeat doesn't send if WebSocket is closed."""
-        gateway.running = True
-        gateway.heartbeat_interval = 50
-        gateway.ws = Mock()
-        gateway.ws.closed = True
-        gateway.ws.send = AsyncMock()
-
-        heartbeat_task: asyncio.Task[None] = asyncio.create_task(gateway._heartbeat())
-        await asyncio.sleep(0.1)
-        gateway.running = False
-
-        try:
-            await asyncio.wait_for(heartbeat_task, timeout=1.0)
-        except TimeoutError:
-            heartbeat_task.cancel()
-
-        # Should not send if closed
-        gateway.ws.send.assert_not_called()
-
 
 class TestDiscordGatewayIdentify:
     """Test identification process."""

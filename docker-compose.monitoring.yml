@@ -13,9 +13,7 @@ services:
       - .env
     environment:
       - PYTHONUNBUFFERED=1
-      - TELEMETRY_EXPORT_PATH=/app/telemetry/metrics.json
     volumes:
-      - ./telemetry:/app/telemetry
       - ./discord_credentials.db:/app/discord_credentials.db
       - ./discord_auth.db:/app/discord_auth.db
     restart: unless-stopped

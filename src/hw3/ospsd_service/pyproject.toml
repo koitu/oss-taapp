@@ -15,8 +15,6 @@ dependencies = [
     "claude-client-service",
     "discord-chat-impl",
     "trello-ticket-impl",
-    "telemetry-api",
-    "telemetry-impl",
 ]
 
 [project.optional-dependencies]
@@ -61,6 +59,3 @@ openai-client-service = { workspace = true }
 claude-client-service = { workspace = true }
 discord-chat-impl = { workspace = true }
 trello-ticket-impl = { workspace = true }
-
-telemetry-api = { workspace = true }
-telemetry-impl = { workspace = true }

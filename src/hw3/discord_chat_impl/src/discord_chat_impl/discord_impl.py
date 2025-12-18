@@ -16,6 +16,7 @@ import requests
 import websockets
 from authlib.integrations.httpx_client import OAuth2Client
 from chat_api import ChatInterface, Message
+from websockets.exceptions import ConnectionClosed
 
 from discord_chat_impl.message_impl import DiscordMessage
 
@@ -131,9 +132,11 @@ class DiscordGateway:
             while self.running:
                 assert self.heartbeat_interval is not None
                 await asyncio.sleep(self.heartbeat_interval / 1000)
-                if self.ws and not self.ws.closed:  # type: ignore[attr-defined]
+                if self.ws:
                     heartbeat = {"op": self.HEARTBEAT, "d": self.sequence}
                     await self.ws.send(json.dumps(heartbeat))
+        except ConnectionClosed:
+            pass
         except asyncio.CancelledError:
             pass
 
@@ -215,12 +218,12 @@ class DiscordGateway:
         try:
             async with websockets.connect(
                 f"{gateway_url}?v=10&encoding=json",
-                max_size=None,  # Remove message size limit
+                max_size=None,  # Remove the message size limit
             ) as ws:
                 self.ws = ws
                 logger.info(f"Connected to Discord Gateway: {gateway_url}")
 
-                # Listen for messages until connection closes
+                # Listen for messages until the connection closes
                 async for message in ws:
                     if isinstance(message, bytes):
                         await self._handle_message(message.decode())
@@ -239,7 +242,7 @@ class DiscordGateway:
                     await self._heartbeat_task
 
     async def _run_forever(self) -> None:
-        """Keep reconnecting if connection drops."""
+        """Keep reconnecting if the connection drops."""
         while self.running:
             try:
                 await self._connect_and_listen()

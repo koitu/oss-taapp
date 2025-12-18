@@ -1,12 +1,9 @@
 """OSPSD Service."""
 
-# ruff: noqa: ERA001
-
 import contextlib
 import logging
 import os
 import sys
-import threading
 import time
 from typing import Any
 
@@ -16,20 +13,16 @@ from chat_api import ChatInterface, Message
 from discord_chat_impl.discord_impl import DiscordGateway
 from dotenv import load_dotenv
 from fastapi import FastAPI, Response
-from telemetry_api import OperationType, TelemetryInterface
-from tickets_api import TicketInterface, TicketStatus
+from tickets_api import Ticket, TicketInterface, TicketStatus
 
-from ospsd_service import prometheus_metrics
+from ospsd_service.metrics import get_metrics, record_latency
 from ospsd_service.ticket_tools import (
+    TICKET_DESC_PREVIEW_LEN,
+    TICKET_SYS_PROMPT,
     TICKET_TOOLS_SCHEMA,
-    get_system_prompt_with_tools,
 )
 
-# Create FastAPI app for health checks
-app = FastAPI(title="OSPSD Service")
 
-
-# Would be great if this could be moved to a get_..._client method in the API
 def get_discord_client() -> ChatInterface:
     """Get the Discord client and return it in a generic interface."""
     from discord_chat_impl import DiscordClient  # noqa: PLC0415
@@ -58,15 +51,6 @@ def get_trello_client() -> TicketInterface:
     return TrelloTicketClientImpl()
 
 
-def get_telemetry_client() -> TelemetryInterface:
-    """Get the telemetry client and return it in a generic interface."""
-    from telemetry_impl import InMemoryTelemetry  # noqa: PLC0415
-
-    # Export metrics to a JSON file for observability
-    export_path = os.getenv("TELEMETRY_EXPORT_PATH", "telemetry/metrics.json")
-    return InMemoryTelemetry(export_path=export_path)
-
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -80,135 +64,319 @@ required_env_vars = [
     "OPENAI_API_KEY",
     "CLAUDE_API_KEY",
     "TRELLO_API_KEY",
-    "TRELLO_API_SECRET",  # This is actually the token
+    "TRELLO_API_SECRET",
     "TRELLO_BOARD_ID",
 ]
 if all(v not in os.environ for v in required_env_vars):
     sys.exit("Required environment variables are not set.")
 
-gateway_client: DiscordGateway = DiscordGateway()
-
 chat_client: ChatInterface = get_discord_client()
-ai_client: AIInterface = get_claude_client()  # change this between claude/openai!
 ticket_client: TicketInterface = get_trello_client()
-telemetry: TelemetryInterface = get_telemetry_client()
-
-bot_id = os.getenv("DISCORD_CLIENT_ID")
-
-# Description preview length for list_tickets
-DESC_PREVIEW_LENGTH = 50
+ai_client: AIInterface = get_claude_client()
 
 
-def record_metrics(
-    operation: str, duration_ms: float, *, success: bool = True, error: str | None = None
-) -> None:
-    """Record metrics to both telemetry and Prometheus.
+class MessageHandler:
+    """Handles Discord messages and coordinates AI/ticket operations."""
 
-    Args:
-        operation: Operation name (e.g., 'ai_generate', 'ticket_create')
-        duration_ms: Duration in milliseconds
-        success: Whether the operation succeeded
-        error: Error message if failed
+    def __init__(self, bot_id: str, default_model: str) -> None:
+        """Initialize the message handler.
 
-    """
-    # Map operation names to OperationType enum
-    operation_map = {
-        "ai_generate": OperationType.AI_GENERATE,
-        "ticket_create": OperationType.TICKET_CREATE,
-        "ticket_list": OperationType.TICKET_LIST,
-        "ticket_get": OperationType.TICKET_GET,
-        "ticket_update": OperationType.TICKET_UPDATE,
-        "ticket_delete": OperationType.TICKET_DELETE,
-        "chat_message": OperationType.CHAT_MESSAGE,
-    }
+        Args:
+            bot_id: The bot's Discord ID
+            default_model: The default AI model being used
 
-    # Record to telemetry
-    telemetry_op = operation_map.get(operation, OperationType.CHAT_MESSAGE)
-    telemetry.record_latency(telemetry_op, duration_ms, success=success, error_message=error)
-    if not success and error:
-        telemetry.record_failure(telemetry_op, error)
+        """
+        self.bot_id = bot_id
+        self.current_model = default_model
 
-    # Record to Prometheus
-    prometheus_metrics.record_latency(operation, duration_ms, success=success)
+    def handle_message(self, data: dict[str, Any]) -> None:  # noqa: C901
+        """Call this function when a message is sent in the server.
 
+        Args:
+            data (dict[str, Any]): The data received from the server
 
-# TODO(Andrew): add tests  # noqa: TD003, FIX002
-def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR0915
-    """Call this function when a message is sent in the server.
+        """
+        start_time = time.time()
 
-    Args:
-        data (dict[str, Any]): The data received from the server
+        author: str = data["author"]["username"]
+        author_id: str = data["author"]["id"]
+        channel_id: str = data["channel_id"]
 
-    """
-    start_time = time.time()
+        # do not respond to messages sent by the bot
+        if author_id == self.bot_id:
+            return
 
-    author: str = data["author"]["username"]
-    author_id: str = data["author"]["id"]
-    channel_id: str = data["channel_id"]
+        # Get recent conversation history (last 10 messages)
+        msgs: list[Message] = chat_client.get_messages(channel_id, limit=10)
 
-    # do not respond to messages sent by the bot
-    if author_id == bot_id:
-        return
+        # Get the most recent message content (the current message)
+        message_content = msgs[0].content.strip() if msgs else ""
 
-    # Get recent conversation history (last 10 messages)
-    msgs: list[Message] = chat_client.get_messages(channel_id, limit=10)
-    chat_log = ""
-    for m in reversed(msgs):
-        if m.sender_id == author_id:
-            chat_log += author
-        elif m.sender_id == bot_id:
-            chat_log += "Bot"
+        # Handle /model commands for switching AI providers
+        if message_content.startswith("/model"):
+            self._handle_model_command(channel_id, message_content)
+            return
+
+        # Only respond if the latest message starts with /bot
+        if not message_content.startswith("/bot"):
+            return
+
+        # Build chat log from message history, stripping /bot prefix from user messages
+        chat_log = self._build_chat_log(msgs, author, author_id)
+        logger.debug(chat_log)
+
+        # Track AI generation latency
+        ai_start = time.time()
+        try:
+            # since system_schema is provided, the response must be a dict
+            ai_response: dict[str, Any] = ai_client.generate_response(  # type: ignore[assignment]
+                chat_log,
+                system_prompt=TICKET_SYS_PROMPT,
+                response_schema=TICKET_TOOLS_SCHEMA,
+            )
+            record_latency("ai_generate", ai_start, success=True)
+            logger.info(ai_response)
+        except Exception as e:  # noqa: BLE001
+            self._handle_ai_exception(channel_id, e, "ai_generate", ai_start)
+            return
+
+        action = ai_response["action"]
+
+        if action == "chat_response":
+            self._handle_chat_response(channel_id, ai_response)
+        elif action == "create_ticket":
+            self._handle_create_ticket(channel_id, ai_response)
+        elif action == "list_tickets":
+            self._handle_list_tickets(channel_id, ai_response)
+        elif action == "get_ticket":
+            self._handle_get_ticket(channel_id, ai_response)
+        elif action == "update_ticket":
+            self._handle_update_ticket(channel_id, ai_response)
+        elif action == "close_ticket":
+            self._handle_close_ticket(channel_id, ai_response)
         else:
-            chat_log += m.sender_id
-        chat_log += ": " + m.content + "\n"
-    logger.debug(chat_log)
+            logger.warning(f"Unknown action: {action}")
 
-    # Generate system prompt with ticket tool definitions
-    system_prompt = get_system_prompt_with_tools()
+        # Track overall pipeline latency (end-to-end request handling)
+        record_latency("pipeline_total", start_time, success=True)
 
-    # Track AI generation latency
-    ai_start = time.time()
-    try:
-        ai_response: Any = ai_client.generate_response(
-            chat_log,
-            system_prompt,
-            response_schema=TICKET_TOOLS_SCHEMA,
+    def _send_discord_message(self, channel_id: str, message: str) -> None:
+        """Send a message to Discord with metrics tracking.
+
+        Args:
+            channel_id: The Discord channel ID
+            message: The message to send
+
+        """
+        discord_start = time.time()
+        try:
+            chat_client.send_message(channel_id, message)
+            record_latency("discord_send_message", discord_start, success=True)
+        except Exception:
+            record_latency("discord_send_message", discord_start, success=False)
+            logger.exception("Failed to send message to Discord")
+
+    def _handle_ai_exception(
+        self,
+        channel_id: str,
+        exc: Exception,
+        metric_name: str,
+        start_time: float,
+    ) -> None:
+        """Record AI metric failure and attempt to notify Discord about the error.
+
+        Args:
+            channel_id: The Discord channel ID
+            exc: The exception that occurred
+            metric_name: Name of the metric for tracking
+            start_time: When the operation started
+
+        """
+        record_latency(metric_name, start_time, success=False)
+        logger.exception("AI client error")
+
+        err_text = (str(exc) or "").lower()
+        if any(k in err_text for k in ("auth", "authentication", "unauthorized", "401", "403")):
+            msg = "❌ Authentication to AI service failed."
+        else:
+            msg = "❌ AI service error: " + (str(exc) or "unknown error")
+
+        self._send_discord_message(channel_id, msg)
+
+    def _handle_ticket_exception(
+        self,
+        channel_id: str,
+        exc: Exception,
+        metric_name: str,
+        start_time: float,
+    ) -> None:
+        """Record ticket metric failure and notify Discord about the error.
+
+        Args:
+            channel_id: The Discord channel ID
+            exc: The exception that occurred
+            metric_name: Name of the metric for tracking
+            start_time: When the operation started
+
+        """
+        record_latency(metric_name, start_time, success=False)
+        logger.exception("Ticket client error")
+
+        err_text = (str(exc) or "").lower()
+        if any(k in err_text for k in ("auth", "authentication", "unauthorized", "401", "403")):
+            msg = "❌ Authentication to ticket service failed."
+        else:
+            msg = "❌ Ticket service error: " + (str(exc) or "unknown error")
+
+        self._send_discord_message(channel_id, msg)
+
+    def _handle_model_command(self, channel_id: str, message_content: str) -> None:
+        """Handle /model commands for switching AI providers.
+
+        Args:
+            channel_id: The Discord channel ID
+            message_content: The full message content
+
+        """
+        global ai_client  # noqa: PLW0603
+
+        parts = message_content.split()
+        if len(parts) == 1 or parts[1].lower() == "status":
+            # Show the current model
+            self._send_discord_message(channel_id, f"🤖 Current AI model: **{self.current_model}**")
+            return
+
+        model_name = parts[1].lower()
+        if model_name == "openai":
+            init_start = time.time()
+            try:
+                ai_client = get_openai_client()
+                self.current_model = "openai"
+            except Exception as e:  # noqa: BLE001
+                self._handle_ai_exception(channel_id, e, "ai_switch", init_start)
+                return
+            else:
+                self._send_discord_message(channel_id, "✅ Switched to **OpenAI** model")
+                logger.info("Switched to OpenAI model")
+                return
+        if model_name == "claude":
+            init_start = time.time()
+            try:
+                ai_client = get_claude_client()
+                self.current_model = "claude"
+            except Exception as e:  # noqa: BLE001
+                self._handle_ai_exception(channel_id, e, "ai_switch", init_start)
+                return
+            else:
+                self._send_discord_message(channel_id, "✅ Switched to **Claude** model")
+                logger.info("Switched to Claude model")
+                return
+
+        self._send_discord_message(
+            channel_id,
+            f"❌ Unknown model: `{model_name}`\n\n"
+            "Available commands:\n"
+            "• `/model openai` - Switch to OpenAI\n"
+            "• `/model claude` - Switch to Claude\n"
+            "• `/model status` - Show current model",
         )
-        ai_duration = (time.time() - ai_start) * 1000
-        record_metrics("ai_generate", ai_duration, success=True)
-        logger.info(ai_response)
-    except Exception as e:
-        ai_duration = (time.time() - ai_start) * 1000
-        record_metrics("ai_generate", ai_duration, success=False, error=str(e))
-        raise
 
-    if ai_response["action"] == "chat_response":
-        chat_client.send_message(channel_id, ai_response["parameters"]["message"])
+    def _build_chat_log(self, msgs: list[Message], author: str, author_id: str) -> str:
+        """Build a chat log from message history.
 
-    elif ai_response["action"] == "create_ticket":
+        Args:
+            msgs: List of messages in chronological order (newest first)
+            author: Username of the current message author
+            author_id: ID of the current message author
+
+        Returns:
+            Formatted chat log string
+
+        """
+        chat_log = ""
+        for m in reversed(msgs):
+            if m.sender_id == author_id:
+                chat_log += author
+            elif m.sender_id == self.bot_id:
+                chat_log += "Bot"
+            else:
+                chat_log += m.sender_id
+
+            # Strip /bot prefix from message content if present
+            content = m.content
+            if content.startswith("/bot "):
+                content = content[5:]  # Remove "/bot " (5 characters including space)
+            elif content.startswith("/bot"):
+                content = content[4:].strip()  # Remove "/bot" and any whitespace
+
+            chat_log += ": " + content + "\n"
+
+        return chat_log
+
+    def _handle_chat_response(self, channel_id: str, ai_response: dict[str, Any]) -> None:
+        """Handle chat response action from AI.
+
+        Args:
+            channel_id: The Discord channel ID
+            ai_response: The AI response containing the chat message
+
+        """
+        self._send_discord_message(channel_id, ai_response["parameters"]["message"])
+
+    def _format_ticket(self, ticket: Ticket, *, truncate_desc: bool) -> str:
+        """Format a ticket for display in Discord."""
+        msg = f"**{ticket.title}**\n"
+        if ticket.description:
+            desc = ticket.description
+
+            if truncate_desc:
+                desc = ticket.description[:TICKET_DESC_PREVIEW_LEN]
+                if len(ticket.description) > TICKET_DESC_PREVIEW_LEN:
+                    desc += "..."
+
+            msg += f"> Description: {desc}\n"
+        if ticket.assignee:
+            msg += f"> Assignee: {ticket.assignee}\n"
+        else:
+            msg += "> Assignee: Unassigned\n"
+        msg += f"> Status: {ticket.status.value}\n> ID: `{ticket.id}`\n\n"
+        return msg
+
+    def _handle_create_ticket(self, channel_id: str, ai_response: dict[str, Any]) -> None:
+        """Handle creating ticket from AI.
+
+        Args:
+            channel_id: The Discord channel ID
+            ai_response: The AI response containing ticket parameters
+
+        """
         ticket_start = time.time()
         try:
+            # Extract parameters, using empty string for None values where needed
+            params = ai_response["parameters"]
             created_ticket = ticket_client.create_ticket(
-                ai_response["parameters"]["title"],
-                ai_response["parameters"]["description"],
-                ai_response["parameters"].get("assignee", None),
+                params["title"],
+                params.get("description") or "",  # Use empty string if None
+                params.get("assignee"),
             )
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_create", ticket_duration, success=True)
+            record_latency("ticket_create", ticket_start, success=True)
 
-            # Format for Discord markdown
+            # Format for Discord Markdown
             msg = "✅ **Created Ticket**\n\n"
-            msg += f"**{created_ticket.title}**\n"
-            if created_ticket.description:
-                msg += f"> {created_ticket.description}\n\n"
-            msg += f"🆔 ID: `{created_ticket.id}`"
-            chat_client.send_message(channel_id, msg)
-        except Exception as e:
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_create", ticket_duration, success=False, error=str(e))
-            raise
+            msg += self._format_ticket(created_ticket, truncate_desc=False)
 
-    elif ai_response["action"] == "list_tickets":
+            self._send_discord_message(channel_id, msg)
+        except Exception as e:  # noqa: BLE001
+            self._handle_ticket_exception(channel_id, e, "ticket_create", ticket_start)
+
+    def _handle_list_tickets(self, channel_id: str, ai_response: dict[str, Any]) -> None:
+        """Handle list tickets action from AI.
+
+        Args:
+            channel_id: The Discord channel ID
+            ai_response: The AI response containing an optional status filter
+
+        """
         ticket_start = time.time()
         try:
             # Extract and normalize status if provided
@@ -220,59 +388,58 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 status_enum = TicketStatus(normalized_status)
 
             tickets = ticket_client.search_tickets(status=status_enum)
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_list", ticket_duration, success=True)
+            record_latency("ticket_list", ticket_start, success=True)
 
             if not tickets:
                 status_msg = f" {status_enum.value}" if status_enum else ""
-                chat_client.send_message(channel_id, f"📋 No{status_msg} tickets found.")
+                msg = f"📋 No{status_msg} tickets found."
             else:
-                # Format for Discord markdown with better readability
+                # Format for Discord Markdown with better readability
                 status_filter = f" ({status_enum.value})" if status_enum else ""
                 msg = f"📋 **Recent Tickets{status_filter}** (showing {len(tickets)}):\n\n"
-                for i, t in enumerate(tickets, 1):
-                    msg += f"**{i}. {t.title}**\n"
-                    if t.description:
-                        # Show preview of description
-                        desc_preview = t.description[:DESC_PREVIEW_LENGTH]
-                        if len(t.description) > DESC_PREVIEW_LENGTH:
-                            desc_preview += "..."
-                        msg += f"> {desc_preview}\n"
-                    msg += f"*ID:* `{t.id}` | *Status:* {t.status.value}\n\n"
-                chat_client.send_message(channel_id, msg.strip())
-        except Exception as e:
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_list", ticket_duration, success=False, error=str(e))
-            raise
+                for i, ticket in enumerate(tickets, 1):
+                    msg += f"{i}. " + self._format_ticket(ticket, truncate_desc=True)
 
-    elif ai_response["action"] == "get_ticket":
+            self._send_discord_message(channel_id, msg.strip())
+        except Exception as e:  # noqa: BLE001
+            self._handle_ticket_exception(channel_id, e, "ticket_list", ticket_start)
+
+    def _handle_get_ticket(self, channel_id: str, ai_response: dict[str, Any]) -> None:
+        """Handle get ticket action from AI.
+
+        Args:
+            channel_id: The Discord channel ID
+            ai_response: The AI response containing ticket_id
+
+        """
         ticket_start = time.time()
         try:
             ticket_id = ai_response["parameters"]["ticket_id"]
             ticket = ticket_client.get_ticket(ticket_id)
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_get", ticket_duration, success=True)
+            record_latency("ticket_get", ticket_start, success=True)
 
             if ticket is None:
-                chat_client.send_message(channel_id, f"❌ Ticket not found: `{ticket_id}`")
+                msg = f"❌ Ticket not found: `{ticket_id}`"
             else:
-                # Format for Discord markdown
-                msg = f"🎫 **Ticket Details**\n\n**{ticket.title}**\n\n"
-                if ticket.description:
-                    msg += f"> {ticket.description}\n\n"
-                msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status.value}"
-                if ticket.assignee:
-                    msg += f" | *Assignee:* {ticket.assignee}"
-                chat_client.send_message(channel_id, msg)
-        except Exception as e:
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_get", ticket_duration, success=False, error=str(e))
-            raise
+                # Format for Discord Markdown
+                msg = "🎫 **Ticket Details**\n\n"
+                msg += self._format_ticket(ticket, truncate_desc=False)
 
-    elif ai_response["action"] == "update_ticket":
+            self._send_discord_message(channel_id, msg)
+        except Exception as e:  # noqa: BLE001
+            self._handle_ticket_exception(channel_id, e, "ticket_get", ticket_start)
+
+    def _handle_update_ticket(self, channel_id: str, ai_response: dict[str, Any]) -> None:
+        """Handle update ticket action from AI.
+
+        Args:
+            channel_id: The Discord channel ID
+            ai_response: The AI response containing update parameters
+
+        """
         ticket_start = time.time()
         try:
-            # Convert status string to TicketStatus enum if provided
+            # Convert a status string to TicketStatus enum if provided
             status_param = ai_response["parameters"].get("status")
             status_enum = None
             if status_param:
@@ -285,46 +452,40 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 status=status_enum,
                 title=ai_response["parameters"].get("title"),
             )
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_update", ticket_duration, success=True)
+            record_latency("ticket_update", ticket_start, success=True)
 
-            msg = f"✅ **Updated Ticket**\n\n**{ticket.title}**\n"
-            msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status.value}"
-            chat_client.send_message(channel_id, msg)
-        except Exception as e:
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_update", ticket_duration, success=False, error=str(e))
-            raise
+            msg = "✅ **Updated Ticket**\n\n"
+            msg += self._format_ticket(ticket, truncate_desc=False)
 
-    elif ai_response["action"] == "close_ticket":
+            self._send_discord_message(channel_id, msg)
+        except Exception as e:  # noqa: BLE001
+            self._handle_ticket_exception(channel_id, e, "ticket_update", ticket_start)
+
+    def _handle_close_ticket(self, channel_id: str, ai_response: dict[str, Any]) -> None:
+        """Handle close ticket action from AI.
+
+        Args:
+            channel_id: The Discord channel ID
+            ai_response: The AI response containing ticket_id
+
+        """
         ticket_start = time.time()
         try:
             ticket_id = ai_response["parameters"]["ticket_id"]
             success = ticket_client.delete_ticket(ticket_id)
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_delete", ticket_duration, success=True)
+            record_latency("ticket_delete", ticket_start, success=True)
 
             if success:
-                chat_client.send_message(channel_id, f"✅ Closed ticket: `{ticket_id}`")
+                msg = f"✅ Closed ticket: `{ticket_id}`"
             else:
-                chat_client.send_message(channel_id, f"❌ Failed to close ticket: `{ticket_id}`")
-        except Exception as e:
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_delete", ticket_duration, success=False, error=str(e))
-            raise
+                msg = f"❌ Failed to close ticket: `{ticket_id}`"
 
-    else:
-        logger.warning(f"Unknown action: {ai_response.get('action')}")
-
-    # Track overall message handling latency
-    total_duration = (time.time() - start_time) * 1000
-    record_metrics("chat_message", total_duration, success=True)
+            self._send_discord_message(channel_id, msg)
+        except Exception as e:  # noqa: BLE001
+            self._handle_ticket_exception(channel_id, e, "ticket_delete", ticket_start)
 
 
-@app.get("/health")
-async def health_check() -> dict[str, str]:
-    """Health check endpoint for container orchestration."""
-    return {"status": "healthy", "service": "ospsd"}
+app = FastAPI(title="OSPSD Service")
 
 
 @app.get("/")
@@ -333,48 +494,27 @@ async def root() -> dict[str, str]:
     return {"message": "OSPSD Service is running", "status": "ok"}
 
 
+@app.get("/health")
+async def health_check() -> dict[str, str]:
+    """Health check endpoint for container orchestration."""
+    return {"status": "healthy", "service": "ospsd"}
+
+
 @app.get("/metrics")
 async def metrics() -> Response:
     """Prometheus metrics endpoint."""
-    return Response(content=prometheus_metrics.get_metrics(), media_type="text/plain")
+    return Response(content=get_metrics(), media_type="text/plain")
 
 
-def run_discord_gateway() -> None:
-    """Run the Discord gateway in a separate thread."""
-    gateway_client.subscribe("MESSAGE_CREATE", handle_message)
-    gateway_client.start()
+handler = MessageHandler(
+    bot_id=os.environ["DISCORD_CLIENT_ID"],
+    default_model="claude",
+)
 
-    while True:
-        time.sleep(1)
+# Start Discord gateway (different thread)
+gateway_client: DiscordGateway = DiscordGateway()
+gateway_client.subscribe("MESSAGE_CREATE", handler.handle_message)
+gateway_client.start()
 
-
-def run_fastapi_server() -> None:
-    """Run the FastAPI server for health checks."""
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")  # noqa: S104
-
-
-# Start Discord gateway in a separate thread
-gateway_thread = threading.Thread(target=run_discord_gateway, daemon=True)
-gateway_thread.start()
-
-# Run FastAPI server in the main thread
-run_fastapi_server()
-
-
-# from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
-# from fastapi import FastAPI, Response
-#
-# app = FastAPI()
-#
-# # Metrics
-# REQUEST_COUNT = Counter('app_requests_total', 'Total request count')
-# REQUEST_DURATION = Histogram('app_request_duration_seconds', 'Request duration')
-#
-# @app.get("/metrics")
-# async def metrics():
-#     REQUEST_COUNT.inc()
-#     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
-#
-# @app.get("/health")
-# async def health():
-#     return {"status": "healthy"}
+# Run FastAPI server (main thread)
+uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")  # noqa: S104 (allow listening to 0.0.0.0)

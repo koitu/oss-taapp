@@ -341,12 +341,12 @@ def test_application_structure_integrity() -> None:
     expected_files = [
         "main.py",
         "pyproject.toml",
-        "src/mail_client_api/src/mail_client_api/__init__.py",
-        "src/mail_client_api/src/mail_client_api/client.py",
-        "src/mail_client_api/src/mail_client_api/message.py",
-        "src/gmail_client_impl/src/gmail_client_impl/__init__.py",
-        "src/gmail_client_impl/src/gmail_client_impl/gmail_impl.py",
-        "src/gmail_client_impl/src/gmail_client_impl/message_impl.py",
+        "src/hw1/mail_client_api/src/mail_client_api/__init__.py",
+        "src/hw1/mail_client_api/src/mail_client_api/client.py",
+        "src/hw1/mail_client_api/src/mail_client_api/message.py",
+        "src/hw1/gmail_client_impl/src/gmail_client_impl/__init__.py",
+        "src/hw1/gmail_client_impl/src/gmail_client_impl/gmail_impl.py",
+        "src/hw1/gmail_client_impl/src/gmail_client_impl/message_impl.py",
     ]
 
     missing_files = []

@@ -1,5 +1,7 @@
 """Prometheus metrics for OSPSD service."""
 
+import time
+
 from prometheus_client import Counter, Histogram, generate_latest
 
 # Request latency histogram (in milliseconds)
@@ -32,15 +34,16 @@ REQUEST_TOTAL = Counter(
 )
 
 
-def record_latency(operation: str, duration_ms: float, *, success: bool = True) -> None:
+def record_latency(operation: str, start_time: float, *, success: bool = True) -> None:
     """Record request latency and increment counters.
 
     Args:
         operation: The operation type (e.g., 'ai_generate', 'ticket_create')
-        duration_ms: Duration in milliseconds
+        start_time: Time when the operation started
         success: Whether the operation was successful
 
     """
+    duration_ms = (time.time() - start_time) * 1000
     REQUEST_LATENCY.labels(operation=operation).observe(duration_ms)
     REQUEST_TOTAL.labels(operation=operation).inc()
 
