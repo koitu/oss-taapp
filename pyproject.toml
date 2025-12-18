@@ -73,6 +73,7 @@ members = [
 [tool.ruff]
 line-length = 130 # high for top level due to tests
 target-version = "py311"
+required-version = "==0.13.2"
 extend-exclude = [
   "view_db.py",
   "get_oauth_code.py",
