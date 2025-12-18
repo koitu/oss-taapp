@@ -8,8 +8,8 @@ import logging
 
 import pytest
 
-import gmail_client_impl  # Import to trigger dependency injection
 import mail_client_api
+import gmail_client_impl  # Import to trigger dependency injection
 
 # Mark all tests in this file as integration tests
 pytestmark = pytest.mark.integration

@@ -1,7 +1,7 @@
 """Use the Discord client service to generate a URL for adding your bot to your server."""
 
-import contextlib
 import os
+import contextlib
 
 from dotenv import load_dotenv
 
