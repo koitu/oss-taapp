@@ -301,7 +301,11 @@ jobs:
             echo "export GOOGLE_PROJECT=$GOOGLE_PROJECT_ID" >> $BASH_ENV
 
             echo "Credentials configured for project: $GOOGLE_PROJECT_ID"
-
+      - run:
+          name: "Debug: Who am I?"
+          command: |
+            echo "GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS"
+            cat $GOOGLE_APPLICATION_CREDENTIALS | jq -r '.client_email'
       - run:
           name: "Terraform Init"
           command: |
