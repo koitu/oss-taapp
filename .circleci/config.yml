@@ -318,7 +318,7 @@ jobs:
             cd terraform
             terraform apply -var="credentials_file=$HOME/gcloud-key.json"-input=false -auto-approve tfplan
 
-# Workflow
+# Workflows
 workflows:
   build_and_test:
     jobs:
