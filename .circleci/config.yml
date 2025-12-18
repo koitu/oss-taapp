@@ -31,6 +31,11 @@ jobs:
             pytest --version
             mypy --version
             coverage --version
+      - run:
+          name: "Format code with ruff"
+          command: |
+            source .venv/bin/activate
+            uv run ruff format .
       - persist_to_workspace:
           root: .
           paths:
