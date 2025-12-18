@@ -16,7 +16,6 @@ from chat_api import ChatInterface, Message
 from discord_chat_impl.discord_impl import DiscordGateway
 from dotenv import load_dotenv
 from fastapi import FastAPI, Response
-from telemetry_api import OperationType, TelemetryInterface
 from tickets_api import TicketInterface, TicketStatus
 
 from ospsd_service import prometheus_metrics
@@ -58,15 +57,6 @@ def get_trello_client() -> TicketInterface:
     return TrelloTicketClientImpl()
 
 
-def get_telemetry_client() -> TelemetryInterface:
-    """Get the telemetry client and return it in a generic interface."""
-    from telemetry_impl import InMemoryTelemetry  # noqa: PLC0415
-
-    # Export metrics to a JSON file for observability
-    export_path = os.getenv("TELEMETRY_EXPORT_PATH", "telemetry/metrics.json")
-    return InMemoryTelemetry(export_path=export_path)
-
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -90,7 +80,6 @@ gateway_client: DiscordGateway = DiscordGateway()
 
 chat_client: ChatInterface = get_discord_client()
 ticket_client: TicketInterface = get_trello_client()
-telemetry: TelemetryInterface = get_telemetry_client()
 
 bot_id = os.getenv("DISCORD_CLIENT_ID")
 
@@ -103,35 +92,16 @@ DESC_PREVIEW_LENGTH = 50
 
 
 def record_metrics(
-    operation: str, duration_ms: float, *, success: bool = True, error: str | None = None
+    operation: str, duration_ms: float, *, success: bool = True
 ) -> None:
-    """Record metrics to both telemetry and Prometheus.
+    """Record metrics to Prometheus.
 
     Args:
         operation: Operation name (e.g., 'ai_generate', 'ticket_create')
         duration_ms: Duration in milliseconds
         success: Whether the operation succeeded
-        error: Error message if failed
 
     """
-    # Map operation names to OperationType enum
-    operation_map = {
-        "ai_generate": OperationType.AI_GENERATE,
-        "ticket_create": OperationType.TICKET_CREATE,
-        "ticket_list": OperationType.TICKET_LIST,
-        "ticket_get": OperationType.TICKET_GET,
-        "ticket_update": OperationType.TICKET_UPDATE,
-        "ticket_delete": OperationType.TICKET_DELETE,
-        "chat_message": OperationType.CHAT_MESSAGE,
-    }
-
-    # Record to telemetry
-    telemetry_op = operation_map.get(operation, OperationType.CHAT_MESSAGE)
-    telemetry.record_latency(telemetry_op, duration_ms, success=success, error_message=error)
-    if not success and error:
-        telemetry.record_failure(telemetry_op, error)
-
-    # Record to Prometheus
     prometheus_metrics.record_latency(operation, duration_ms, success=success)
 
 
@@ -219,9 +189,9 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
         ai_duration = (time.time() - ai_start) * 1000
         record_metrics("ai_generate", ai_duration, success=True)
         logger.info(ai_response)
-    except Exception as e:
+    except Exception:
         ai_duration = (time.time() - ai_start) * 1000
-        record_metrics("ai_generate", ai_duration, success=False, error=str(e))
+        record_metrics("ai_generate", ai_duration, success=False)
         raise
 
     if ai_response["action"] == "chat_response":
@@ -247,9 +217,9 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 msg += f"> {created_ticket.description}\n\n"
             msg += f"🆔 ID: `{created_ticket.id}`"
             chat_client.send_message(channel_id, msg)
-        except Exception as e:
+        except Exception:
             ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_create", ticket_duration, success=False, error=str(e))
+            record_metrics("ticket_create", ticket_duration, success=False)
             raise
 
     elif ai_response["action"] == "list_tickets":
@@ -284,9 +254,9 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                         msg += f"> {desc_preview}\n"
                     msg += f"*ID:* `{t.id}` | *Status:* {t.status.value}\n\n"
                 chat_client.send_message(channel_id, msg.strip())
-        except Exception as e:
+        except Exception:
             ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_list", ticket_duration, success=False, error=str(e))
+            record_metrics("ticket_list", ticket_duration, success=False)
             raise
 
     elif ai_response["action"] == "get_ticket":
@@ -308,9 +278,9 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 if ticket.assignee:
                     msg += f" | *Assignee:* {ticket.assignee}"
                 chat_client.send_message(channel_id, msg)
-        except Exception as e:
+        except Exception:
             ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_get", ticket_duration, success=False, error=str(e))
+            record_metrics("ticket_get", ticket_duration, success=False)
             raise
 
     elif ai_response["action"] == "update_ticket":
@@ -335,9 +305,9 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
             msg = f"✅ **Updated Ticket**\n\n**{ticket.title}**\n"
             msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status.value}"
             chat_client.send_message(channel_id, msg)
-        except Exception as e:
+        except Exception:
             ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_update", ticket_duration, success=False, error=str(e))
+            record_metrics("ticket_update", ticket_duration, success=False)
             raise
 
     elif ai_response["action"] == "close_ticket":
@@ -352,9 +322,9 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 chat_client.send_message(channel_id, f"✅ Closed ticket: `{ticket_id}`")
             else:
                 chat_client.send_message(channel_id, f"❌ Failed to close ticket: `{ticket_id}`")
-        except Exception as e:
+        except Exception:
             ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_delete", ticket_duration, success=False, error=str(e))
+            record_metrics("ticket_delete", ticket_duration, success=False)
             raise
 
     else:

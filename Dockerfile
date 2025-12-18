@@ -31,9 +31,6 @@ COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/src /app/src
 COPY --from=builder /app/pyproject.toml /app/uv.lock /app/
 
-# Create directory for telemetry
-RUN mkdir -p /app/telemetry
-
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/src:/app/clients/python \

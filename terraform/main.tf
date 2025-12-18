@@ -158,10 +158,6 @@ resource "google_cloud_run_v2_service" "service" {
         value = "1"
       }
       env {
-        name  = "TELEMETRY_EXPORT_PATH"
-        value = var.telemetry_export_path
-      }
-      env {
         name  = "NO_AUTH"
         value = var.no_auth
       }
