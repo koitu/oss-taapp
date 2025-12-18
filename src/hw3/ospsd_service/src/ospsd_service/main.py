@@ -89,11 +89,14 @@ if all(v not in os.environ for v in required_env_vars):
 gateway_client: DiscordGateway = DiscordGateway()
 
 chat_client: ChatInterface = get_discord_client()
-ai_client: AIInterface = get_claude_client()  # change this between claude/openai!
 ticket_client: TicketInterface = get_trello_client()
 telemetry: TelemetryInterface = get_telemetry_client()
 
 bot_id = os.getenv("DISCORD_CLIENT_ID")
+
+# AI client state - can be switched at runtime via Discord commands
+current_model: str = "claude"  # Default model
+ai_client: AIInterface = get_claude_client()
 
 # Description preview length for list_tickets
 DESC_PREVIEW_LENGTH = 50
@@ -152,6 +155,45 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
 
     # Get recent conversation history (last 10 messages)
     msgs: list[Message] = chat_client.get_messages(channel_id, limit=10)
+
+    # Get the most recent message content (the current message)
+    message_content = msgs[0].content.strip() if msgs else ""
+
+    # Handle /model commands for switching AI providers
+    if message_content.startswith("/model"):
+        global ai_client, current_model  # noqa: PLW0603
+
+        parts = message_content.split()
+        if len(parts) == 1 or parts[1].lower() == "status":
+            # Show current model
+            chat_client.send_message(channel_id, f"🤖 Current AI model: **{current_model}**")
+            return
+
+        model_name = parts[1].lower()
+        if model_name == "openai":
+            ai_client = get_openai_client()
+            current_model = "openai"
+            chat_client.send_message(channel_id, "✅ Switched to **OpenAI** model")
+            logger.info("Switched to OpenAI model")
+            return
+        if model_name == "claude":
+            ai_client = get_claude_client()
+            current_model = "claude"
+            chat_client.send_message(channel_id, "✅ Switched to **Claude** model")
+            logger.info("Switched to Claude model")
+            return
+
+        chat_client.send_message(
+            channel_id,
+            f"❌ Unknown model: `{model_name}`\n\n"
+            "Available commands:\n"
+            "• `/model openai` - Switch to OpenAI\n"
+            "• `/model claude` - Switch to Claude\n"
+            "• `/model status` - Show current model"
+        )
+        return
+
+    # Build chat log from message history
     chat_log = ""
     for m in reversed(msgs):
         if m.sender_id == author_id:
