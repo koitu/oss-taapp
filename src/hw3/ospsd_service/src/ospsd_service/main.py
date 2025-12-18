@@ -89,6 +89,28 @@ ai_client: AIInterface = get_claude_client()
 DESC_PREVIEW_LENGTH = 50
 
 
+def _handle_ticket_exception(channel_id: str, exc: Exception, metric_name: str, start_time: float) -> None:
+    """Record ticket metric failure and notify Discord about the error.
+
+    If the error message appears authentication-related, send a specific authentication
+    failure message; otherwise send a generic ticket-service error.
+    """
+    duration = (time.time() - start_time) * 1000
+    record_latency(metric_name, duration, success=False)
+    logger.exception("Ticket client error")
+
+    err_text = (str(exc) or "").lower()
+    if any(k in err_text for k in ("auth", "authentication", "unauthorized", "401", "403")):
+        msg = "❌ Authentication to ticket service failed."
+    else:
+        msg = "❌ Ticket service error: " + (str(exc) or "unknown error")
+
+    try:
+        chat_client.send_message(channel_id, msg)
+    except Exception:
+        logger.exception("Failed to send ticket error message to Discord")
+
+
 def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR0915
     """Call this function when a message is sent in the server.
 
@@ -212,10 +234,9 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 msg += f"> {created_ticket.description}\n\n"
             msg += f"🆔 ID: `{created_ticket.id}`"
             chat_client.send_message(channel_id, msg)
-        except Exception:
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_latency("ticket_create", ticket_duration, success=False)
-            raise
+        except Exception as e:
+            _handle_ticket_exception(channel_id, e, "ticket_create", ticket_start)
+            return
 
     elif ai_response["action"] == "list_tickets":
         ticket_start = time.time()
@@ -249,10 +270,9 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                         msg += f"> {desc_preview}\n"
                     msg += f"*ID:* `{t.id}` | *Status:* {t.status.value}\n\n"
                 chat_client.send_message(channel_id, msg.strip())
-        except Exception:
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_latency("ticket_list", ticket_duration, success=False)
-            raise
+        except Exception as e:
+            _handle_ticket_exception(channel_id, e, "ticket_list", ticket_start)
+            return
 
     elif ai_response["action"] == "get_ticket":
         ticket_start = time.time()
@@ -273,10 +293,9 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 if ticket.assignee:
                     msg += f" | *Assignee:* {ticket.assignee}"
                 chat_client.send_message(channel_id, msg)
-        except Exception:
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_latency("ticket_get", ticket_duration, success=False)
-            raise
+        except Exception as e:
+            _handle_ticket_exception(channel_id, e, "ticket_get", ticket_start)
+            return
 
     elif ai_response["action"] == "update_ticket":
         ticket_start = time.time()
@@ -300,10 +319,9 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
             msg = f"✅ **Updated Ticket**\n\n**{ticket.title}**\n"
             msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status.value}"
             chat_client.send_message(channel_id, msg)
-        except Exception:
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_latency("ticket_update", ticket_duration, success=False)
-            raise
+        except Exception as e:
+            _handle_ticket_exception(channel_id, e, "ticket_update", ticket_start)
+            return
 
     elif ai_response["action"] == "close_ticket":
         ticket_start = time.time()
@@ -317,10 +335,9 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 chat_client.send_message(channel_id, f"✅ Closed ticket: `{ticket_id}`")
             else:
                 chat_client.send_message(channel_id, f"❌ Failed to close ticket: `{ticket_id}`")
-        except Exception:
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_latency("ticket_delete", ticket_duration, success=False)
-            raise
+        except Exception as e:
+            _handle_ticket_exception(channel_id, e, "ticket_delete", ticket_start)
+            return
 
     else:
         logger.warning(f"Unknown action: {ai_response.get('action')}")
