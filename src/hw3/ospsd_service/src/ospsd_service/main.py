@@ -188,10 +188,12 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
     elif ai_response["action"] == "create_ticket":
         ticket_start = time.time()
         try:
+            # Extract parameters, using empty string for None values where needed
+            params = ai_response["parameters"]
             created_ticket = ticket_client.create_ticket(
-                ai_response["parameters"]["title"],
-                ai_response["parameters"]["description"],
-                ai_response["parameters"].get("assignee", None),
+                params["title"],
+                params.get("description") or "",  # Use empty string if None
+                params.get("assignee"),
             )
             ticket_duration = (time.time() - ticket_start) * 1000
             record_metrics("ticket_create", ticket_duration, success=True)
