@@ -58,7 +58,20 @@ class EnvAIImplementation(AIInterface):
         """
         if response_schema is not None:
             try:
-                parsed_raw = json.loads(content)
+                # Strip markdown code blocks if present (```json ... ```)
+                stripped_content = content.strip()
+                if stripped_content.startswith("```json"):
+                    # Remove ```json from start and ``` from end
+                    stripped_content = stripped_content[7:]  # Remove ```json
+                    stripped_content = stripped_content.removesuffix("```")  # Remove ```
+                    stripped_content = stripped_content.strip()
+                elif stripped_content.startswith("```"):
+                    # Remove ``` from start and end
+                    stripped_content = stripped_content[3:]
+                    stripped_content = stripped_content.removesuffix("```")
+                    stripped_content = stripped_content.strip()
+
+                parsed_raw = json.loads(stripped_content)
                 if not isinstance(parsed_raw, dict):
                     error_msg = "Structured response must be a dictionary"
                     raise TypeError(error_msg)
