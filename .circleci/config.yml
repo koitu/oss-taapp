@@ -389,17 +389,3 @@ workflows:
             branches:
               only:
                 - hw2
-
-  terraform:
-    jobs:
-      - build
-      - terraform_apply:
-          requires:
-            - report_summary
-          filters:
-            branches:
-              only:
-                - hw3-ai
-                - terraform-test
-                - hw3-alignment
-                - hw3
