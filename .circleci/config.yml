@@ -332,6 +332,16 @@ workflows:
           requires:
             - unit_test
             - circleci_test
+      - terraform_apply:
+          requires:
+            - report_summary
+          filters:
+            branches:
+              only:
+                - hw3-ai
+                - terraform-test
+                - hw3-alignment
+                - hw3
 
   full_integration:
     jobs:
@@ -358,6 +368,16 @@ workflows:
             - circleci_test
             - integration_test
             - e2e_test
+      - terraform_apply:
+          requires:
+            - report_summary
+          filters:
+            branches:
+              only:
+                - hw3-ai
+                - terraform-test
+                - hw3-alignment
+                - hw3
 
   deploy_to_cloud_run:
     jobs:
@@ -373,9 +393,6 @@ workflows:
   terraform:
     jobs:
       - build
-      - report_summary:
-          requires:
-            - build
       - terraform_apply:
           requires:
             - report_summary
