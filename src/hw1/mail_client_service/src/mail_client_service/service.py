@@ -7,11 +7,10 @@ import logging
 import typing
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, status
-from fastmcp import FastMCP
-
 import gmail_client_impl  # noqa: F401 - Register implementation
 import mail_client_api
+from fastapi import FastAPI, HTTPException, status
+from fastmcp import FastMCP
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

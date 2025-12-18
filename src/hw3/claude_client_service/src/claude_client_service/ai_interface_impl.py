@@ -5,9 +5,8 @@ import logging
 import os
 from typing import Any
 
-from anthropic import Anthropic
-
 from ai_api import AIInterface  # type: ignore[attr-defined]
+from anthropic import Anthropic
 
 DEFAULT_MODEL = "claude-3-7-sonnet-20250219"
 logger = logging.getLogger(__name__)

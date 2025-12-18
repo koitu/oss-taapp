@@ -9,7 +9,6 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-
 from ai_api import AIInterface
 from tickets_api import Ticket, TicketInterface, TicketStatus
 
