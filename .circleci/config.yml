@@ -286,6 +286,19 @@ jobs:
     steps:
       - checkout
       - run:
+          name: "Configure GCP Credentials for Terraform"
+          command: |
+            echo "Configuring GCP credentials for Terraform..."
+            if [ -z "$GOOGLE_SERVICE_KEY" ]; then
+              echo "ERROR: GOOGLE_SERVICE_KEY is not set"
+              exit 1
+            fi
+            # Write service account JSON to a file and point Terraform/SDK at it
+            echo "$GOOGLE_SERVICE_KEY" > $HOME/gcloud-key.json
+            export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud-key.json
+            export GOOGLE_PROJECT=$GOOGLE_PROJECT_ID
+            echo "Wrote credentials; using project: $GOOGLE_PROJECT"
+      - run:
           name: "Terraform Init"
           command: |
             cd terraform
@@ -362,7 +375,7 @@ workflows:
       - build
       - terraform_apply:
           requires:
-            - build
+            - report_summary
           filters:
             branches:
               only:
