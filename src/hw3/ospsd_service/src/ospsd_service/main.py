@@ -111,6 +111,28 @@ def _handle_ticket_exception(channel_id: str, exc: Exception, metric_name: str, 
         logger.exception("Failed to send ticket error message to Discord")
 
 
+def _handle_ai_exception(channel_id: str, exc: Exception, metric_name: str, start_time: float) -> None:
+    """Record AI metric failure and notify Discord about the error.
+
+    If the error message appears authentication-related, send a specific authentication
+    failure message; otherwise send a generic AI service error.
+    """
+    duration = (time.time() - start_time) * 1000
+    record_latency(metric_name, duration, success=False)
+    logger.exception("AI client error")
+
+    err_text = (str(exc) or "").lower()
+    if any(k in err_text for k in ("auth", "authentication", "unauthorized", "401", "403", "api key", "invalid_api_key", "forbidden")):
+        msg = "❌ Authentication to AI service failed."
+    else:
+        msg = "❌ AI service error: " + (str(exc) or "unknown error")
+
+    try:
+        chat_client.send_message(channel_id, msg)
+    except Exception:
+        logger.exception("Failed to send AI error message to Discord")
+
+
 def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR0915
     """Call this function when a message is sent in the server.
 
@@ -146,17 +168,27 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
 
         model_name = parts[1].lower()
         if model_name == "openai":
-            ai_client = get_openai_client()
-            current_model = "openai"
-            chat_client.send_message(channel_id, "✅ Switched to **OpenAI** model")
-            logger.info("Switched to OpenAI model")
-            return
+            init_start = time.time()
+            try:
+                ai_client = get_openai_client()
+                current_model = "openai"
+                chat_client.send_message(channel_id, "✅ Switched to **OpenAI** model")
+                logger.info("Switched to OpenAI model")
+                return
+            except Exception as e:
+                _handle_ai_exception(channel_id, e, "ai_switch", init_start)
+                return
         if model_name == "claude":
-            ai_client = get_claude_client()
-            current_model = "claude"
-            chat_client.send_message(channel_id, "✅ Switched to **Claude** model")
-            logger.info("Switched to Claude model")
-            return
+            init_start = time.time()
+            try:
+                ai_client = get_claude_client()
+                current_model = "claude"
+                chat_client.send_message(channel_id, "✅ Switched to **Claude** model")
+                logger.info("Switched to Claude model")
+                return
+            except Exception as e:
+                _handle_ai_exception(channel_id, e, "ai_switch", init_start)
+                return
 
         chat_client.send_message(
             channel_id,
@@ -206,10 +238,9 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
         ai_duration = (time.time() - ai_start) * 1000
         record_latency("ai_generate", ai_duration, success=True)
         logger.info(ai_response)
-    except Exception:
-        ai_duration = (time.time() - ai_start) * 1000
-        record_latency("ai_generate", ai_duration, success=False)
-        raise
+    except Exception as e:
+        _handle_ai_exception(channel_id, e, "ai_generate", ai_start)
+        return
 
     if ai_response["action"] == "chat_response":
         chat_client.send_message(channel_id, ai_response["parameters"]["message"])
