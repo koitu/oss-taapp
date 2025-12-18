@@ -65,8 +65,6 @@ members = [
     "src/hw3/openai_client_service",
     "src/hw3/discord_chat_impl",
     "src/hw3/ospsd_service",
-    "src/hw3/telemetry_api",
-    "src/hw3/telemetry_impl",
     "src/hw3/trello_ticket_impl",
 ]
 
@@ -115,24 +113,15 @@ mypy_path = [
     "src/hw2/discord_client_service/src",
     "src/hw2/discord_client_service_adapter/src",
 
-    "src/ospsd_service/src",
-    "src/tickets_api/src",
-    "src/telemetry_api/src",
-    "src/telemetry_impl/src",
-    "src/kanban_client_api/src",
-    "src/trello_client_impl/src",
-
     "src/hw3/claude_client_service/src",
     "src/hw3/openai_client_service/src",
     "src/hw3/discord_chat_impl/src",
     "src/hw3/ospsd_service/src",
-    "src/hw3/telemetry_impl/src",
 ]
 exclude = [
     "src/oss-api/ai_api/src",
     "src/oss-api/chat_api/src",
     "src/oss-api/tickets_api/src",
-    "src/hw3/telemetry_api/src",
 
     "src/hw3/trello_ticket_impl/src",
 ]

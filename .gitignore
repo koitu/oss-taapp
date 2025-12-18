@@ -7,7 +7,6 @@ crash.*.log
 *.tfvars
 *_override.tf
 override.tf
-telemetry/metrics.json
 
 # databases
 .data/

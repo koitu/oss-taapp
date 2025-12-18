@@ -16,6 +16,7 @@ import requests
 import websockets
 from authlib.integrations.httpx_client import OAuth2Client
 from chat_api import ChatInterface, Message
+from websockets.exceptions import ConnectionClosed
 
 from discord_chat_impl.message_impl import DiscordMessage
 
@@ -131,9 +132,11 @@ class DiscordGateway:
             while self.running:
                 assert self.heartbeat_interval is not None
                 await asyncio.sleep(self.heartbeat_interval / 1000)
-                if self.ws and not self.ws.closed:  # type: ignore[attr-defined]
+                if self.ws:
                     heartbeat = {"op": self.HEARTBEAT, "d": self.sequence}
                     await self.ws.send(json.dumps(heartbeat))
+        except ConnectionClosed:
+            pass
         except asyncio.CancelledError:
             pass
 

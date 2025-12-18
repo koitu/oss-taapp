@@ -25,8 +25,6 @@ members = [
     "openai-client-service",
     "ospsd-service",
     "ta-assignment",
-    "telemetry-api",
-    "telemetry-impl",
     "tickets-api",
     "trello-ticket-impl",
 ]
@@ -2237,8 +2235,6 @@ dependencies = [
     { name = "fastapi" },
     { name = "openai-client-service" },
     { name = "prometheus-client" },
-    { name = "telemetry-api" },
-    { name = "telemetry-impl" },
     { name = "tickets-api" },
     { name = "trello-ticket-impl" },
     { name = "uvicorn" },
@@ -2263,8 +2259,6 @@ requires-dist = [
     { name = "prometheus-client", specifier = ">=0.19.0" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=7.0.0" },
     { name = "pytest-mock", marker = "extra == 'test'", specifier = ">=3.10.0" },
-    { name = "telemetry-api", editable = "src/hw3/telemetry_api" },
-    { name = "telemetry-impl", editable = "src/hw3/telemetry_impl" },
     { name = "tickets-api", editable = "src/oss-api/tickets_api" },
     { name = "trello-ticket-impl", editable = "src/hw3/trello_ticket_impl" },
     { name = "uvicorn", specifier = ">=0.34.0" },
@@ -3361,22 +3355,6 @@ dev = [
     { name = "respx", specifier = ">=0.22.0" },
     { name = "ruff", specifier = ">=0.13.2" },
 ]
-
-[[package]]
-name = "telemetry-api"
-version = "0.1.0"
-source = { editable = "src/hw3/telemetry_api" }
-
-[[package]]
-name = "telemetry-impl"
-version = "0.1.0"
-source = { editable = "src/hw3/telemetry_impl" }
-dependencies = [
-    { name = "telemetry-api" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "telemetry-api", editable = "src/hw3/telemetry_api" }]
 
 [[package]]
 name = "tickets-api"

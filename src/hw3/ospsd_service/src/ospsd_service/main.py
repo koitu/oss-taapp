@@ -1,7 +1,5 @@
 """OSPSD Service."""
 
-# ruff: noqa: ERA001
-
 import contextlib
 import logging
 import os
@@ -18,7 +16,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Response
 from tickets_api import TicketInterface, TicketStatus
 
-from ospsd_service import prometheus_metrics
+from ospsd_service.metrics import get_metrics, record_latency
 from ospsd_service.ticket_tools import (
     TICKET_TOOLS_SCHEMA,
     get_system_prompt_with_tools,
@@ -91,19 +89,6 @@ ai_client: AIInterface = get_claude_client()
 DESC_PREVIEW_LENGTH = 50
 
 
-def record_metrics(operation: str, duration_ms: float, *, success: bool = True) -> None:
-    """Record metrics to Prometheus.
-
-    Args:
-        operation: Operation name (e.g., 'ai_generate', 'ticket_create')
-        duration_ms: Duration in milliseconds
-        success: Whether the operation succeeded
-
-    """
-    prometheus_metrics.record_latency(operation, duration_ms, success=success)
-
-
-# TODO(Andrew): add tests  # noqa: TD003, FIX002
 def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR0915
     """Call this function when a message is sent in the server.
 
@@ -197,11 +182,11 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
             response_schema=TICKET_TOOLS_SCHEMA,
         )
         ai_duration = (time.time() - ai_start) * 1000
-        record_metrics("ai_generate", ai_duration, success=True)
+        record_latency("ai_generate", ai_duration, success=True)
         logger.info(ai_response)
     except Exception:
         ai_duration = (time.time() - ai_start) * 1000
-        record_metrics("ai_generate", ai_duration, success=False)
+        record_latency("ai_generate", ai_duration, success=False)
         raise
 
     if ai_response["action"] == "chat_response":
@@ -218,7 +203,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 params.get("assignee"),
             )
             ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_create", ticket_duration, success=True)
+            record_latency("ticket_create", ticket_duration, success=True)
 
             # Format for Discord markdown
             msg = "✅ **Created Ticket**\n\n"
@@ -229,7 +214,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
             chat_client.send_message(channel_id, msg)
         except Exception:
             ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_create", ticket_duration, success=False)
+            record_latency("ticket_create", ticket_duration, success=False)
             raise
 
     elif ai_response["action"] == "list_tickets":
@@ -245,7 +230,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
 
             tickets = ticket_client.search_tickets(status=status_enum)
             ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_list", ticket_duration, success=True)
+            record_latency("ticket_list", ticket_duration, success=True)
 
             if not tickets:
                 status_msg = f" {status_enum.value}" if status_enum else ""
@@ -266,7 +251,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 chat_client.send_message(channel_id, msg.strip())
         except Exception:
             ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_list", ticket_duration, success=False)
+            record_latency("ticket_list", ticket_duration, success=False)
             raise
 
     elif ai_response["action"] == "get_ticket":
@@ -275,7 +260,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
             ticket_id = ai_response["parameters"]["ticket_id"]
             ticket = ticket_client.get_ticket(ticket_id)
             ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_get", ticket_duration, success=True)
+            record_latency("ticket_get", ticket_duration, success=True)
 
             if ticket is None:
                 chat_client.send_message(channel_id, f"❌ Ticket not found: `{ticket_id}`")
@@ -290,7 +275,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 chat_client.send_message(channel_id, msg)
         except Exception:
             ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_get", ticket_duration, success=False)
+            record_latency("ticket_get", ticket_duration, success=False)
             raise
 
     elif ai_response["action"] == "update_ticket":
@@ -310,14 +295,14 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 title=ai_response["parameters"].get("title"),
             )
             ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_update", ticket_duration, success=True)
+            record_latency("ticket_update", ticket_duration, success=True)
 
             msg = f"✅ **Updated Ticket**\n\n**{ticket.title}**\n"
             msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status.value}"
             chat_client.send_message(channel_id, msg)
         except Exception:
             ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_update", ticket_duration, success=False)
+            record_latency("ticket_update", ticket_duration, success=False)
             raise
 
     elif ai_response["action"] == "close_ticket":
@@ -326,7 +311,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
             ticket_id = ai_response["parameters"]["ticket_id"]
             success = ticket_client.delete_ticket(ticket_id)
             ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_delete", ticket_duration, success=True)
+            record_latency("ticket_delete", ticket_duration, success=True)
 
             if success:
                 chat_client.send_message(channel_id, f"✅ Closed ticket: `{ticket_id}`")
@@ -334,7 +319,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 chat_client.send_message(channel_id, f"❌ Failed to close ticket: `{ticket_id}`")
         except Exception:
             ticket_duration = (time.time() - ticket_start) * 1000
-            record_metrics("ticket_delete", ticket_duration, success=False)
+            record_latency("ticket_delete", ticket_duration, success=False)
             raise
 
     else:
@@ -342,13 +327,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
 
     # Track overall message handling latency
     total_duration = (time.time() - start_time) * 1000
-    record_metrics("chat_message", total_duration, success=True)
-
-
-@app.get("/health")
-async def health_check() -> dict[str, str]:
-    """Health check endpoint for container orchestration."""
-    return {"status": "healthy", "service": "ospsd"}
+    record_latency("chat_message", total_duration, success=True)
 
 
 @app.get("/")
@@ -357,10 +336,16 @@ async def root() -> dict[str, str]:
     return {"message": "OSPSD Service is running", "status": "ok"}
 
 
+@app.get("/health")
+async def health_check() -> dict[str, str]:
+    """Health check endpoint for container orchestration."""
+    return {"status": "healthy", "service": "ospsd"}
+
+
 @app.get("/metrics")
 async def metrics() -> Response:
     """Prometheus metrics endpoint."""
-    return Response(content=prometheus_metrics.get_metrics(), media_type="text/plain")
+    return Response(content=get_metrics(), media_type="text/plain")
 
 
 def run_discord_gateway() -> None:
@@ -383,22 +368,3 @@ gateway_thread.start()
 
 # Run FastAPI server in the main thread
 run_fastapi_server()
-
-
-# from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
-# from fastapi import FastAPI, Response
-#
-# app = FastAPI()
-#
-# # Metrics
-# REQUEST_COUNT = Counter('app_requests_total', 'Total request count')
-# REQUEST_DURATION = Histogram('app_request_duration_seconds', 'Request duration')
-#
-# @app.get("/metrics")
-# async def metrics():
-#     REQUEST_COUNT.inc()
-#     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
-#
-# @app.get("/health")
-# async def health():
-#     return {"status": "healthy"}
