@@ -291,36 +291,48 @@ jobs:
             set -e
 
             echo "Writing GCP service account key..."
-            echo "$GOOGLE_SERVICE_KEY" > $HOME/gcloud-key.json
+            echo "$GOOGLE_SERVICE_KEY" > /tmp/gcloud-key.json
 
-            export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud-key.json
-            export GOOGLE_PROJECT=$GOOGLE_PROJECT_ID
-
-            # Persist for next steps
-            echo "export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud-key.json" >> $BASH_ENV
+            # Persist env vars for ALL future steps
+            echo 'export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcloud-key.json' >> $BASH_ENV
             echo "export GOOGLE_PROJECT=$GOOGLE_PROJECT_ID" >> $BASH_ENV
 
-            echo "Credentials configured for project: $GOOGLE_PROJECT_ID"
-      - run:
-          name: "Debug: Who am I?"
-          command: |
+            # Source immediately for THIS step
+            source $BASH_ENV
+
             echo "GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS"
-            cat $GOOGLE_APPLICATION_CREDENTIALS | jq -r '.client_email'
+            echo "Using project: $GOOGLE_PROJECT"
+
+      - run:
+          name: "Debug: Terraform identity (no jq)"
+          command: |
+            source $BASH_ENV
+            echo "Credentials file path:"
+            echo "$GOOGLE_APPLICATION_CREDENTIALS"
+            echo "Service account email:"
+            sed -n 's/.*"client_email": "\(.*\)".*/\1/p' "$GOOGLE_APPLICATION_CREDENTIALS"
+
       - run:
           name: "Terraform Init"
           command: |
+            source $BASH_ENV
             cd terraform
             terraform init -input=false
+
       - run:
           name: "Terraform Plan"
           command: |
+            source $BASH_ENV
             cd terraform
-            terraform plan -var="credentials_file=$HOME/gcloud-key.json" -out=tfplan -input=false
+            terraform plan -out=tfplan -input=false
+
       - run:
           name: "Terraform Apply"
           command: |
+            source $BASH_ENV
             cd terraform
-            terraform apply -var="credentials_file=$HOME/gcloud-key.json"-input=false -auto-approve tfplan
+            terraform apply -auto-approve tfplan
+
 
 # Workflows
 workflows:
