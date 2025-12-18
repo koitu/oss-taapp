@@ -9,10 +9,10 @@ import os
 from collections.abc import Iterator
 from typing import cast
 
-import chat_client_api
 import httpx
 import pytest
 
+import chat_client_api
 from discord_client_service_adapter import ServiceAdapterClient
 
 pytestmark = pytest.mark.e2e

@@ -12,10 +12,10 @@ from collections.abc import Callable, Generator
 from unittest.mock import MagicMock
 
 import httpx
-import mail_client_api
 import pytest
 from fastapi.testclient import TestClient
 
+import mail_client_api
 from mail_client_service.service import app, get_mail_client
 from mail_client_service_adapter import ServiceAdapterClient
 

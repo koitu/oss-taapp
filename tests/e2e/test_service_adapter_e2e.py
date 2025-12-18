@@ -10,9 +10,9 @@ import os
 from pathlib import Path
 
 import httpx
-import mail_client_api
 import pytest
 
+import mail_client_api
 from mail_client_service_adapter import adapter_impl
 
 pytestmark = pytest.mark.e2e
