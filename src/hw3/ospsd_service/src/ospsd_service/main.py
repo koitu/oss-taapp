@@ -91,9 +91,7 @@ ai_client: AIInterface = get_claude_client()
 DESC_PREVIEW_LENGTH = 50
 
 
-def record_metrics(
-    operation: str, duration_ms: float, *, success: bool = True
-) -> None:
+def record_metrics(operation: str, duration_ms: float, *, success: bool = True) -> None:
     """Record metrics to Prometheus.
 
     Args:
@@ -159,7 +157,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
             "Available commands:\n"
             "• `/model openai` - Switch to OpenAI\n"
             "• `/model claude` - Switch to Claude\n"
-            "• `/model status` - Show current model"
+            "• `/model status` - Show current model",
         )
         return
 

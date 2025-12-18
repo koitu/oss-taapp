@@ -3,8 +3,9 @@
 import contextlib
 import os
 
-from discord_client_impl import DiscordClient
 from dotenv import load_dotenv
+
+from discord_client_impl import DiscordClient
 
 with contextlib.suppress(FileNotFoundError):
     load_dotenv()

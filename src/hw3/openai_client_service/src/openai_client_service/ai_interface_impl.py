@@ -4,8 +4,9 @@ import json
 import os
 from typing import Any
 
-from ai_api import AIInterface  # type: ignore[attr-defined]
 from openai import OpenAI
+
+from ai_api import AIInterface  # type: ignore[attr-defined]
 
 DEFAULT_MODEL = "gpt-4o-mini"
 

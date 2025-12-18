@@ -1,13 +1,16 @@
 """Implementation of AIInterface that reads Claude API key from environment variables."""
 
 import json
+import logging
 import os
 from typing import Any
 
-from ai_api import AIInterface  # type: ignore[attr-defined]
 from anthropic import Anthropic
 
+from ai_api import AIInterface  # type: ignore[attr-defined]
+
 DEFAULT_MODEL = "claude-3-7-sonnet-20250219"
+logger = logging.getLogger(__name__)
 
 
 class EnvAIImplementation(AIInterface):
@@ -119,8 +122,6 @@ class EnvAIImplementation(AIInterface):
 
             # Log the raw content for debugging
             if response_schema and content.strip() and not content.strip().startswith("{"):
-                import logging
-                logger = logging.getLogger(__name__)
                 logger.warning(f"Claude returned non-JSON content: {content[:200]}")
 
             return self._parse_response(content, response_schema)

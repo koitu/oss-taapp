@@ -19,8 +19,9 @@ from typing import Any, cast
 import httpx
 import pytest
 from discord_client_service import api, service
-from discord_client_service_adapter import ServiceAdapterClient
 from fastapi.testclient import TestClient
+
+from discord_client_service_adapter import ServiceAdapterClient
 
 pytestmark = pytest.mark.integration
 
