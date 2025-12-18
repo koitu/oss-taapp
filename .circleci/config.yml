@@ -331,6 +331,12 @@ workflows:
       - circleci_test:
           requires:
             - unit_test
+      - integration_test:
+          requires:
+            - circleci_test
+      - e2e_test:
+          requires:
+            - integration_test
       - report_summary:
           requires:
             - unit_test
