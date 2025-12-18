@@ -295,11 +295,11 @@ jobs:
             fi
             # Write service account JSON to a file and point Terraform/SDK at it
             echo "$GOOGLE_SERVICE_KEY" > $HOME/gcloud-key.json
-            export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud-key.json
-            # Also export GOOGLE_CREDENTIALS with the JSON content so Terraform's
-            # google provider can pick it up directly (avoids needing ADC).
-            export GOOGLE_CREDENTIALS="$(cat $HOME/gcloud-key.json)"
-            export GOOGLE_PROJECT=$GOOGLE_PROJECT_ID
+            # Persist environment variables across CircleCI steps by appending
+            # them to $BASH_ENV (CircleCI injects this into later shells).
+            echo "export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud-key.json" >> $BASH_ENV
+            echo "export GOOGLE_CREDENTIALS='$(cat $HOME/gcloud-key.json)'" >> $BASH_ENV
+            echo "export GOOGLE_PROJECT=$GOOGLE_PROJECT_ID" >> $BASH_ENV
             echo "Wrote credentials; using project: $GOOGLE_PROJECT"
       - run:
           name: "Terraform Init"
