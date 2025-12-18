@@ -118,11 +118,18 @@ jobs:
       - attach_workspace:
           at: .
       - run:
-          name: "Verify Environment Variables"
+          name: "Verify Environment Variables for Integration"
           command: |
             echo "Checking for required environment variables..."
-            if [ -z "$GMAIL_CLIENT_ID" ] || [ -z "$GMAIL_CLIENT_SECRET" ] || [ -z "$GMAIL_REFRESH_TOKEN" ]; then
-              echo "WARNING: Missing Gmail environment variables. Integration tests may be skipped."
+            missing=""
+            for var in DISCORD_CLIENT_ID DISCORD_CLIENT_SECRET DISCORD_REDIRECT_URI DISCORD_PUBLIC_KEY DISCORD_BOT_TOKEN \
+                       OPENAI_API_KEY CLAUDE_API_KEY NO_AUTH TRELLO_API_KEY TRELLO_API_SECRET; do
+              if [ -z "${!var}" ]; then
+                missing="$missing $var"
+              fi
+            done
+            if [ -n "$missing" ]; then
+              echo "WARNING: Missing environment variables:$missing. Integration tests may be skipped or fail."
             else
               echo "All required environment variables are present."
             fi
@@ -143,7 +150,46 @@ jobs:
       - store_artifacts:
           path: test-results/integration
 
-  # Job 6: Report Summary
+  # Job 6: End-to-end Tests (E2E)
+  e2e_test:
+    docker:
+      - image: cimg/python:3.11
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Verify Environment Variables for E2E"
+          command: |
+            echo "Checking for required environment variables..."
+            missing=""
+            for var in DISCORD_CLIENT_ID DISCORD_CLIENT_SECRET DISCORD_REDIRECT_URI DISCORD_PUBLIC_KEY DISCORD_BOT_TOKEN \
+                       OPENAI_API_KEY CLAUDE_API_KEY NO_AUTH TRELLO_API_KEY TRELLO_API_SECRET; do
+              if [ -z "${!var}" ]; then
+                missing="$missing $var"
+              fi
+            done
+            if [ -n "$missing" ]; then
+              echo "WARNING: Missing environment variables:$missing. E2E tests may be skipped or fail."
+            else
+              echo "All required environment variables are present."
+            fi
+      - run:
+          name: "Activate Venv and Create E2E Test Results Directory"
+          command: |
+            source .venv/bin/activate
+            mkdir -p test-results/e2e
+      - run:
+          name: "Execute E2E Test Suite"
+          command: |
+            source .venv/bin/activate
+            uv run pytest -m e2e \
+                   --junitxml=test-results/e2e/junit.xml -v --no-cov
+      - store_test_results:
+          path: test-results/e2e
+      - store_artifacts:
+          path: test-results/e2e
+
+  # Job 7: Report Summary
   report_summary:
     docker:
       - image: cimg/base:stable
@@ -188,7 +234,7 @@ jobs:
             fi
 
 
-  # Job 7: Deploy to Cloud Run
+  # Job 8: Deploy to Cloud Run
   deploy:
     docker:
       - image: cimg/gcp:2025.01  # GCP image with gcloud installed
@@ -259,6 +305,9 @@ workflows:
           requires:
             - circleci_test
           context: gmail-client
+      - e2e_test:
+          requires:
+            - integration_test
       - report_summary:
           requires:
             - unit_test
