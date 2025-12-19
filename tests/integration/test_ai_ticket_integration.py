@@ -9,9 +9,8 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from tickets_api import Ticket, TicketInterface, TicketStatus
-
 from ai_api import AIInterface
+from tickets_api import Ticket, TicketInterface, TicketStatus
 
 pytestmark = pytest.mark.integration
 

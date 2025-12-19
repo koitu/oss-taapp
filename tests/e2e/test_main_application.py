@@ -10,10 +10,9 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 import gmail_client_impl
 import mail_client_api
+import pytest
 
 # Mark all tests in this file as e2e tests
 pytestmark = pytest.mark.e2e

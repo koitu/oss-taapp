@@ -16,9 +16,8 @@ from unittest.mock import MagicMock
 import httpx
 import pytest
 from discord_client_service import api, service
-from fastapi.testclient import TestClient
-
 from discord_client_service_adapter import ServiceAdapterClient
+from fastapi.testclient import TestClient
 
 logger = logging.getLogger(__name__)
 

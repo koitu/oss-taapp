@@ -13,10 +13,9 @@ from typing import Any
 from unittest.mock import MagicMock, PropertyMock
 
 import pytest
+from ai_api import AIInterface
 from chat_api import ChatInterface, Message
 from tickets_api import Ticket, TicketInterface, TicketStatus
-
-from ai_api import AIInterface
 
 pytestmark = pytest.mark.e2e
 
