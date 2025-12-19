@@ -2,6 +2,9 @@
 
 from typing import Any
 
+# Description preview length for list_tickets
+TICKET_DESC_PREVIEW_LEN = 50
+
 # Tool/Function definitions for AI to understand ticket operations
 TICKET_TOOLS_SCHEMA = {
     "type": "object",
@@ -45,14 +48,7 @@ TICKET_TOOLS_SCHEMA = {
 }
 
 
-def get_system_prompt_with_tools() -> str:
-    """Generate system prompt that explains available ticket operations.
-
-    Returns:
-        System prompt with tool instructions
-
-    """
-    return """You are a helpful assistant that manages work tickets via natural language.
+TICKET_SYS_PROMPT = """You are a helpful assistant that manages work tickets via natural language.
 
 You have access to the following ticket operations:
 

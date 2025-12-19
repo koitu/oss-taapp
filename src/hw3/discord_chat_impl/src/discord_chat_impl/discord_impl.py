@@ -218,12 +218,12 @@ class DiscordGateway:
         try:
             async with websockets.connect(
                 f"{gateway_url}?v=10&encoding=json",
-                max_size=None,  # Remove message size limit
+                max_size=None,  # Remove the message size limit
             ) as ws:
                 self.ws = ws
                 logger.info(f"Connected to Discord Gateway: {gateway_url}")
 
-                # Listen for messages until connection closes
+                # Listen for messages until the connection closes
                 async for message in ws:
                     if isinstance(message, bytes):
                         await self._handle_message(message.decode())
@@ -242,7 +242,7 @@ class DiscordGateway:
                     await self._heartbeat_task
 
     async def _run_forever(self) -> None:
-        """Keep reconnecting if connection drops."""
+        """Keep reconnecting if the connection drops."""
         while self.running:
             try:
                 await self._connect_and_listen()
