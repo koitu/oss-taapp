@@ -23,7 +23,7 @@ jobs:
             source .venv/bin/activate
             uv sync --all-packages --extra dev --verbose
       - run:
-          name: "Verify Installation (Optional)"
+          name: "Verify Installation"
           command: |
             source .venv/bin/activate
             uv tree
@@ -52,7 +52,7 @@ jobs:
           name: "Run Linting and Formatting Checks"
           command: |
             source .venv/bin/activate
-            ruff check .
+            uv run ruff check .
 
   # Job 3: Unit Tests and Coverage
   unit_test:
