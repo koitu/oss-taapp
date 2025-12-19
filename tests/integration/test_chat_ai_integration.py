@@ -5,8 +5,9 @@ from typing import Any
 from unittest.mock import MagicMock, PropertyMock
 
 import pytest
-from ai_api import AIInterface
 from chat_api import ChatInterface, Message
+
+from ai_api import AIInterface
 
 
 def create_mock_message(message_id: str, content: str, sender_id: str) -> MagicMock:

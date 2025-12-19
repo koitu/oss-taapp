@@ -49,7 +49,6 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
   "links": [],
   "panels": [
     {
@@ -137,7 +136,7 @@
         {
           "editorMode": "code",
           "expr": "(sum(rate(ospsd_requests_success_total[5m])) / sum(rate(ospsd_requests_total[5m]))) * 100",
-          "legendFormat": "success %",
+          "legendFormat": "percent",
           "range": true,
           "refId": "A",
           "datasource": {
@@ -194,6 +193,8 @@
             }
           },
           "mappings": [],
+          "max": 100,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -206,7 +207,8 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -235,7 +237,7 @@
         {
           "editorMode": "code",
           "expr": "(sum(rate(ospsd_requests_failure_total[5m])) / sum(rate(ospsd_requests_total[5m]))) * 100",
-          "legendFormat": "failure %",
+          "legendFormat": "percent",
           "range": true,
           "refId": "A",
           "datasource": {
@@ -728,13 +730,14 @@
     "list": []
   },
   "time": {
-    "from": "now-3h",
+    "from": "now-12h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "browser",
   "title": "OSPSD Dashboard",
   "uid": "adq76nd",
-  "version": 1,
-  "weekStart": ""
+  "version": 3,
+  "weekStart": "",
+  "id": null
 }

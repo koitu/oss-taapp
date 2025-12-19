@@ -100,8 +100,7 @@ def _handle_ticket_exception(
     If the error message appears authentication-related, send a specific authentication
     failure message; otherwise send a generic ticket-service error.
     """
-    duration = (time.time() - start_time) * 1000
-    record_latency(metric_name, duration, success=False)
+    record_latency(metric_name, start_time, success=False)
     logger.exception("Ticket client error")
 
     err_text = (str(exc) or "").lower()
@@ -110,9 +109,12 @@ def _handle_ticket_exception(
     else:
         msg = "❌ Ticket service error: " + (str(exc) or "unknown error")
 
+    discord_start = time.time()
     try:
         chat_client.send_message(channel_id, msg)
+        record_latency("discord_send_message", discord_start, success=True)
     except Exception:
+        record_latency("discord_send_message", discord_start, success=False)
         logger.exception("Failed to send ticket error message to Discord")
 
 
@@ -127,8 +129,7 @@ def _handle_ai_exception(
     If the error message appears authentication-related, send a specific authentication
     failure message; otherwise send a generic AI service error.
     """
-    duration = (time.time() - start_time) * 1000
-    record_latency(metric_name, duration, success=False)
+    record_latency(metric_name, start_time, success=False)
     logger.exception("AI client error")
 
     err_text = (str(exc) or "").lower()
@@ -149,9 +150,12 @@ def _handle_ai_exception(
     else:
         msg = "❌ AI service error: " + (str(exc) or "unknown error")
 
+    discord_start = time.time()
     try:
         chat_client.send_message(channel_id, msg)
+        record_latency("discord_send_message", discord_start, success=True)
     except Exception:
+        record_latency("discord_send_message", discord_start, success=False)
         logger.exception("Failed to send AI error message to Discord")
 
 
@@ -259,15 +263,16 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
             system_prompt,
             response_schema=TICKET_TOOLS_SCHEMA,
         )
-        ai_duration = (time.time() - ai_start) * 1000
-        record_latency("ai_generate", ai_duration, success=True)
+        record_latency("ai_generate", ai_start, success=True)
         logger.info(ai_response)
     except Exception as e:  # noqa: BLE001
         _handle_ai_exception(channel_id, e, "ai_generate", ai_start)
         return
 
     if ai_response["action"] == "chat_response":
+        discord_start = time.time()
         chat_client.send_message(channel_id, ai_response["parameters"]["message"])
+        record_latency("discord_send_message", discord_start, success=True)
 
     elif ai_response["action"] == "create_ticket":
         ticket_start = time.time()
@@ -279,8 +284,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 params.get("description") or "",  # Use empty string if None
                 params.get("assignee"),
             )
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_latency("ticket_create", ticket_duration, success=True)
+            record_latency("ticket_create", ticket_start, success=True)
 
             # Format for Discord markdown
             msg = "✅ **Created Ticket**\n\n"
@@ -288,7 +292,10 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
             if created_ticket.description:
                 msg += f"> {created_ticket.description}\n\n"
             msg += f"🆔 ID: `{created_ticket.id}`"
+
+            discord_start = time.time()
             chat_client.send_message(channel_id, msg)
+            record_latency("discord_send_message", discord_start, success=True)
         except Exception as e:  # noqa: BLE001
             _handle_ticket_exception(channel_id, e, "ticket_create", ticket_start)
             return
@@ -305,12 +312,11 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 status_enum = TicketStatus(normalized_status)
 
             tickets = ticket_client.search_tickets(status=status_enum)
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_latency("ticket_list", ticket_duration, success=True)
+            record_latency("ticket_list", ticket_start, success=True)
 
             if not tickets:
                 status_msg = f" {status_enum.value}" if status_enum else ""
-                chat_client.send_message(channel_id, f"📋 No{status_msg} tickets found.")
+                msg = f"📋 No{status_msg} tickets found."
             else:
                 # Format for Discord markdown with better readability
                 status_filter = f" ({status_enum.value})" if status_enum else ""
@@ -324,7 +330,10 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                             desc_preview += "..."
                         msg += f"> {desc_preview}\n"
                     msg += f"*ID:* `{t.id}` | *Status:* {t.status.value}\n\n"
-                chat_client.send_message(channel_id, msg.strip())
+
+            discord_start = time.time()
+            chat_client.send_message(channel_id, msg.strip())
+            record_latency("discord_send_message", discord_start, success=True)
         except Exception as e:  # noqa: BLE001
             _handle_ticket_exception(channel_id, e, "ticket_list", ticket_start)
             return
@@ -334,11 +343,10 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
         try:
             ticket_id = ai_response["parameters"]["ticket_id"]
             ticket = ticket_client.get_ticket(ticket_id)
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_latency("ticket_get", ticket_duration, success=True)
+            record_latency("ticket_get", ticket_start, success=True)
 
             if ticket is None:
-                chat_client.send_message(channel_id, f"❌ Ticket not found: `{ticket_id}`")
+                msg = f"❌ Ticket not found: `{ticket_id}`"
             else:
                 # Format for Discord markdown
                 msg = f"🎫 **Ticket Details**\n\n**{ticket.title}**\n\n"
@@ -347,7 +355,10 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status.value}"
                 if ticket.assignee:
                     msg += f" | *Assignee:* {ticket.assignee}"
-                chat_client.send_message(channel_id, msg)
+
+            discord_start = time.time()
+            chat_client.send_message(channel_id, msg)
+            record_latency("discord_send_message", discord_start, success=True)
         except Exception as e:  # noqa: BLE001
             _handle_ticket_exception(channel_id, e, "ticket_get", ticket_start)
             return
@@ -359,7 +370,7 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
             status_param = ai_response["parameters"].get("status")
             status_enum = None
             if status_param:
-                # Normalize status string (replace spaces with underscores and lowercase)
+                # Normalize status string (replace spaces with underscaces and lowercase)
                 normalized_status = status_param.lower().replace(" ", "_")
                 status_enum = TicketStatus(normalized_status)
 
@@ -368,12 +379,14 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
                 status=status_enum,
                 title=ai_response["parameters"].get("title"),
             )
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_latency("ticket_update", ticket_duration, success=True)
+            record_latency("ticket_update", ticket_start, success=True)
 
             msg = f"✅ **Updated Ticket**\n\n**{ticket.title}**\n"
             msg += f"*ID:* `{ticket.id}` | *Status:* {ticket.status.value}"
+
+            discord_start = time.time()
             chat_client.send_message(channel_id, msg)
+            record_latency("discord_send_message", discord_start, success=True)
         except Exception as e:  # noqa: BLE001
             _handle_ticket_exception(channel_id, e, "ticket_update", ticket_start)
             return
@@ -383,13 +396,16 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
         try:
             ticket_id = ai_response["parameters"]["ticket_id"]
             success = ticket_client.delete_ticket(ticket_id)
-            ticket_duration = (time.time() - ticket_start) * 1000
-            record_latency("ticket_delete", ticket_duration, success=True)
+            record_latency("ticket_delete", ticket_start, success=True)
 
             if success:
-                chat_client.send_message(channel_id, f"✅ Closed ticket: `{ticket_id}`")
+                msg = f"✅ Closed ticket: `{ticket_id}`"
             else:
-                chat_client.send_message(channel_id, f"❌ Failed to close ticket: `{ticket_id}`")
+                msg = f"❌ Failed to close ticket: `{ticket_id}`"
+
+            discord_start = time.time()
+            chat_client.send_message(channel_id, msg)
+            record_latency("discord_send_message", discord_start, success=True)
         except Exception as e:  # noqa: BLE001
             _handle_ticket_exception(channel_id, e, "ticket_delete", ticket_start)
             return
@@ -397,9 +413,8 @@ def handle_message(data: dict[str, Any]) -> None:  # noqa: C901, PLR0912, PLR091
     else:
         logger.warning(f"Unknown action: {ai_response.get('action')}")
 
-    # Track overall message handling latency
-    total_duration = (time.time() - start_time) * 1000
-    record_latency("chat_message", total_duration, success=True)
+    # Track overall pipeline latency (end-to-end request handling)
+    record_latency("pipeline_total", start_time, success=True)
 
 
 @app.get("/")
