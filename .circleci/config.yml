@@ -23,7 +23,7 @@ jobs:
             source .venv/bin/activate
             uv sync --all-packages --extra dev --verbose
       - run:
-          name: "Verify Installation (Optional)"
+          name: "Verify Installation"
           command: |
             source .venv/bin/activate
             uv tree
@@ -31,6 +31,11 @@ jobs:
             pytest --version
             mypy --version
             coverage --version
+      - run:
+          name: "Format code with ruff"
+          command: |
+            source .venv/bin/activate
+            uv run ruff format .
       - persist_to_workspace:
           root: .
           paths:
@@ -47,7 +52,7 @@ jobs:
           name: "Run Linting and Formatting Checks"
           command: |
             source .venv/bin/activate
-            ruff check .
+            uv run ruff check .
 
   # Job 3: Unit Tests and Coverage
   unit_test:
@@ -113,11 +118,18 @@ jobs:
       - attach_workspace:
           at: .
       - run:
-          name: "Verify Environment Variables"
+          name: "Verify Environment Variables for Integration"
           command: |
             echo "Checking for required environment variables..."
-            if [ -z "$GMAIL_CLIENT_ID" ] || [ -z "$GMAIL_CLIENT_SECRET" ] || [ -z "$GMAIL_REFRESH_TOKEN" ]; then
-              echo "WARNING: Missing Gmail environment variables. Integration tests may be skipped."
+            missing=""
+            for var in DISCORD_CLIENT_ID DISCORD_CLIENT_SECRET DISCORD_REDIRECT_URI DISCORD_PUBLIC_KEY DISCORD_BOT_TOKEN \
+                       OPENAI_API_KEY CLAUDE_API_KEY NO_AUTH TRELLO_API_KEY TRELLO_API_SECRET; do
+              if [ -z "${!var}" ]; then
+                missing="$missing $var"
+              fi
+            done
+            if [ -n "$missing" ]; then
+              echo "WARNING: Missing environment variables:$missing. Integration tests may be skipped or fail."
             else
               echo "All required environment variables are present."
             fi
@@ -138,7 +150,46 @@ jobs:
       - store_artifacts:
           path: test-results/integration
 
-  # Job 6: Report Summary
+  # Job 6: End-to-end Tests (E2E)
+  e2e_test:
+    docker:
+      - image: cimg/python:3.11
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Verify Environment Variables for E2E"
+          command: |
+            echo "Checking for required environment variables..."
+            missing=""
+            for var in DISCORD_CLIENT_ID DISCORD_CLIENT_SECRET DISCORD_REDIRECT_URI DISCORD_PUBLIC_KEY DISCORD_BOT_TOKEN \
+                       OPENAI_API_KEY CLAUDE_API_KEY NO_AUTH TRELLO_API_KEY TRELLO_API_SECRET; do
+              if [ -z "${!var}" ]; then
+                missing="$missing $var"
+              fi
+            done
+            if [ -n "$missing" ]; then
+              echo "WARNING: Missing environment variables:$missing. E2E tests may be skipped or fail."
+            else
+              echo "All required environment variables are present."
+            fi
+      - run:
+          name: "Activate Venv and Create E2E Test Results Directory"
+          command: |
+            source .venv/bin/activate
+            mkdir -p test-results/e2e
+      - run:
+          name: "Execute E2E Test Suite"
+          command: |
+            source .venv/bin/activate
+            uv run pytest -m e2e \
+                   --junitxml=test-results/e2e/junit.xml -v --no-cov
+      - store_test_results:
+          path: test-results/e2e
+      - store_artifacts:
+          path: test-results/e2e
+
+  # Job 7: Report Summary
   report_summary:
     docker:
       - image: cimg/base:stable
@@ -173,6 +224,15 @@ jobs:
               echo "Integration test results file not found."
             fi
       - run:
+          name: "Summarize E2E Test Results"
+          command: |
+            echo "--- E2E Test Summary ---"
+            if [ -f test-results/e2e/junit.xml ]; then
+              echo "E2E test results file found."
+            else
+              echo "E2E test results file not found."
+            fi
+      - run:
           name: "Display Coverage Info"
           command: |
             echo "--- Coverage Summary ---"
@@ -183,7 +243,7 @@ jobs:
             fi
 
 
-  # Job 7: Deploy to Cloud Run
+  # Job 8: Deploy to Cloud Repository
   deploy:
     docker:
       - image: cimg/gcp:2025.01  # GCP image with gcloud installed
@@ -204,41 +264,69 @@ jobs:
       - run:
           name: Build and Push Docker Image
           command: |
-            IMAGE="us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/discord-service-repo/discord-service:latest"
+            IMAGE="us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/ospsd-repo/ospsd-service:latest"
             docker build -t "$IMAGE" .
             docker push "$IMAGE"
 
+
+  # Job 9: Terraform Apply
+  terraform_apply:
+    docker:
+      - image: hashicorp/terraform:1.5.7
+    steps:
+      - checkout
       - run:
-          name: Deploy to Cloud Run
+          name: "Configure GCP Credentials for Terraform"
           command: |
-            IMAGE="us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/discord-service-repo/discord-service:latest"
-            gcloud run deploy discord-service \
-              --image "$IMAGE" \
-              --platform managed \
-              --region us-central1 \
-              --allow-unauthenticated \
-              --port 8000
+            set -e
+
+            echo "Writing GCP service account key..."
+            echo "$GOOGLE_SERVICE_KEY" > /tmp/gcloud-key.json
+
+            # Persist env vars for ALL future steps
+            echo 'export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcloud-key.json' >> $BASH_ENV
+            echo "export GOOGLE_PROJECT=$GOOGLE_PROJECT_ID" >> $BASH_ENV
+
+            # Source immediately for THIS step
+            source $BASH_ENV
+
+            echo "GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS"
+            echo "Using project: $GOOGLE_PROJECT"
+
+      - run:
+          name: "Debug: Terraform identity (no jq)"
+          command: |
+            source $BASH_ENV
+            echo "Credentials file path:"
+            echo "$GOOGLE_APPLICATION_CREDENTIALS"
+            echo "Service account email:"
+            sed -n 's/.*"client_email": "\(.*\)".*/\1/p' "$GOOGLE_APPLICATION_CREDENTIALS"
+
+      - run:
+          name: "Terraform Init"
+          command: |
+            source $BASH_ENV
+            cd terraform
+            terraform init -input=false
+
+      - run:
+          name: "Terraform Plan"
+          command: |
+            source $BASH_ENV
+            cd terraform
+            terraform plan -out=tfplan -input=false
+
+      - run:
+          name: "Terraform Apply"
+          command: |
+            source $BASH_ENV
+            cd terraform
+            terraform apply -auto-approve tfplan
+
 
 # Workflows
 workflows:
-  build_and_test:
-    jobs:
-      - build
-      - lint:
-          requires:
-            - build
-      - unit_test:
-          requires:
-            - build
-      - circleci_test:
-          requires:
-            - unit_test
-      - report_summary:
-          requires:
-            - unit_test
-            - circleci_test
-
-  full_integration:
+  pipeline:
     jobs:
       - build
       - lint:
@@ -253,20 +341,26 @@ workflows:
       - integration_test:
           requires:
             - circleci_test
-          context: gmail-client
+      - e2e_test:
+          requires:
+            - integration_test
       - report_summary:
           requires:
             - unit_test
             - circleci_test
             - integration_test
-
-  deploy_to_cloud_run:
-    jobs:
-      - build
+            - e2e_test
       - deploy:
           requires:
-            - build
+            - report_summary
           filters:
             branches:
               only:
-                - hw2
+                - hw3-final
+      - terraform_apply:
+          requires:
+            - deploy
+          filters:
+            branches:
+              only:
+                - hw3-final

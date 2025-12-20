@@ -1,0 +1,17 @@
+[project]
+name = "claude-client-service"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2",
+  "python-dotenv",
+  "anthropic>=0.40.0",
+  "ai-api",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+ai-api = { workspace = true }

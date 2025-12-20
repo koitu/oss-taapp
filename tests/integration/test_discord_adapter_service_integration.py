@@ -10,18 +10,16 @@ networking stays in-process and fast.
 
 import logging
 from collections.abc import Callable, Generator
-from unittest.mock import MagicMock
-
-logger = logging.getLogger(__name__)
-
 from typing import Any, cast
+from unittest.mock import MagicMock
 
 import httpx
 import pytest
 from discord_client_service import api, service
+from discord_client_service_adapter import ServiceAdapterClient
 from fastapi.testclient import TestClient
 
-from discord_client_service_adapter import ServiceAdapterClient
+logger = logging.getLogger(__name__)
 
 pytestmark = pytest.mark.integration
 

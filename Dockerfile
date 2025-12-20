@@ -1,23 +1,47 @@
-# Use Python 3.11 slim image
+# Multi-stage build for optimized image size
+FROM python:3.11-slim AS builder
+
+# Install uv
+RUN pip install --no-cache-dir uv
+
+# Set working directory
+WORKDIR /app
+
+# Copy all project files (needed for workspace resolution)
+COPY pyproject.toml uv.lock ./
+COPY src/ ./src/
+
+# Install dependencies (sync entire workspace)
+RUN uv sync --frozen --no-dev --all-packages
+
+# Final stage
 FROM python:3.11-slim
 
 # Set working directory
 WORKDIR /app
 
-# Copy all project files into container
-COPY . .
+# Copy uv from builder
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 
-# Install uv (your package manager)
-RUN pip install uv
+# Copy installed dependencies from builder
+COPY --from=builder /app/.venv /app/.venv
 
-# Install all dependencies
-RUN uv sync --all-packages --no-dev
+# Copy source code and config from builder
+COPY --from=builder /app/src /app/src
+COPY --from=builder /app/pyproject.toml /app/uv.lock /app/
 
-# Set PYTHONPATH so imports work
-ENV PYTHONPATH=/app/src:/app/clients/python
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src:/app/clients/python \
+    PATH="/app/.venv/bin:$PATH"
 
 # Expose FastAPI port
 EXPOSE 8000
 
-# Default command runs the FastAPI service
-CMD ["sh", "-c", "uv run uvicorn discord_client_service.api:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()" || exit 1
+
+# Run the OSPSD service
+CMD ["python", "-m", "ospsd_service.main"]

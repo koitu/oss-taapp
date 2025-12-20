@@ -45,25 +45,27 @@ dev = [
 
 [tool.uv.workspace]
 members = [
-  "src/mail_client_api",
-  "src/gmail_client_impl",
-  "src/services/mail_client_service",
-  "src/clients",
-  "src/clients/discord_client_service_client",
-  "src/mail_client_service_adapter",
-  "src/chat_client_api",
-  "src/discord_client_impl",
-  "src/services/discord_client_service",
-  "src/discord_client_service_adapter",
-  "src/ai_api",
-  "src/openai_service_api",
-  "src/openai_client_impl",
-  "src/openai_client_service",
-  "src/openai_client_service_api_client",
-  "src/openai_adapter",
-  "src/claude_client_impl",
-  "src/claude_client_service",
-  "src/ospsd_service",
+    "src/hw1/gmail_client_impl",
+    "src/hw1/mail_client_api",
+    "src/hw1/mail_client_service",
+    "src/hw1/mail_client_service_adapter",
+    "src/hw1/mail_client_service_client",
+
+    "src/hw2/chat_client_api",
+    "src/hw2/discord_client_impl",
+    "src/hw2/discord_client_service",
+    "src/hw2/discord_client_service_adapter",
+    "src/hw2/discord_client_service_client",
+
+    "src/oss-api/ai_api",
+    "src/oss-api/chat_api",
+    "src/oss-api/tickets_api",
+
+    "src/hw3/claude_client_service",
+    "src/hw3/openai_client_service",
+    "src/hw3/discord_chat_impl",
+    "src/hw3/ospsd_service",
+    "src/hw3/trello_ticket_impl",
 ]
 
 [tool.ruff]
@@ -74,8 +76,7 @@ extend-exclude = [
   "get_oauth_code.py",
   "test_real_callback.py",
   "test_callback.py",
-  "src/clients/discord_client_service_client/**",
-  "src/openai_client_service_api_client/**",
+  "src/hw2/discord_client_service_client/**",
 ]
 
 [tool.ruff.lint]
@@ -102,26 +103,27 @@ ignore = [
 strict = true
 explicit_package_bases = true # Required for src layout
 mypy_path = [
-    "src/mail_client_service_adapter/src",
-    "src/mail_client_api/src",
-    "src/gmail_client_impl/src",
-    "src/services/mail_client_service/src",
-    "src/clients",
-    "src/chat_client_api/src",
-    "src/services/discord_client_service/src",
-    "src/discord_client_service_adapter/src",
-    "src/ospsd_service/",
+    "src/hw1/gmail_client_impl/src",
+    "src/hw1/mail_client_api/src",
+    "src/hw1/mail_client_service/src",
+    "src/hw1/mail_client_service_adapter/src",
+
+    "src/hw2/chat_client_api/src",
+    "src/hw2/discord_client_impl/src",
+    "src/hw2/discord_client_service/src",
+    "src/hw2/discord_client_service_adapter/src",
+
+    "src/hw3/claude_client_service/src",
+    "src/hw3/openai_client_service/src",
+    "src/hw3/discord_chat_impl/src",
+    "src/hw3/ospsd_service/src",
 ]
 exclude = [
-    "src/ai_api/",
-    "src/openai_service_api/",
-    "src/openai_adapter/",
-    "src/openai_client_impl/",
-    "src/openai_client_service/",
-    "src/openai_client_service_api_client/",
-    "src/claude_client_impl/",
-    "src/claude_client_service/",
-    "src/discord_client_impl/",
+    "src/oss-api/ai_api/src",
+    "src/oss-api/chat_api/src",
+    "src/oss-api/tickets_api/src",
+
+    "src/hw3/trello_ticket_impl/src",
 ]
 ignore_missing_imports = false
 warn_unused_ignores = false
@@ -137,6 +139,8 @@ module = [
     "openai.*",
     "anthropic",
     "anthropic.*",
+    "prometheus_client",
+    "prometheus_client.*",
 ]
 ignore_missing_imports = true
 
@@ -169,13 +173,9 @@ source = ["src"]
 omit = [
     "*/tests/*",
     "*/__main__.py",
-    "src/clients/mail_client_service_client/**",
-    "src/clients/discord_client_service_client/**",
-    "src/openai_client_service_api_client/**",
-    "src/openai_client_service/main.py",
-    "src/openai_client_service/__init__.py",
-    "src/claude_client_service/main.py",
-    "src/claude_client_service/__init__.py",
+    "src/hw1/mail_client_service_client/**",
+    "src/hw2/discord_client_service_client/**",
+    "src/hw2/discord_client_impl/src/discord_client_impl/auth_helper.py",
 ]
 
 [tool.coverage.report]
