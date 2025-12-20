@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# TODO: set up cloud build
-# https://console.cloud.google.com/run/detail/us-central1/ospsd-service/observability/metrics?project=ospsd-471816
-#   - add cloudbuild.yaml
-#   - connect this server to this repo
-
 # Configuration
 PROJECT_ID="ospsd-471816"
 REGION="us-central1"
